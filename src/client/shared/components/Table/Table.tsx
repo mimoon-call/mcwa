@@ -177,7 +177,7 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
           );
         }
 
-        const formattedValue = header.formatter ? header.formatter(item) : value;
+        const formattedValue = header.valueFormatter ? header.valueFormatter(item[value]) : value;
 
         return (
           <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style}>

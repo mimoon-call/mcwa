@@ -42,7 +42,7 @@ export type TableHeader<T extends object = Record<never, never>> = {
   style?: CSSProperties;
   class?: ClassValue[];
   hidden?: boolean;
-  formatter?: (item?: any) => string | undefined;
+  valueFormatter?: (value?: any) => string | undefined;
   component?: (props: { item: T }) => ReactNode;
   colSpan?: number;
 };

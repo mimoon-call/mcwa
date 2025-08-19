@@ -13,7 +13,7 @@ const timeoutMap = new Map<string, ReturnType<typeof setTimeout>>();
 export const liveUpdateHandler = <T extends object>(
   idKey: keyof T,
   updateCallback: (data: Partial<T>) => void,
-  fieldFormatter?: Record<keyof T, TableHeader<T>['formatter']>,
+  fieldFormatter?: Record<keyof T, TableHeader<T>['valueFormatter']>,
   delay: number = 5000
 ) => {
   return (data: Partial<T>) => {

@@ -57,7 +57,7 @@ const InstanceTable = () => {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
       sortable: true,
-      formatter: (value) => dayjs(value).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+      valueFormatter: (value) => dayjs(value).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
     },
   ];
 
@@ -90,10 +90,10 @@ const InstanceTable = () => {
     const socket = getClientSocket();
 
     const fieldFormatter = headers.reduce(
-      (acc, { value, formatter }) => {
-        return formatter ? { ...acc, [value]: formatter } : acc;
+      (acc, { value, valueFormatter }) => {
+        return valueFormatter ? { ...acc, [value]: valueFormatter } : acc;
       },
-      {} as Record<keyof InstanceItem, TableHeader['formatter']>
+      {} as Record<keyof InstanceItem, TableHeader['valueFormatter']>
     );
 
     const socketUpdate = liveUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
