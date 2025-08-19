@@ -1,20 +1,26 @@
 // mongo-service.ts
 import mongoose, {
-  Model,
-  Schema,
-  type SchemaDefinition,
-  type SchemaOptions,
-  type FilterQuery,
-  type ProjectionType,
-  type QueryOptions,
-  type PipelineStage,
   type ClientSession,
+  type FilterQuery,
   type HydratedDocument,
   type IndexDefinition,
   type IndexOptions,
+  Model,
+  type PipelineStage,
+  type ProjectionType,
+  type QueryOptions,
+  Schema,
+  type SchemaDefinition,
+  type SchemaOptions,
 } from 'mongoose';
-import { EntityList, Pagination } from '@models';
+import crypto from 'crypto';
+import type { EntityList, Pagination } from '@models';
+import { LRUCache } from 'lru-cache';
 
+// Extended QueryOptions with cache flag
+type ExtendedQueryOptions<TDoc> = QueryOptions<TDoc> & { cacheEnabledFlag?: boolean };
+
+// URI will be evaluated when connect() is called, after environment variables are loaded
 const DEFAULT_PAGE_SIZE = 20;
 
 // Auto-reconnect configuration
@@ -26,11 +32,7 @@ const RECONNECT_CONFIG = {
 };
 
 type UniqueFlag = boolean | [true, string]; // [true, 'index_name']
-
-type IndexSpec = {
-  fields: IndexDefinition;
-  options?: Omit<IndexOptions, 'unique'> & { unique?: UniqueFlag };
-};
+type IndexSpec = { fields: IndexDefinition; options?: Omit<IndexOptions, 'unique'> & { unique?: UniqueFlag } };
 
 type MongoServiceOpts = {
   /** Additional schema-level indexes to add */
@@ -39,6 +41,8 @@ type MongoServiceOpts = {
   autoCreateIndexes?: boolean;
   /** Pre-save middleware functions to apply to the schema */
   preSave?: ((doc: any) => void | Promise<void>) | ((doc: any) => void | Promise<void>)[];
+  /** Cache configuration options */
+  cacheOptions?: { max?: number; ttl?: number };
 };
 
 function sanitizePage(page?: Pagination): Required<Pick<Pagination, 'pageSize' | 'pageIndex'>> & Pick<Pagination, 'pageSort'> {
@@ -101,12 +105,13 @@ export class MongoService<TDoc extends object> {
   public readonly model: Model<TDoc>;
 
   // Static properties for auto-reconnect
+  private readonly cache: LRUCache<string, any>;
   private static reconnectAttempts = 0;
   private static isReconnecting = false;
 
   // Pass-throughs
   public readonly find: Model<TDoc>['find'];
-  public readonly findOne: Model<TDoc>['findOne'];
+  public findOne: Model<TDoc>['findOne'];
   public readonly findById: Model<TDoc>['findById'];
   public readonly countDocuments: Model<TDoc>['countDocuments'];
   public readonly distinct: Model<TDoc>['distinct'];
@@ -130,6 +135,12 @@ export class MongoService<TDoc extends object> {
   ) {
     const opts: MongoServiceOpts =
       optsOrIndex && 'fields' in (optsOrIndex as any) ? { indexes: optsOrIndex as IndexSpec } : ((optsOrIndex as MongoServiceOpts) ?? {});
+
+    // Initialize cache
+    this.cache = new LRUCache<string, any>({
+      max: opts.cacheOptions?.max ?? 10000,
+      ttl: opts.cacheOptions?.ttl ?? 1000 * 60 * 60, // 1 hour default
+    });
 
     if (mongoose.models[name]) {
       // If model already compiled, reuse it (schema/index changes won’t apply here).
@@ -170,7 +181,7 @@ export class MongoService<TDoc extends object> {
 
     // Bind pass-throughs
     this.find = this.model.find.bind(this.model);
-    this.findOne = this.model.findOne.bind(this.model);
+    this.findOne = this.getCachedFindOne.bind(this);
     this.findById = this.model.findById.bind(this.model);
     this.countDocuments = this.model.countDocuments.bind(this.model);
     this.distinct = this.model.distinct.bind(this.model);
@@ -187,7 +198,6 @@ export class MongoService<TDoc extends object> {
 
     this.create = async (doc: Partial<TDoc>, options?: QueryOptions<TDoc>) => {
       const [created] = await this.model.create([doc], options);
-
       return created as HydratedDocument<TDoc>;
     };
   }
@@ -199,10 +209,11 @@ export class MongoService<TDoc extends object> {
     projection?: ProjectionType<TDoc> | null,
     options?: QueryOptions<TDoc>
   ): Promise<TOut | null> {
-    return this.model
+    const result = await this.model
       .findOne(filter, projection ?? undefined, options)
       .lean<TOut>()
       .exec();
+    return result;
   }
 
   async findLean<TOut = TDoc>(
@@ -214,6 +225,78 @@ export class MongoService<TDoc extends object> {
       .find(filter, projection ?? undefined, options)
       .lean<TOut[]>()
       .exec();
+  }
+
+  /* ---------------- Cached FindOne ---------------- */
+
+  /**
+   * Generate a cache key from filter, projection, and options
+   */
+  private generateCacheKey(...arg: any[]): string {
+    return crypto.createHash('sha256').update(JSON.stringify(arg)).digest('hex');
+  }
+
+  /**
+   * Invalidate cache entries for this model
+   * Call this after updates/deletes to ensure cache consistency
+   */
+  invalidateCache(): void {
+    this.cache.clear();
+  }
+
+  /**
+   * Invalidate specific cache entries based on a filter pattern
+   */
+  invalidateCacheByFilter(filterPattern: Partial<FilterQuery<TDoc>>): void {
+    const pattern = JSON.stringify(filterPattern);
+    const keysToDelete: string[] = [];
+
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach((key) => this.cache.delete(key));
+  }
+
+  /**
+   * Enhanced findOne method that supports caching via cacheEnabledFlag
+   * Each call can decide whether to use cache or not
+   */
+  private getCachedFindOne(filter: FilterQuery<TDoc>, projection?: ProjectionType<TDoc> | null, options?: ExtendedQueryOptions<TDoc>) {
+    const { cacheEnabledFlag, ...queryOptions } = options || {};
+
+    // If cache is not enabled globally or for this specific query, use standard findOne
+    if (!cacheEnabledFlag) {
+      return this.model.findOne(filter, projection ?? undefined, queryOptions);
+    }
+
+    // Create a custom query that handles caching
+    const query = this.model.findOne(filter, projection ?? undefined, queryOptions);
+
+    // Override the exec method to add caching
+    const originalExec = query.exec.bind(query);
+    query.exec = async () => {
+      const cacheKey = this.generateCacheKey(filter, projection, queryOptions);
+
+      // Check cache first
+      const cachedResult = this.cache.get(cacheKey);
+
+      if (cachedResult !== undefined) {
+        return cachedResult;
+      }
+
+      // If not in cache, execute the original query
+      const result = await originalExec();
+
+      // Cache the result (null results are also cached to avoid repeated DB calls)
+      this.cache.set(cacheKey, result);
+
+      return result;
+    };
+
+    return query as any;
   }
 
   /* ---------------- Aggregate (typed) ---------------- */
@@ -331,15 +414,18 @@ export class MongoService<TDoc extends object> {
    * Connect to MongoDB
    */
   static async connect(): Promise<void> {
-    const mongoUri = process.env.DB_RUI || 'mongodb://localhost:27017/mimoon-call-whatsapp';
-
     if (mongoose.connection.readyState === 1) {
       console.log('MongoDB already connected');
       return;
     }
 
+    const uri = process.env.DB_URI;
+    if (!uri) {
+      throw new Error('DB_URI environment variable is not set');
+    }
+
     try {
-      await mongoose.connect(mongoUri, {
+      await mongoose.connect(uri, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,

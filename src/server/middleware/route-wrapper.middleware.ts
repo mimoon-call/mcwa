@@ -7,6 +7,7 @@ import logger from '@server/helpers/logger';
 import AuthenticationError from '@server/middleware/errors/authentication-error';
 import { ErrorEnum } from '@server/middleware/errors';
 import CustomError from '@server/middleware/errors/custom-error';
+import { Auth } from '@server/api/auth/auth.db';
 
 type RouteOptions = Partial<{
   isAuthRequired: boolean;
@@ -24,6 +25,20 @@ export const routeMiddleware = (options?: RouteOptions, callback?: (...arg: Arra
 
       if (options?.isAuthRequired && !req[CookieEnum.ACCESS_TOKEN]) {
         throw new AuthenticationError(ErrorEnum.AUTHENTICATION_FAILED);
+      }
+
+      if (!req[CookieEnum.ACCESS_TOKEN]) {
+        res.clearCookie(CookieEnum.ACCESS_TOKEN);
+      }
+
+      if (req[CookieEnum.ACCESS_TOKEN]) {
+        const { hashPassword, email } = req[CookieEnum.ACCESS_TOKEN];
+        const user = await Auth.findOne({ email, hashPassword }, null, { cacheEnabledFlag: true });
+
+        if (!user) {
+          res.clearCookie(CookieEnum.ACCESS_TOKEN);
+          throw new AuthenticationError(ErrorEnum.AUTHENTICATION_FAILED);
+        }
       }
 
       if (callback) {
