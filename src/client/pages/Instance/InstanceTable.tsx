@@ -1,5 +1,5 @@
 import type { Pagination } from '@models';
-import type { TableHeaders } from '@components/Table/Table.type';
+import type { TableHeader, TableHeaders } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
@@ -18,7 +18,7 @@ import AddInstanceModal from '@client/pages/Instance/modal/AddInstanceModal';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
-import { itemUpdateHandler } from '@helpers/item-update-handler';
+import { liveUpdateHandler } from '@helpers/live-update-handler';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -57,7 +57,7 @@ const InstanceTable = () => {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
       sortable: true,
-      formatter: (item) => dayjs(item?.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+      formatter: (value) => dayjs(value).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
     },
   ];
 
@@ -89,7 +89,14 @@ const InstanceTable = () => {
   useEffect(() => {
     const socket = getClientSocket();
 
-    const socketUpdate = itemUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)));
+    const fieldFormatter = headers.reduce(
+      (acc, { value, formatter }) => {
+        return formatter ? { ...acc, [value]: formatter } : acc;
+      },
+      {} as Record<keyof InstanceItem, TableHeader['formatter']>
+    );
+
+    const socketUpdate = liveUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
 
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, socketUpdate);
 
