@@ -442,7 +442,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             const credsForStorage = convertBufferToPlain(creds);
 
             await this.updateAppAuth(
-              { creds: credsForStorage, ...(this.connected ? { statusCode: 200, errorMessage: '' } : {}) } as WAAppAuth<T>,
+              { creds: credsForStorage, ...(this.connected ? { statusCode: 200, errorMessage: null } : {}) } as WAAppAuth<T>,
               clientName
             );
 
@@ -712,6 +712,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.recovering = true;
           try {
             const refreshed = await this.refresh();
+
             if (refreshed) {
               this.log('info', '✅ Session synchronized due to decryption issues');
             } else {
@@ -1238,6 +1239,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       if (refreshSuccess) {
         this.log('info', '✅ Session refresh successful, MAC error resolved');
+
+        if (this.appState?.statusCode !== 200) {
+          this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+        }
+
         return true;
       }
 
@@ -1309,6 +1315,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         if (this.socket.user?.id) {
           this.log('info', '🔄 Session synchronization successful');
+
+          if (this.appState?.statusCode !== 200) {
+            this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+          }
+
           return true;
         }
       }
