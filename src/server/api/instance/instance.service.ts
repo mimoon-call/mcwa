@@ -1,4 +1,4 @@
-import type { EntityList, Pagination } from '@models';
+import type { EntityList, Pagination } from '../../../client/shared/models';
 import type { GetInstanceConversationRes, GetInstanceConversationsRes, InstanceItem } from '@server/api/instance/instance.types';
 import {
   ADD_INSTANCE,

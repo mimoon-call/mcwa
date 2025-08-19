@@ -15,7 +15,7 @@ import mongoose, {
   type SchemaOptions,
 } from 'mongoose';
 import crypto from 'crypto';
-import type { EntityList, Pagination } from '@models';
+import type { EntityList, Pagination } from '../../../client/shared/models';
 import { LRUCache } from 'lru-cache';
 
 // URI will be evaluated when connect() is called, after environment variables are loaded

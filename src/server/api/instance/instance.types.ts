@@ -1,6 +1,6 @@
 import type { WAAppAuth, WAMessage } from '@server/services/whatsapp/whatsapp-instance.type';
 import type { WAPersona } from '@server/services/whatsapp/whatsapp.type';
-import type { Pagination, EntityList } from '@models';
+import type { Pagination, EntityList } from '../../../client/shared/models';
 
 export type InstanceItem = Pick<
   WAAppAuth<WAPersona>,
