@@ -52,21 +52,12 @@ export class ServerExpress {
     this.app.use(cookieParser());
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-    
-    // Add timeout middleware
-    this.app.use((req, res, next) => {
-      req.setTimeout(30000); // 30 seconds
-      res.setTimeout(30000); // 30 seconds
-      next();
-    });
 
     // Ensure service worker is served with correct MIME type FIRST
     this.app.get('/sw.js', (req: Request, res: Response) => {
       try {
         // In production, the server runs from /app/dist/server, so we need to go up to /app/public
-        const swPath = process.env.NODE_ENV === 'production' 
-          ? '/app/public/sw.js'
-          : path.join(dir, '/../public/sw.js');
+        const swPath = process.env.NODE_ENV === 'production' ? '/app/public/sw.js' : path.join(dir, '/../public/sw.js');
         res.setHeader('Content-Type', 'application/javascript');
         res.sendFile(swPath);
       } catch (error) {
@@ -78,17 +69,20 @@ export class ServerExpress {
     // Serve static files from dist/client in production FIRST (before other routes)
     if (process.env.NODE_ENV === 'production') {
       const clientPath = path.join(dir, '/../client');
-      this.app.use('/client', express.static(clientPath, {
-        setHeaders: (res, path) => {
-          if (path.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-          } else if (path.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-          }
-        }
-      }));
+      this.app.use(
+        '/client',
+        express.static(clientPath, {
+          setHeaders: (res, path) => {
+            if (path.endsWith('.js')) {
+              res.setHeader('Content-Type', 'application/javascript');
+            } else if (path.endsWith('.css')) {
+              res.setHeader('Content-Type', 'text/css');
+            }
+          },
+        })
+      );
     }
-    
+
     // Serve static files from public directory
     this.app.use(express.static(path.join(dir, '/../public')));
 
