@@ -403,9 +403,9 @@ export class MongoService<TDoc extends object> {
       return;
     }
 
-    const uri = process.env.DB_URI;
+    const uri = process.env.MONGO_RUI;
     if (!uri) {
-      throw new Error('DB_URI environment variable is not set');
+      throw new Error('MONGO_RUI environment variable is not set');
     }
 
     try {
