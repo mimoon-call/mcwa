@@ -8,7 +8,7 @@ phases:
     commands:
       - export ROLLUP_SKIP_NATIVE=true
       - export VITE_FORCE_ESBUILD=true
-      - npm run build:docker || npm run build:esbuild
+      - npm run build:simple || npm run build:pure || npm run build:esbuild || (echo "All builds failed" && exit 1)
   post_build:
     commands:
       - echo "Build complete"
