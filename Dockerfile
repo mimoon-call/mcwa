@@ -39,5 +39,5 @@ COPY --from=builder /app/public ./public
 # Expose server
 EXPOSE 3000
 
-# Start your SSR server with environment variable debugging
-CMD ["sh", "-c", "echo 'Environment variables:' && env | grep -E '(MONGO_RUI|OPENAI_API_KEY|ACCESS_TOKEN_KEY|WEBHOOK_SECRET|SESSION_SECRET_KEY)' && echo 'Starting application...' && npm run start"]
+# Start the SSR server
+CMD ["npm", "run", "start"]
