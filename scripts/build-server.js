@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 
-import * as esbuild from 'esbuild';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const esbuild = require('esbuild');
+const path = require('path');
 
 async function buildServer() {
   try {

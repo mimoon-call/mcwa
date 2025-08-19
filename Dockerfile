@@ -19,8 +19,8 @@ COPY . .
 # Install all dependencies
 RUN npm ci
 
-# Build the application using multiple fallback options
-RUN npm run build:simple || npm run build:pure || npm run build:esbuild || (echo "All builds failed" && exit 1)
+# Try to build with Vite first, fallback to esbuild if it fails
+RUN npm run build:docker || npm run build:esbuild
 
 # Keep all dependencies since some are needed at runtime
 
