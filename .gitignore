@@ -27,4 +27,4 @@ dist-ssr
 .terraform
 .terraform.lock.hcl
 /.wa-auth-temp/*
-seed.ts
+src/seed.ts
