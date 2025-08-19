@@ -36,6 +36,8 @@ export default defineConfig({
     ssrManifest: true,
     target: 'esnext',
     assetsDir: 'assets',
+    // Force esbuild for better Alpine Linux compatibility
+    minify: 'esbuild',
     rollupOptions: {
       input: path.resolve(__dirname, 'src/client/index.tsx'),
       output: {
@@ -44,6 +46,10 @@ export default defineConfig({
         entryFileNames: 'assets/[name]-[hash].js',
       },
     },
+  },
+  // Force esbuild usage
+  esbuild: {
+    target: 'esnext',
   },
   assetsInclude: ['**/*.svg', '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.webp', '**/*.ico'],
 });

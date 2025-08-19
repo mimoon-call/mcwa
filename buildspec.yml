@@ -6,7 +6,9 @@ phases:
       - npm install
   build:
     commands:
-      - npm run build
+      - export ROLLUP_SKIP_NATIVE=true
+      - export VITE_FORCE_ESBUILD=true
+      - npm run build:docker || npm run build:esbuild
   post_build:
     commands:
       - echo "Build complete"
