@@ -19,3 +19,5 @@ export type SearchInstanceRes = EntityList<InstanceItem>;
 export type SearchInstanceReq = Partial<{ page: Pagination }>;
 
 export type AddInstanceRes = { image: string };
+
+export type InstanceUpdate = Pick<InstanceItem, 'phoneNumber'> & Partial<Omit<InstanceItem, 'phoneNumber'>>;

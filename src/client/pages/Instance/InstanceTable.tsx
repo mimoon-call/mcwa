@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { Pagination } from '@models';
 import type { TableHeaders } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
+import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
@@ -18,6 +18,7 @@ import AddInstanceModal from '@client/pages/Instance/modal/AddInstanceModal';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
+import { itemUpdateHandler } from '@helpers/item-update-handler';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -88,15 +89,12 @@ const InstanceTable = () => {
   useEffect(() => {
     const socket = getClientSocket();
 
-    const handleInstanceUpdate = (data: Partial<InstanceItem>) => {
-      console.log('Instance update received:', data);
-      dispatch(instanceActions.updateInstance(data));
-    };
+    const socketUpdate = itemUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)));
 
-    socket?.on(InstanceEventEnum.INSTANCE_UPDATE, handleInstanceUpdate);
+    socket?.on(InstanceEventEnum.INSTANCE_UPDATE, socketUpdate);
 
     return () => {
-      socket?.off(InstanceEventEnum.INSTANCE_UPDATE, handleInstanceUpdate);
+      socket?.off(InstanceEventEnum.INSTANCE_UPDATE, socketUpdate);
     };
   }, [dispatch]);
 

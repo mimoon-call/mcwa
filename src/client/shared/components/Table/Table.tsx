@@ -168,6 +168,15 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
         }
 
         const value = item[header.value as keyof typeof item];
+
+        if (React.isValidElement(value)) {
+          return (
+            <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style}>
+              {value}
+            </td>
+          );
+        }
+
         const formattedValue = header.formatter ? header.formatter(item) : value;
 
         return (
@@ -191,12 +200,12 @@ const Body = (props: TableBodyProps) => {
   return (
     <tbody ref={tbodyRef}>
       {props.items?.map((item, itemIndex) => (
-        <Item 
-          item={item} 
-          key={itemIndex} 
-          itemIndex={itemIndex} 
-          setRow={setRow} 
-          setFocus={setFocus} 
+        <Item
+          item={item}
+          key={itemIndex}
+          itemIndex={itemIndex}
+          setRow={setRow}
+          setFocus={setFocus}
           headers={props.headers}
           keyboardDisabled={props.keyboardDisabled}
           rowClickable={props.rowClickable}
