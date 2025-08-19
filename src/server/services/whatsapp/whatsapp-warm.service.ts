@@ -24,7 +24,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly lastConversation = new LRUCache<string, WAConversation[]>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
   private readonly maxRetryAttempt = 3;
-  private readonly dailyScheduleTimeHour = 10;
+  private readonly dailyScheduleTimeHour = 9;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -69,7 +69,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const now = dayjs().tz(timezone);
     const hour = now.hour();
 
-    return hour >= this.dailyScheduleTimeHour && hour < this.dailyScheduleTimeHour + 12; // Will be ended 12 hours from start
+    return hour >= this.dailyScheduleTimeHour && hour < this.dailyScheduleTimeHour + 14; // Will be ended 14 hours from start
   }
 
   private getNextWarmingTime(): Date {
@@ -79,10 +79,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     let nextWarmingTime: dayjs.Dayjs;
 
     if (now.hour() < this.dailyScheduleTimeHour) {
-      nextWarmingTime = now.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
+      nextWarmingTime = now.hour(this.dailyScheduleTimeHour).minute(5).second(0).millisecond(0);
     } else {
       const tomorrow = now.add(1, 'day');
-      nextWarmingTime = tomorrow.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
+      nextWarmingTime = tomorrow.hour(this.dailyScheduleTimeHour).minute(5).second(0).millisecond(0);
     }
 
     return nextWarmingTime.toDate();
@@ -397,7 +397,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
         if (stillNeededWarm.length > 0) {
           const nextWarmingTime = this.getNextWarmingTime();
-          const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now() + 60000 * 5; // Add 5 minutes safety delay
+          const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
           this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
 
