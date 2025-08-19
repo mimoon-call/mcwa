@@ -22,7 +22,7 @@ export default defineConfig({
   build: {
     ssr: 'src/server/index.ts',
     outDir: 'dist/server',
-    target: 'node20',
+    target: 'node22',
     rollupOptions: {
       external: ['express', 'vite', 'fs', 'path', 'crypto', 'http', 'url', 'util', 'lru-cache', /^node:/],
     },

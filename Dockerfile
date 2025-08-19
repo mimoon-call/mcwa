@@ -1,5 +1,5 @@
 # Multi-stage build - let Docker detect the correct platform
-FROM node:20.18.1-alpine AS builder
+FROM node:22.18-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:20.18.1-alpine AS production
+FROM node:22.18-alpine AS production
 
 WORKDIR /app
 

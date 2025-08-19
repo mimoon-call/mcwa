@@ -33,8 +33,8 @@ react-ssr-ts/
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ (or 20+ recommended)
-- npm 9+
+- Node.js 22.18+
+- npm 10+
 
 ### Install dependencies
 ```bash
