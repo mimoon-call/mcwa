@@ -11,10 +11,9 @@
     "build": "npm run build:client && npm run build:server",
     "start": "NODE_ENV=production node dist/server/index.js",
     "run:seed": "NODE_ENV=development tsx --import ./loader-register.mjs src/server/seed.ts",
+    "run:seed:production": "NODE_ENV=production tsx --import ./loader-register.mjs src/server/seed.ts",
     "clean": "rm -rf dest node_modules package-lock.json && npm install",
-    "clean:branch": "git checkout --orphan temp-branch && git add -A && git commit -m 'Initial commit' && git branch -D main && git branch -m main && git push -f origin main",
-    "docker:build": "docker build -t zivtal/react-ts .",
-    "docker:run": "docker run -p 3000:3000 zivtal/react-ts"
+    "clean:branch": "git checkout --orphan temp-branch && git add -A && git commit -m 'Initial commit' && git branch -D main && git branch -m main && git push -f origin main"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",

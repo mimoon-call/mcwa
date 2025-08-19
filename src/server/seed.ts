@@ -3,6 +3,27 @@ import { Auth } from '@server/api/auth/auth.db';
 import authService from '@server/api/auth/auth.service';
 import { ADD_USER } from '@server/api/auth/auth.map';
 import type { AddUserReq } from '@server/api/auth/auth.type';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const resolve = (p: string) => path.resolve(__dirname, p);
+
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const envFile = nodeEnv === 'production' ? '.env' : '.env.development';
+
+  console.log(`🌍 Loading environment from: ${envFile}`);
+  // Navigate from src/server/ to project root (../../)
+  dotenv.config({ path: resolve(`../../${envFile}`) });
+} catch (e) {
+  console.error('dotenv:file', e);
+  console.log('⚠️  Falling back to default .env file');
+  dotenv.config();
+}
 
 // Sample users data
 const sampleUsers: AddUserReq[] = [
