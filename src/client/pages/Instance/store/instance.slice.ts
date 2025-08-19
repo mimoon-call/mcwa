@@ -24,7 +24,7 @@ export interface InstanceState {
 
 const initialState: InstanceState = {
   [INSTANCE_SEARCH_DATA]: null,
-  [INSTANCE_SEARCH_PAGINATION]: { pageSize: 18 },
+  [INSTANCE_SEARCH_PAGINATION]: { pageSize: 30 },
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
 };
