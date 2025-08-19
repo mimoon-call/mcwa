@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { ServerExpress } from '@server/services/server-express/server-express';
 import authRoute from '@server/api/auth/auth.route';
-import { DatabaseService } from '@server/services/database/database.service';
+import { MongoService } from '@server/services/database/mongo.service';
 import { WhatsappWarmService } from '@server/services/whatsapp/whatsapp-warm.service';
 import { whatsappConfig } from '@server/services/whatsapp/whatsapp-config';
 import getLocalNow from '@server/helpers/get-local-now';
@@ -51,8 +51,7 @@ export const wa = new WhatsappWarmService({
 });
 
 (async () => {
-  const databaseService = DatabaseService.getInstance();
-  await databaseService.connect();
+  await MongoService.connect();
 
   wa.onReady(() => {
     wa.startWarmingUp();

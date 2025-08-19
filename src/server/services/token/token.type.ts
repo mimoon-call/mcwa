@@ -1,12 +1,4 @@
 // src/server/services/token/token.type.ts
-import type { BaseId } from '@server/models/base-id';
-import { RoleEnum } from '@server/constants';
+import { AuthUser } from '@server/api/auth/auth.type';
 
-export interface AccessToken extends Record<string, unknown> {
-  id: BaseId;
-  email: string;
-  hashedPass: string;
-  firstName?: string;
-  lastName?: string;
-  role?: keyof typeof RoleEnum;
-}
+export type AccessToken = Record<string, unknown> & Pick<AuthUser, 'firstName' | 'lastName' | 'hashPassword' | 'email'>;

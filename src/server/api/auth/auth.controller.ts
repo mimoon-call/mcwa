@@ -1,7 +1,5 @@
 import type { Request, Response } from 'express';
-import type { AccessToken } from '@server/services/token/token.type';
 import type { LoginReq, LoginRes, LogoutRes } from '@server/api/auth/auth.type';
-import TokenService from '@server/services/token/token.service';
 import { LOGIN, LOGOUT, REFRESH_TOKEN } from './auth.map';
 import { COOKIE_OPTIONS } from './auth.constants';
 import { CookieEnum, RegexPattern } from '@server/constants';
@@ -16,7 +14,7 @@ const authController = {
         ['password', { required: [true], type: ['String'] }],
       ]).validate();
 
-      const accessToken = TokenService.encrypt<AccessToken>(await authService[LOGIN](email, password));
+      const accessToken = await authService[LOGIN](email, password);
 
       res.cookie(CookieEnum.ACCESS_TOKEN, accessToken, COOKIE_OPTIONS).send({ returnCode: 0 });
     } catch (err) {

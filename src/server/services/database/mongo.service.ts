@@ -17,6 +17,14 @@ import { EntityList, Pagination } from '@models';
 
 const DEFAULT_PAGE_SIZE = 20;
 
+// Auto-reconnect configuration
+const RECONNECT_CONFIG = {
+  maxRetries: 10,
+  baseDelay: 1000, // 1 second
+  maxDelay: 30000, // 30 seconds
+  backoffMultiplier: 2,
+};
+
 type UniqueFlag = boolean | [true, string]; // [true, 'index_name']
 
 type IndexSpec = {
@@ -91,6 +99,10 @@ function applyPreSaveMiddleware<T>(schema: Schema<T>, preSaveFns?: ((doc: any) =
  */
 export class MongoService<TDoc extends object> {
   public readonly model: Model<TDoc>;
+
+  // Static properties for auto-reconnect
+  private static reconnectAttempts = 0;
+  private static isReconnecting = false;
 
   // Pass-throughs
   public readonly find: Model<TDoc>['find'];
@@ -175,6 +187,7 @@ export class MongoService<TDoc extends object> {
 
     this.create = async (doc: Partial<TDoc>, options?: QueryOptions<TDoc>) => {
       const [created] = await this.model.create([doc], options);
+
       return created as HydratedDocument<TDoc>;
     };
   }
@@ -310,5 +323,127 @@ export class MongoService<TDoc extends object> {
     };
 
     return Object.assign(base, extraObj);
+  }
+
+  /* ---------------- Static Connection Methods ---------------- */
+
+  /**
+   * Connect to MongoDB
+   */
+  static async connect(): Promise<void> {
+    const mongoUri = process.env.DB_RUI || 'mongodb://localhost:27017/mimoon-call-whatsapp';
+
+    if (mongoose.connection.readyState === 1) {
+      console.log('MongoDB already connected');
+      return;
+    }
+
+    try {
+      await mongoose.connect(mongoUri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        bufferCommands: false,
+      });
+
+      console.log('✅ MongoDB connected successfully via MongoService');
+
+      mongoose.connection.on('error', (error) => {
+        console.error('MongoDB connection error:', error);
+      });
+
+      mongoose.connection.on('disconnected', () => {
+        console.log('MongoDB disconnected - attempting to reconnect...');
+        // Auto-reconnect on disconnect with exponential backoff
+        MongoService.attemptReconnect();
+      });
+
+      mongoose.connection.on('reconnected', () => {
+        console.log('MongoDB reconnected');
+      });
+    } catch (error) {
+      console.error('Failed to connect to MongoDB:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Disconnect from MongoDB
+   */
+  static async disconnect(): Promise<void> {
+    if (mongoose.connection.readyState === 0) {
+      console.log('MongoDB already disconnected');
+      return;
+    }
+
+    try {
+      await mongoose.disconnect();
+      console.log('MongoDB disconnected via MongoService');
+    } catch (error) {
+      console.error('Error disconnecting from MongoDB:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a model by name
+   */
+  static getModel<T = any>(name: string): Model<T> {
+    if (!mongoose.models[name]) {
+      throw new Error(`Model '${name}' not found. Make sure it has been registered.`);
+    }
+    return mongoose.models[name] as Model<T>;
+  }
+
+  /**
+   * Attempt to reconnect with exponential backoff
+   */
+  private static async attemptReconnect(): Promise<void> {
+    if (MongoService.isReconnecting || mongoose.connection.readyState === 1) {
+      return;
+    }
+
+    if (MongoService.reconnectAttempts >= RECONNECT_CONFIG.maxRetries) {
+      console.error(`❌ Max reconnection attempts (${RECONNECT_CONFIG.maxRetries}) reached. Giving up.`);
+      return;
+    }
+
+    MongoService.isReconnecting = true;
+    MongoService.reconnectAttempts++;
+
+    // Calculate delay with exponential backoff
+    const delay = Math.min(
+      RECONNECT_CONFIG.baseDelay * Math.pow(RECONNECT_CONFIG.backoffMultiplier, MongoService.reconnectAttempts - 1),
+      RECONNECT_CONFIG.maxDelay
+    );
+
+    console.log(`🔄 Attempting to reconnect (${MongoService.reconnectAttempts}/${RECONNECT_CONFIG.maxRetries}) in ${delay}ms...`);
+
+    setTimeout(async () => {
+      try {
+        if (mongoose.connection.readyState === 0) {
+          await MongoService.connect();
+          // Reset counters on successful reconnection
+          MongoService.reconnectAttempts = 0;
+          console.log('✅ Reconnection successful!');
+        }
+      } catch (reconnectError) {
+        console.error(`❌ Reconnection attempt ${MongoService.reconnectAttempts} failed:`, reconnectError);
+        // Try again if we haven't reached max retries
+        if (MongoService.reconnectAttempts < RECONNECT_CONFIG.maxRetries) {
+          MongoService.attemptReconnect();
+        }
+      } finally {
+        MongoService.isReconnecting = false;
+      }
+    }, delay);
+  }
+
+  /**
+   * Reset reconnection counters (useful for testing or manual reconnection)
+   */
+  static resetReconnectCounters(): void {
+    MongoService.reconnectAttempts = 0;
+    MongoService.isReconnecting = false;
   }
 }
