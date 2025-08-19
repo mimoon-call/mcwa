@@ -33,6 +33,9 @@ RUN npm ci --only=production && \
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy public directory for SSR to work properly
+COPY --from=builder /app/public ./public
+
 # Expose server
 EXPOSE 3000
 
