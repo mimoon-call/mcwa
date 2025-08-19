@@ -11,15 +11,8 @@ export const useTableItems = (props: TableProps, tableRef: ReturnType<typeof use
   useEffect(() => {
     const sortPage = props.pageSort;
     const isServedResult = props.totalPages !== undefined;
+    const items = sortElementArray(props.items || [], sortPage);
     tableRef.current?.scrollTo({ top: 0, behavior: 'instant' });
-
-    const items = (() => {
-      if (sortPage && props.onSort && !isServedResult) {
-        return sortElementArray(props.items, sortPage);
-      }
-
-      return props.items || [];
-    })();
 
     // If no page size is set or total pages is 1, show all items
     if (!pageSize || totalPages === 1 || isServedResult) {
