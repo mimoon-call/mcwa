@@ -1,5 +1,6 @@
 // mongo-service.ts
 import mongoose, {
+  AggregateOptions,
   type ClientSession,
   type FilterQuery,
   type HydratedDocument,
@@ -17,9 +18,6 @@ import crypto from 'crypto';
 import type { EntityList, Pagination } from '@models';
 import { LRUCache } from 'lru-cache';
 
-// Extended QueryOptions with cache flag
-type ExtendedQueryOptions<TDoc> = QueryOptions<TDoc> & { cacheEnabledFlag?: boolean };
-
 // URI will be evaluated when connect() is called, after environment variables are loaded
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -31,8 +29,16 @@ const RECONNECT_CONFIG = {
   backoffMultiplier: 2,
 };
 
+type ExtendedQueryOptions<TDoc> = QueryOptions<TDoc> & { cacheEnabledFlag?: boolean };
 type UniqueFlag = boolean | [true, string]; // [true, 'index_name']
 type IndexSpec = { fields: IndexDefinition; options?: Omit<IndexOptions, 'unique'> & { unique?: UniqueFlag } };
+
+type AggregatePaginatedOpts = {
+  page?: Pagination;
+  groupQuery?: Record<string, unknown>;
+  session?: ClientSession | null;
+  debug?: boolean;
+} & AggregateOptions;
 
 type MongoServiceOpts = {
   /** Additional schema-level indexes to add */
@@ -308,27 +314,9 @@ export class MongoService<TDoc extends object> {
     return agg.exec();
   }
 
-  async aggregatePaginated<TRow, TExtra extends object = Record<never, never>>(
-    options: {
-      page?: Pagination;
-      allowDiskUse?: boolean;
-      collation?: {
-        locale: string;
-        strength?: number;
-        caseLevel?: boolean;
-        caseFirst?: string;
-        numericOrdering?: boolean;
-        alternate?: string;
-        maxVariable?: string;
-        normalization?: boolean;
-        backwards?: boolean;
-      };
-      project?: PipelineStage.Project['$project'];
-      groupQuery?: Record<string, unknown>;
-      session?: ClientSession | null;
-      debug?: boolean;
-    } = {},
-    beforePipeline: ReadonlyArray<PipelineStage> = [],
+  async pagination<TRow, TExtra extends object = Record<never, never>>(
+    options: AggregatePaginatedOpts,
+    beforePipeline: ReadonlyArray<PipelineStage>,
     afterPipeline: ReadonlyArray<PipelineStage> = []
   ): Promise<EntityList<TRow> & TExtra> {
     const { pageSize, pageIndex, pageSort } = sanitizePage(options.page);
@@ -369,10 +357,6 @@ export class MongoService<TDoc extends object> {
         },
       } as PipelineStage,
     ];
-
-    if (options.debug) {
-      console.debug('[aggregatePaginated] pipeline:', JSON.stringify(pipeline, null, 2));
-    }
 
     const agg = this.model.aggregate<{
       data: TRow[];

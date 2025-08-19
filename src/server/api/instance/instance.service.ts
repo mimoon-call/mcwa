@@ -12,23 +12,28 @@ import { wa } from '@server/index';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
-    return await WhatsAppAuth.aggregatePaginated<InstanceItem>({
-      page,
-      project: {
-        phoneNumber: 1,
-        isActive: 1,
-        dailyMessageCount: 1,
-        outgoingMessageCount: 1,
-        incomingMessageCount: 1,
-        statusCode: 1,
-        errorMessage: 1,
-        warmUpDay: 1,
-        dailyWarmUpCount: 1,
-        dailyWarmConversationCount: 1,
-        hasWarmedUp: 1,
-        createdAt: 1,
-      },
-    });
+    return await WhatsAppAuth.pagination<InstanceItem>(
+      { page },
+      [
+        {
+          $project: {
+            phoneNumber: 1,
+            isActive: 1,
+            dailyMessageCount: 1,
+            outgoingMessageCount: 1,
+            incomingMessageCount: 1,
+            statusCode: 1,
+            errorMessage: 1,
+            warmUpDay: 1,
+            dailyWarmUpCount: 1,
+            dailyWarmConversationCount: 1,
+            hasWarmedUp: 1,
+            createdAt: 1,
+          },
+        },
+      ],
+      []
+    );
   },
 
   [GET_INSTANCE_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string): Promise<GetInstanceConversationRes['messages']> => {
@@ -46,7 +51,7 @@ export const instanceService = {
   },
 
   [GET_INSTANCE_CONVERSATIONS]: async (phoneNumber: string, page: Pagination): Promise<GetInstanceConversationsRes> => {
-    return await WhatsAppMessage.aggregatePaginated<GetInstanceConversationsRes['data'][0]>({ page }, [
+    return await WhatsAppMessage.pagination<GetInstanceConversationsRes['data'][0]>({ page }, [
       // only messages where myNumber is involved
       { $match: { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] } },
 
