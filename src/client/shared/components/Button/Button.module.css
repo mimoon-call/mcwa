@@ -1,0 +1,24 @@
+/* src/client/shared/components/Button/Button.module.css */
+.button {
+    @apply duration-300 ease-linear;
+}
+
+.button--solid {
+    @apply min-h-10 relative font-medium rounded focus:outline-none min-w-24 uppercase text-opacity-90 hover:text-opacity-100 hover:disabled:text-opacity-90 disabled:cursor-default;
+    
+    &:before {
+        @apply absolute rounded inset-0 z-0 bg-current opacity-10 hover:opacity-15 hover:disabled:opacity-10 transition-opacity duration-300 ease-in-out;
+        content: '';
+    }
+    
+    &:after {
+        @apply absolute rounded inset-0 z-10 border-current opacity-50 hover:opacity-100 hover:disabled:opacity-50 border-2;
+        content: '';
+    }
+
+    transition: background-color ease-in-out 0.2s, border-color ease-in-out 0.2s;
+}
+
+.button--flat {
+    @apply font-medium rounded hover:underline hover:text-blue-600;
+}

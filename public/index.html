@@ -1,0 +1,44 @@
+<!-- public/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>React SSR</title>
+    <!-- inject:css -->
+    <link id="preloader" rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="preloader"><span></span></div>
+    <div id="root"><!-- SSR injects here --></div>
+
+    <script id="sw">
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').then(
+            function (registration) {
+              console.info('ServiceWorker:registration', 'successful with scope: ', registration.scope);
+              document.getElementById('sw').remove();
+            },
+            function (err) {
+              console.error('ServiceWorker:registration', 'failed: ', err);
+              document.getElementById('sw').remove();
+            }
+          );
+        });
+      }
+    </script>
+
+    <!-- Client script will be injected by SSR in production -->
+    <script type="module" id="client-script">
+      // This will be replaced by SSR in production
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = '/src/client/index.tsx';
+      script.onload = () => {
+        document.getElementById('preloader')?.remove();
+        document.querySelector('.preloader')?.remove();
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>

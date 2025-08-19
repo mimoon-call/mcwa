@@ -1,0 +1,21 @@
+import type { EntityList, Pagination } from '@models';
+
+export type InstanceItem = {
+  phoneNumber: string;
+  isActive: boolean;
+  dailyMessageCount: number;
+  outgoingMessageCount: number;
+  incomingMessageCount: number;
+  statusCode: number;
+  errorMessage: string;
+  warmUpDay: number;
+  dailyWarmUpCount: number;
+  dailyWarmConversationCount: number;
+  hasWarmedUp: boolean;
+  createdAt: string;
+};
+
+export type SearchInstanceRes = EntityList<InstanceItem>;
+export type SearchInstanceReq = Partial<{ page: Pagination }>;
+
+export type AddInstanceRes = { image: string };

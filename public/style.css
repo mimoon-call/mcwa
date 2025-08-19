@@ -1,0 +1,56 @@
+body {
+    --bg-loader-color: rgb(15, 23, 42); 
+    
+    * {
+        margin: 0 !important;
+        box-sizing: border-box;
+    }
+
+    @keyframes rotation {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    html,
+    body {
+        position: relative;
+        height: 100vh !important;
+        width: 100vw !important;
+        overflow: hidden;
+    }
+
+    .preloader {
+        margin:0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        color: white;
+        background-color: var(--bg-loader-color);
+        z-index: 1;
+    }
+
+    .preloader > svg {
+        max-height: 3rem;
+        margin-top: 1rem;
+    }
+
+    .preloader > span {
+        height: 4rem;
+        width: 4rem;
+        border-radius: 50%;
+        display: inline-block;
+        animation: rotation 1s linear infinite;
+        border-bottom: calc(4rem / 24) solid currentColor;
+    }
+}

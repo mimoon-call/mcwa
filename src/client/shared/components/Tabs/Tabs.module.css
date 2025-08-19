@@ -1,0 +1,84 @@
+.tabs {
+    @apply relative flex flex-col;
+
+    > div:first-child {
+        display: inline-flex;
+        @apply pt-1 pb-2 px-1;
+
+        > :not(button) {
+            max-width: calc(100% - 2rem);
+            
+            span:focus {
+                @apply outline-none ring-transparent;
+            }
+        }
+
+        .tab-back-button,
+        .tab-next-button {
+            @apply opacity-0 border-0 w-0 overflow-hidden duration-300;
+
+            svg {
+                @apply rtl:rotate-180;
+            }
+        }
+
+        .tab-back-button--shown {
+            @apply opacity-100 cursor-pointer w-6 pe-2;
+        }
+
+        .tab-next-button--shown {
+            @apply opacity-100 cursor-pointer w-8 ps-2;
+        }
+    }
+
+    > div:last-child {
+        @apply flex-grow overflow-hidden;
+    }
+
+    .tabs-items {
+        @apply relative overflow-x-auto overflow-y-hidden select-none whitespace-nowrap ltr:pe-2 rtl:ps-2;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE 10+ */
+
+        div {
+            @apply px-0.5 inline-block duration-300;
+
+            span {
+                @apply font-medium px-2 text-primary text-opacity-80 relative hover:text-opacity-100 hover:font-bold duration-200;
+            }
+
+            span::after {
+                content: '';
+                position: absolute;
+                bottom: -0.125rem;
+                background-color: currentColor;
+                border-radius: 2px;
+                opacity: 0;
+                height: 2px;
+                width: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                transition: height 0.3s, width 0.3s, opacity 0.3s, transform 0.3s, left 0.3s;
+                z-index: 1;
+            }
+        }
+
+        .tabs-item--active {
+            span {
+                @apply text-primary font-bold;
+            }
+
+            span::after {
+                width: 100%;
+                left: 0;
+                transform: translateX(0);
+                opacity: 1;
+                height: 2px;
+            }
+        }
+    }
+
+    .tabs-items::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+    }
+}

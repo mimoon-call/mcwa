@@ -1,0 +1,45 @@
+// tsconfig.client.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "composite": true,
+    "paths": {
+      "@client/*": ["src/client/*"],
+      "@components": ["src/client/shared/components"],
+      "@components/*": ["src/client/shared/components/*"],
+      "@client-constants": ["src/client/shared/constants"],
+      "@client-constants/*": ["src/client/shared/constants/*"],
+      "@helpers": ["src/client/shared/helpers"],
+      "@helpers/*": ["src/client/shared/helpers/*"],
+      "@hooks": ["src/client/shared/hooks"],
+      "@hooks/*": ["src/client/shared/hooks/*"],
+      "@models": ["src/client/shared/models"],
+      "@models/*": ["src/client/shared/models/*"],
+      "@services": ["src/client/shared/services"],
+      "@services/*": ["src/client/shared/services/*"],
+      "@server/*": ["src/server/*"],
+      "@server-constants": ["src/server/constants"],
+      "@server-services": ["src/server/services"]
+    },
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "jsx": "react",
+    "esModuleInterop": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "typeRoots": ["src/client/types", "./node_modules/@types"]
+  },
+  "include": ["src/client/**/*.ts", "src/client/**/*.d.ts", "src/client/**/*.{tsx,jsx}"]
+}

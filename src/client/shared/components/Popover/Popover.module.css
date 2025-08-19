@@ -1,0 +1,54 @@
+/* Popover.module.css */
+.popover {
+    @keyframes zoomIn {
+        from {
+            transform: scale(0.5);
+            opacity: 0.5;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes zoomDown {
+        from {
+            transform: scaleY(0.5);
+            opacity: 0.3;
+        }
+        to {
+            transform: scaleY(1);
+            opacity: 1;
+        }
+    }
+
+    .activator {
+        @apply relative flex items-center justify-center max-w-fit disabled:text-slate-600;
+        cursor: pointer;
+        
+        &:before {
+            content: '';
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            position: absolute;
+            background:transparent;
+            z-index:10;
+        }
+
+        &.disabled {
+            @apply cursor-default;
+        }
+    }
+
+    .content {
+        @apply fixed bg-slate-50 shadow-xl rounded-md flex flex-col overflow-hidden min-w-[180px] max-w-[90vw] max-h-[90vh] select-none;
+        animation: zoomIn 0.3s ease-out;
+
+        &.fit {
+            animation: zoomDown 0.3s ease-out;
+            transform-origin: top;
+        }
+    }
+}

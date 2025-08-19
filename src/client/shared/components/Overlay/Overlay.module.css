@@ -1,0 +1,63 @@
+/* OverlayModal.module.css - Tailwind + Nested CSS (PostCSS-compatible) */
+
+/* Overlay backdrop */
+.overlay {
+    @apply fixed inset-0 flex transition-opacity duration-500 ease-in-out bg-black bg-opacity-70;
+}
+
+/* Modal container base */
+.modal {
+    @apply absolute top-1/2 left-1/2 m-auto flex flex-col overflow-hidden max-w-full max-h-screen transition-transform duration-500 ease-in-out rounded-sm;
+    transform: translate(-50%, -50%) scale(0.7);
+}
+
+.modal__content {
+    @apply shadow-lg;
+}
+
+/* Modal sizes using OverlayEnum */
+.sm {
+    @apply w-[512px] min-h-[200px] max-w-[95vw] max-h-[95vh];
+}
+
+.md {
+    @apply w-[900px] h-[600px] max-w-[95vw] max-h-[95vh];
+}
+
+.lg {
+    @apply w-[1024px] h-[800px] max-w-[95vw] max-h-[95vh];
+}
+
+.xl {
+    @apply w-[1280px] h-[1000px] max-w-[95vw] max-h-[95vh];
+}
+
+.fit {
+    @apply w-fit h-fit min-w-[300px] min-h-[100px];
+}
+
+.full {
+    @apply w-[95vw] h-[95vh];
+}
+
+/* Optional fit-height modifier */
+.fit-height {
+    @apply h-fit max-h-[95vh];
+}
+
+/* Responsive mobile modal */
+@media (max-width: 860px) {
+    .modal {
+        @apply fixed bottom-0 left-0 right-0 top-auto w-screen max-h-screen rounded-none shadow-lg overflow-hidden;
+        transform: translate(0, 0) scale(1) !important;
+    }
+
+    .fit-height {
+        @apply pb-8;
+    }
+}
+
+/* Close button */
+.modal__close-button {
+    @apply absolute top-2 cursor-pointer ltr:right-2 rtl:left-2;
+}

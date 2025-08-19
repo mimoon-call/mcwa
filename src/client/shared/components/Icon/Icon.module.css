@@ -1,0 +1,17 @@
+/* Icon.module.css */
+.icon-svg {
+    @apply p-[0.125rem] self-center;
+    aspect-ratio: 1 / 1 !important;
+}
+
+.icon-svg--clickable {
+    @apply cursor-pointer opacity-90 transition-opacity duration-500;
+}
+
+.icon-svg--clickable:hover {
+    @apply opacity-100;
+}
+
+.icon-svg--loading {
+    @apply animate-spin;
+}

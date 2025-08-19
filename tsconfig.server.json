@@ -1,0 +1,39 @@
+// tsconfig.server.json
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "ESNext",
+    "target": "ES2020",
+    "lib": ["ES2015", "ES2020", "DOM"],
+    "jsx": "react-jsx",
+    "rootDir": "src",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "composite": true,
+    "typeRoots": ["src/server/types", "./node_modules/@types"],
+    "baseUrl": ".",
+    "paths": {
+      "@client/*": ["src/client/*"],
+      "@components": ["src/client/shared/components"],
+      "@components/*": ["src/client/shared/components/*"],
+      "@client-constants": ["src/client/shared/constants"],
+      "@client-constants/*": ["src/client/shared/constants/*"],
+      "@helpers": ["src/client/shared/helpers"],
+      "@helpers/*": ["src/client/shared/helpers/*"],
+      "@hooks": ["src/client/shared/hooks"],
+      "@hooks/*": ["src/client/shared/hooks/*"],
+      "@models": ["src/client/shared/models"],
+      "@models/*": ["src/client/shared/models/*"],
+      "@services": ["src/client/shared/services"],
+      "@services/*": ["src/client/shared/services/*"],
+      "@server/*": ["src/server/*"],
+      "@server-constants": ["src/server/constants"],
+      "@server-services": ["src/server/services"]
+    }
+  },
+  "rootDir": "src",
+  "include": ["src/**/*"]
+}

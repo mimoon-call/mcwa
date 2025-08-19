@@ -1,0 +1,69 @@
+import type { ModalRef } from '@components/Modal/Modal.types';
+import type { StepperModalProps } from '@components/StepperModal/StepperModal.types';
+import { OverlayEnum } from '@components/Overlay/Overlay.enum';
+import React, { forwardRef, useState } from 'react';
+import StepperModal from '@components/StepperModal/StepperModal';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@client/store';
+import { instanceQr, searchInstance } from '@client/pages/Instance/store/instance.slice';
+import ServerError from '@services/http/server-error';
+import TextField from '@components/Fields/TextField/TextField';
+import { RegexPattern } from '@client-constants';
+
+const AddInstanceModal = forwardRef<ModalRef>((_props, ref) => {
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [qrData, setQrData] = useState<string | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const addInstanceQr = async () => {
+    if (!phoneNumber) {
+      throw new ServerError('Phone number is required');
+    }
+
+    const res = await dispatch(instanceQr(phoneNumber));
+    setQrData(res.payload as string);
+  };
+
+  const InstancePhone = (
+    <div className="py-4">
+      <TextField
+        name="phoneNumber"
+        label="INSTANCE.PHONE_NUMBER"
+        value={phoneNumber}
+        rules={{ required: [true], regex: [/^972\d{9}$/, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
+        pattern={RegexPattern.PHONE_INPUT}
+        onChange={setPhoneNumber}
+      />
+    </div>
+  );
+
+  const InstanceQr = qrData ? (
+    <div className="flex flex-col items-center justify-center h-full gap-2 pb-4 pt-8">
+      <h1 className="text-2xl font-semibold">
+        Scan QR Code for <code>{phoneNumber}</code>
+      </h1>
+      <img className="h-72 w-72 aspect-square" src={qrData} alt="WhatsApp QR for ${number}" />
+      <p className="font-medium">Open WhatsApp → Menu → Linked Devices → Link a Device</p>
+    </div>
+  ) : null;
+
+  const steps: StepperModalProps['steps'] = [
+    { title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr },
+    { component: InstanceQr },
+  ];
+
+  return (
+    <StepperModal
+      ref={ref}
+      submitText="GENERAL.CLOSE"
+      steps={steps}
+      size={OverlayEnum.SM}
+      hideContentDivider={true}
+      closeCallback={async () => dispatch(searchInstance({}))}
+    />
+  );
+});
+
+AddInstanceModal.displayName = 'AddInstanceModal';
+
+export default AddInstanceModal;

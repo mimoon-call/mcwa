@@ -1,0 +1,6 @@
+/* src/client/shared/components/TextField/TextField.module.css */
+.text-field {
+    @apply bg-white text-lg py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 form-error:border-red-700 form-error:ring-red-600 form-error:ring-opacity-100 form-error:bg-red-50;
+
+    transition: background-color ease-in-out 0.2s, border-color ease-in-out 0.2s;
+}
