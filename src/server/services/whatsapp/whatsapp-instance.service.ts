@@ -838,10 +838,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startKeepAlive() {
     this.stopKeepAlive();
 
-    this.keepAliveInterval = setInterval(() => {
+    this.keepAliveInterval = setInterval(async () => {
       try {
         if (this.socket?.user && this.socket.user.id) {
-          this.socket.sendPresenceUpdate('available', this.socket.user.id);
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
+
+          // Check if socket is healthy and update status code if needed
+          if (this.connected && this.appState?.statusCode !== 200) {
+            await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+          }
         }
       } catch (error) {
         this.log('error', `Keep-alive failed:`, error);
@@ -857,11 +862,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startHealthCheck() {
     this.stopHealthCheck();
 
-    this.healthCheckInterval = setInterval(() => {
+    this.healthCheckInterval = setInterval(async () => {
       try {
         // Try to send a presence update to check if connection is still alive
         if (this.socket?.user?.id) {
-          this.socket.sendPresenceUpdate('available', this.socket.user.id);
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
+
+          // Check if socket is healthy and update status code if needed
+          if (this.connected && this.appState?.statusCode !== 200) {
+            await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+          }
         }
       } catch (error) {
         this.log('error', 'Health check failed, connection may be dead:', error);
@@ -1240,10 +1250,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       if (refreshSuccess) {
         this.log('info', '✅ Session refresh successful, MAC error resolved');
 
-        if (this.appState?.statusCode !== 200) {
-          this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
-        }
-
         return true;
       }
 
@@ -1316,10 +1322,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (this.socket.user?.id) {
           this.log('info', '🔄 Session synchronization successful');
 
-          if (this.appState?.statusCode !== 200) {
-            this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
-          }
-
           return true;
         }
       }
@@ -1350,49 +1352,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     } catch (error) {
       this.log('error', '❌ Error during manual MAC error recovery:', error);
       return false;
-    }
-  }
-
-  /**
-   * Force session cleanup and prepare for re-registration
-   * Use this when MAC errors persist and automatic recovery fails
-   */
-  async forceSessionCleanup(): Promise<void> {
-    this.log('warn', '🧹', 'Force session cleanup initiated');
-
-    try {
-      // Stop all background processes
-      this.stopKeepAlive();
-      this.stopHealthCheck();
-
-      // Logout if socket is valid
-      if (this.socket && typeof this.socket.logout === 'function') {
-        try {
-          await this.socket.logout();
-          this.log('info', '✅ Successfully logged out during cleanup');
-        } catch (logoutError: any) {
-          if (logoutError?.output?.payload?.message === 'Connection Closed') {
-            this.log('debug', 'Socket already closed during cleanup');
-          } else {
-            this.log('warn', 'Logout failed during cleanup:', logoutError);
-          }
-        }
-      }
-
-      // Clear session data
-      await this.cleanupAndRemoveTempDir();
-      await this.deleteAppAuth();
-
-      // Reset instance state
-      this.connected = false;
-      this.socket = null;
-      this.saveCreds = null;
-      this.appState = null;
-
-      this.log('info', '✅ Session cleanup completed, ready for re-registration');
-    } catch (error) {
-      this.log('error', '❌ Error during force session cleanup:', error);
-      throw error;
     }
   }
 
