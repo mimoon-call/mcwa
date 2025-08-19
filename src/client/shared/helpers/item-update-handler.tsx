@@ -20,7 +20,7 @@ export const itemUpdateHandler = <T extends object>(idKey: keyof T, updateCallba
       clearTimeout(timeoutMap.get(timeoutKey));
 
       // Create temporary marked data with JSX span
-      const tempData = { [idKey]: data[idKey], [fieldKey]: <span className="text-red-800">{String(fieldValue)}</span> } as Partial<T>;
+      const tempData = { [idKey]: data[idKey], [fieldKey]: <span className="text-red-800 font-semibold">{String(fieldValue)}</span> } as Partial<T>;
       updateCallback(tempData);
 
       const timeoutId = setTimeout(() => {
