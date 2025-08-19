@@ -7,8 +7,10 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies - npm will auto-detect correct rollup binary
-RUN npm ci
+# Install dependencies and force reinstall rollup to get correct binary
+RUN npm ci && \
+    npm uninstall rollup && \
+    npm install rollup
 
 # Copy source code
 COPY . .
@@ -24,8 +26,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies - npm will auto-detect correct rollup binary
-RUN npm ci --only=production
+# Install production dependencies and ensure rollup binary is available
+RUN npm ci --only=production && \
+    npm install rollup
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
