@@ -85,6 +85,7 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   onOutgoingMessage: WAMessageOutgoingCallback;
   onMessageBlocked: WAMessageBlockCallback;
   // Callbacks for instance events
+  onRegistered: (phoneNumber: string) => Promise<unknown> | unknown;
   onReady: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
   onDisconnect: (phoneNumber: string, reason: string) => Promise<unknown> | unknown;
   onError: (phoneNumber: string, error: any) => Promise<unknown> | unknown;

@@ -6,12 +6,12 @@ import {
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
   GET_INSTANCE_CONVERSATIONS,
+  INSTANCE_REFRESH,
   SEARCH_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey, WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
-import logger from '@server/helpers/logger';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
@@ -101,19 +101,35 @@ export const instanceService = {
   },
 
   [DELETE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
+    const instance = wa.getInstance(phoneNumber);
+
+    await instance?.remove(true);
     await WhatsAppAuth.deleteOne({ phoneNumber });
     await WhatsAppKey.deleteMany({ phoneNumber });
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
-    const instances = wa.getAllInstances();
-    const instance = instances.find((instance) => instance.phoneNumber === phoneNumber);
+    const instance = wa.getInstance(phoneNumber);
 
     if (!instance) {
-      throw new ServerError('Instance not found');
+      throw new ServerError('INSTANCE.NOT_FOUND');
     }
 
     const isActive = !!instance.get('isActive');
-    await (isActive ? instance.disable : instance.enable)();
+    if (isActive) {
+      await instance.disable();
+    } else {
+      await instance.enable();
+    }
+  },
+
+  [INSTANCE_REFRESH]: async (phoneNumber: string): Promise<void> => {
+    const instance = wa.getInstance(phoneNumber);
+
+    if (!instance) {
+      throw new ServerError('INSTANCE.NOT_FOUND');
+    }
+
+    await instance.refresh();
   },
 };

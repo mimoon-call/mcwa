@@ -53,12 +53,16 @@ export const wa = new WhatsappWarmService({
 (async () => {
   await MongoService.connect();
 
-  wa.onSchedule((data) => {
-    app.socket.broadcast(InstanceEventEnum.NEXT_WARM_AT, data);
+  wa.onSchedule((nextWarmAt) => {
+    app.socket.broadcast(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, { nextWarmAt });
   });
 
   wa.onConversationEnd((data) => {
-    app.socket.broadcast(InstanceEventEnum.WARM_END, data);
+    app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_END, data);
+  });
+
+  wa.onRegister((phoneNumber) => {
+    app.socket.broadcast(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber });
   });
 
   wa.onReady(() => {

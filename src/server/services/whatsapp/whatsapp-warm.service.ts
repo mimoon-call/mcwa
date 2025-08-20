@@ -1,4 +1,10 @@
-import type { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
+import type {
+  WAAppAuth,
+  WAMessageIncoming,
+  WAMessageIncomingCallback,
+  WAMessageIncomingRaw,
+  WAMessageOutgoingCallback,
+} from './whatsapp-instance.type';
 import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type';
 import { WhatsappAiService } from './whatsapp.ai';
 import { LRUCache } from 'lru-cache';
@@ -554,7 +560,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.nextCheckUpdate = callback;
   }
 
-  onConversationEnd(callback?: (data: any) => unknown) {
+  onConversationEnd(callback?: (data: WAAppAuth<WAPersona>) => unknown) {
     this.conversationEndCallback = callback;
   }
 

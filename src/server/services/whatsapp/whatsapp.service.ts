@@ -41,6 +41,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
   // Global callbacks
   private readonly messageCallback: WAMessageIncomingCallback[] = [];
   private readonly updateCallback: WAServiceConfig<T>['onUpdate'][] = [];
+  private registeredCallback?: WAServiceConfig<T>['onRegistered'];
   private readyCallback?: () => Promise<void> | void;
   private clientRemovalCallback?: (phoneNumber: string) => void;
 
@@ -218,16 +219,18 @@ export class WhatsappService<T extends object = Record<never, never>> {
       updateAppKey: this.updateAppKey,
       onIncomingMessage: this.incomingMessageCallback,
       onOutgoingMessage: this.outgoingMessageCallback,
-      onReady: (instance) => {
-        this.instances.set(instance.phoneNumber, instance);
-
-        return this.readyCallback?.();
-      },
+      onReady: this.readyCallback,
+      onRegistered: this.registeredCallback,
       onUpdate: (state: Partial<WAAppAuth<T>>) => Promise.allSettled(this.updateCallback.map((cb) => cb?.(state))),
       onRemove: (phoneNumber) => this.instances.delete(phoneNumber),
     };
 
-    return new WhatsappInstance(phoneNumber, config);
+    const instance = new WhatsappInstance(phoneNumber, config);
+
+    // Store the instance immediately when created
+    this.instances.set(phoneNumber, instance);
+
+    return instance;
   }
 
   async addInstanceQR(phoneNumber: string): Promise<string> {
@@ -315,6 +318,10 @@ export class WhatsappService<T extends object = Record<never, never>> {
         callback?.();
       }, 5000);
     };
+  }
+
+  onRegister(callback: (phoneNumber: string) => Promise<void> | void) {
+    this.registeredCallback = callback;
   }
 
   onClientRemoval(callback: (number: string) => void) {

@@ -33,6 +33,7 @@
     "ACTIVE": "Active",
     "DISABLE": "Disable",
     "ENABLE": "Enable",
+    "REFRESH": "Refresh",
     "CREATED_AT": "Created at",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?"
   },
@@ -49,7 +50,8 @@
     "OUTGOING_COUNT": "Outgoing counter",
     "INCOMING_COUNT": "Incoming counter",
     "WARM_END_TOAST": "Warm conversation between {{phoneNumber1}} to {{phoneNumber2}} ended.\nTotal messages: {{totalMessages}}, Total sent: {{sentMessages}}",
-    "NEXT_WARM_AT": "Warm session is over, the next session will start at {{nextWarmAt}}"
+    "NEXT_WARM_AT": "Warm session is over, the next session will start at {{nextWarmAt}}",
+    "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed"
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

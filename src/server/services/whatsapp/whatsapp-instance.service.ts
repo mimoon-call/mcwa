@@ -65,6 +65,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private readonly onDisconnect: (reason: string) => Promise<unknown> | unknown;
   private readonly onError: (error: any) => Promise<unknown> | unknown;
   private readonly onUpdate: (data: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
+  private readonly onRegister: () => Promise<unknown> | unknown;
 
   public readonly phoneNumber: string;
   public connected: boolean = false;
@@ -135,6 +136,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       return config.onReady?.(this);
     };
+    this.onRegister = () => config.onRegistered?.(this.phoneNumber);
   }
 
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
@@ -486,6 +488,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           // Check if registration is complete (has registered: true or me object) - EXACTLY like old version
           if (creds.registered || creds.me) {
             this.log('info', 'Registration complete, saving to database');
+            this.onRegister();
 
             await handleFileChange(true);
             hasBeenSavedToDatabase = true;
@@ -979,6 +982,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             this.log('error', '🚫 Authentication/Authorization error during registration, skipping reconnection');
           } else if (shouldReconnect) {
             this.log('info', 'Registration completed but connection closed - attempting to restore connection...');
+            this.onRegister();
 
             try {
               await this.connect();
@@ -1004,7 +1008,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
 
     if (this.appState?.isActive === false) {
-      throw new Error('🚫 Instance is not active');
+      return;
     }
 
     this.log('info', 'Restoring session...');
@@ -1066,17 +1070,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         throw new Error('Failed to restore session');
       }
     } catch (error) {
-      // If restoration fails, check if this is a new/incomplete session
       this.appState = await this.getAppAuth();
 
       if (!this.appState || !this.appState.creds || !this.appState.creds.me) {
         this.log('info', 'Session appears to be incomplete or new, removing from active instances');
-        // Clean up incomplete session and remove from active instances
         await this.handleIncompleteSession();
-        return; // Don't throw error, just return
+
+        return;
       }
 
-      // Also check if the current temp files indicate incomplete registration
       try {
         const credsPath = path.join(this.TEMP_DIR, 'creds.json');
         const credsData = await readFile(credsPath, 'utf8');
@@ -1085,15 +1087,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (!creds.registered && !creds.me) {
           this.log('info', 'Current session files indicate incomplete registration');
           await this.handleIncompleteSession();
-          return; // Don't throw error, just return
+
+          return;
         }
       } catch (_error) {
         this.log('info', 'Could not read current session files, assuming incomplete');
         await this.handleIncompleteSession();
-        return; // Don't throw error, just return
+
+        return;
       }
 
-      // If we get here, it's a different type of error, re-throw it
       throw error;
     }
   }
@@ -1256,27 +1259,18 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       // If simple refresh fails, try a more aggressive approach
       this.log('warn', '🔄 Simple refresh failed, attempting session reconnection...');
 
-      // Disconnect and reconnect the socket
-      if (this.socket) {
-        try {
-          this.log('debug', 'Logging out socket for reconnection...');
-          await this.socket.logout();
-        } catch (logoutError: any) {
-          if (logoutError?.output?.payload?.message !== 'Connection Closed') {
-            this.log('debug', 'Logout during refresh failed:', logoutError);
-          }
-        }
-      }
-
-      // Clear socket and attempt restore
-      this.socket = null;
-      this.connected = false;
-
-      // Wait a bit before attempting restore
-      this.log('debug', 'Waiting 2 seconds before restore attempt...');
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Try to reconnect without logging out first
+      this.log('info', '🔄 Attempting to reconnect without logout...');
 
       try {
+        // Clear socket reference but keep credentials
+        this.socket = null;
+        this.connected = false;
+
+        // Wait a bit before attempting restore
+        this.log('debug', 'Waiting 2 seconds before restore attempt...');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
         this.log('info', '🔄 Attempting session restore...');
         await this.connect();
         this.log('info', '✅ Session reconnection successful after MAC error');
@@ -1284,17 +1278,34 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       } catch (restoreError) {
         this.log('error', '❌ Session reconnection failed after MAC error:', restoreError);
 
-        // If restore fails, this might indicate corrupted session data
-        // Log this for manual intervention
-        this.log('error', '🚨 Session appears to be corrupted, may require re-registration');
+        // If restore fails, try one more time with a fresh socket
+        this.log('info', '🔄 First restore failed, trying with fresh socket...');
+        try {
+          this.socket = null;
+          this.connected = false;
 
-        // Update status to indicate session issues
-        await this.update({
-          statusCode: 500,
-          errorMessage: `MAC/Decryption error - session corrupted: ${errorMessage}`,
-        } as Partial<WAAppAuth<T>>);
+          // Wait a bit longer before second attempt
+          await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        return false;
+          await this.connect();
+          this.log('info', '✅ Session reconnection successful on second attempt');
+          return true;
+        } catch (secondRestoreError) {
+          this.log('error', '❌ Second restore attempt also failed:', secondRestoreError);
+
+          // Clear everything and try to register again
+          this.socket = null;
+          this.connected = false;
+
+          await this.update({
+            statusCode: 200,
+            errorMessage: 'Auto disabled, Please re-authenticate',
+          } as Partial<WAAppAuth<T>>);
+
+          await this.disable();
+
+          return false;
+        }
       }
     } catch (refreshError) {
       this.log('error', '❌ Failed to handle decryption error:', refreshError);
@@ -1467,7 +1478,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   async disable() {
     await this.update({ isActive: false } as WAAppAuth<T>);
-    await this.disconnect();
+    await this.disconnect(false);
   }
 
   async update(data: Partial<WAAppAuth<T>>): Promise<void> {

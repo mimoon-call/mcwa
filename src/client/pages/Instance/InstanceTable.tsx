@@ -10,7 +10,13 @@ import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
-import { searchInstance, instanceActions, deleteInstance, toggleInstanceActivate } from '@client/pages/Instance/store/instance.slice';
+import {
+  searchInstance,
+  instanceActions,
+  deleteInstance,
+  toggleInstanceActivate,
+  refreshInstance,
+} from '@client/pages/Instance/store/instance.slice';
 import { INSTANCE_LOADING, INSTANCE_SEARCH_DATA, INSTANCE_SEARCH_PAGINATION } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
@@ -99,37 +105,53 @@ const InstanceTable = () => {
     );
 
     const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
+
     const warmToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
 
       toast.success(text);
     };
-    const nextWarmToast = (nextAt: Date | string) => {
+
+    const nextWarmToast = ({ nextAt }: { nextAt: Date | string }) => {
       const nextWarmAt = dayjs(nextAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
       const text = t('INSTANCE.NEXT_WARM_AT', { nextWarmAt }).toString();
 
       toast.success(text);
     };
 
-    socket?.on(InstanceEventEnum.WARM_END, warmToast);
-    socket?.on(InstanceEventEnum.NEXT_WARM_AT, nextWarmToast);
+    const registerToast = ({ phoneNumber }: InstanceItem) => {
+      const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber }).toString();
+      modelRef.current?.close();
+      toast.success(text);
+    };
+
+    socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmToast);
+    socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
+    socket?.on(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
 
     return () => {
-      socket?.off(InstanceEventEnum.WARM_END, warmToast);
-      socket?.off(InstanceEventEnum.NEXT_WARM_AT, nextWarmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
     };
   }, [dispatch]);
 
-  const onActiveToggle = async (item: InstanceItem) => await dispatch(toggleInstanceActivate(item.phoneNumber));
+  const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
+  const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
 
   const customActions: TableProps<InstanceItem>['customActions'] = [
-    // {
-    //   label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),
-    //   iconName: ({ isActive }) => (isActive ? 'svg:wifi-disconnected' : 'svg:wifi'),
-    //   onClick: onActiveToggle,
-    // },
+    {
+      label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),
+      iconName: ({ isActive }) => (isActive ? 'svg:wifi-disconnected' : 'svg:wifi'),
+      onClick: onActiveToggle,
+    },
+    {
+      label: 'GENERAL.REFRESH',
+      iconName: 'svg:refresh',
+      onClick: onRefresh,
+    },
   ];
 
   return (

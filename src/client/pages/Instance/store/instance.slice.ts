@@ -9,6 +9,7 @@ import {
   DELETE_INSTANCE,
   INSTANCE_ERROR,
   INSTANCE_LOADING,
+  INSTANCE_REFRESH,
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_PAGINATION,
   SEARCH_INSTANCE,
@@ -71,6 +72,11 @@ const toggleInstanceActivate = createAsyncThunk(
   }
 );
 
+const refreshInstance = createAsyncThunk(`${StoreEnum.instance}/${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
+  await Http.post<void>(`${StoreEnum.instance}/${INSTANCE_REFRESH}/${phoneNumber}`);
+  await dispatch(searchInstance({}));
+});
+
 const instanceSlice = createSlice({
   name: StoreEnum.instance,
   initialState,
@@ -111,4 +117,4 @@ const instanceSlice = createSlice({
 export const { actions: instanceActions } = instanceSlice;
 export const { updateInstance } = instanceSlice.actions;
 export default instanceSlice.reducer;
-export { searchInstance, instanceQr, deleteInstance, toggleInstanceActivate };
+export { searchInstance, instanceQr, deleteInstance, toggleInstanceActivate, refreshInstance };

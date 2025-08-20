@@ -6,6 +6,7 @@ import {
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
   GET_INSTANCE_CONVERSATIONS,
+  INSTANCE_REFRESH,
   SEARCH_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { instanceController } from '@server/api/instance/instance.controller';
@@ -28,5 +29,6 @@ instanceRoute.get(`/${ADD_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequi
 instanceRoute.delete(`/${DELETE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[DELETE_INSTANCE]));
 
 instanceRoute.post(`/${ACTIVE_TOGGLE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[ACTIVE_TOGGLE_INSTANCE]));
+instanceRoute.post(`/${INSTANCE_REFRESH}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[INSTANCE_REFRESH]));
 
 export default instanceRoute;

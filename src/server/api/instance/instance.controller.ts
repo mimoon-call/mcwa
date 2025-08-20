@@ -15,6 +15,7 @@ import {
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
   GET_INSTANCE_CONVERSATIONS,
+  INSTANCE_REFRESH,
   SEARCH_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
@@ -76,8 +77,14 @@ export const instanceController = {
 
   [ACTIVE_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
     const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
-
     await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
+
+    res.send();
+  },
+
+  [INSTANCE_REFRESH]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+    await instanceService[INSTANCE_REFRESH](phoneNumber);
 
     res.send();
   },
