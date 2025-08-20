@@ -25,6 +25,7 @@ export class WhatsappAiService {
 
   // Conversation
   /** Pick a lightweight topic-hint based on personas + recent chat */
+  /** Pick a lightweight topic-hint based on personas + recent chat (no books) */
   private buildTopicHint(a: WAPersona, b: WAPersona, prev?: WAConversation[]): string {
     const hasKidsA = (a.children?.length ?? 0) > 0;
     const hasKidsB = (b.children?.length ?? 0) > 0;
@@ -34,39 +35,40 @@ export class WhatsappAiService {
       a.jobTitle?.trim().toLowerCase() && b.jobTitle?.trim().toLowerCase() && a.jobTitle.trim().toLowerCase() === b.jobTitle.trim().toLowerCase();
 
     const likesNightlife = (p: WAPersona) => (p.hobbies || []).concat(p.interests || []).some((x) => /night|club|party|dj|bar/i.test(x));
-
     const eitherNightlife = likesNightlife(a) || likesNightlife(b);
 
-    // very light de-dup vs. last 6 msgs
+    // dedupe vs last 8 msgs
     const recent = (prev || [])
-      .slice(-6)
+      .slice(-8)
       .map((m) => m.text.toLowerCase())
       .join(' ');
     const mentioned = (k: string) => recent.includes(k);
 
-    const options: string[] = [];
+    // Common, low-friction seeds (short, everyday)
+    const seeds: Array<string> = [];
 
-    if (bothHaveKids && !mentioned('birthday')) {
-      options.push('kids_birthday');
-    }
-    if (eitherNightlife && !mentioned('club') && !mentioned('bar')) {
-      options.push('night_out');
-    }
-    // Hetero meet-partner nudge (you can relax this if you prefer)
+    if (bothHaveKids && !mentioned('birthday') && !mentioned('party')) seeds.push('kids_birthday');
+    if (eitherNightlife && !mentioned('club') && !mentioned('bar')) seeds.push('night_out');
     if (!mentioned('date') && ((a.gender === 'male' && b.gender === 'female') || (a.gender === 'female' && b.gender === 'male'))) {
-      options.push('meet_partner');
+      seeds.push('meet_partner');
     }
-    if (!mentioned('book')) {
-      options.push('books');
-    }
-    if (sameJob && !mentioned('project') && !mentioned('deadline')) {
-      options.push('work_colleagues');
-    }
+    if (sameJob && !mentioned('project') && !mentioned('deadline')) seeds.push('work_colleagues');
 
-    if (!options.length) return ''; // let the base prompt handle variety
+    // New generic everyday topics (books intentionally excluded)
+    if (!mentioned('coffee') && !mentioned('caf')) seeds.push('coffee_catchup');
+    if (!mentioned('traffic') && !mentioned('parking')) seeds.push('traffic_parking');
+    if (!mentioned('delivery') && !mentioned('package')) seeds.push('delivery_pickup');
+    if (!mentioned('phone') && !mentioned('battery')) seeds.push('phone_battery');
+    if (!mentioned('grocery') && !mentioned('shopping')) seeds.push('quick_groceries');
+    if ((hasKidsA || hasKidsB) && !mentioned('school')) seeds.push('school_pickup');
+    if (!mentioned('series') && !mentioned('episode')) seeds.push('tv_series');
+    if (!mentioned('gym') && !mentioned('workout')) seeds.push('quick_workout');
+
+    // If nothing suitable, leave empty so base prompt handles "small talk"
+    if (!seeds.length) return '';
 
     // light randomization
-    return options[Math.floor(Math.random() * options.length)];
+    return seeds[Math.floor(Math.random() * seeds.length)];
   }
 
   private weightedChoice(weights: Array<[len: number, weight: number]>): number {
@@ -209,6 +211,16 @@ Infer relationship, tone, and slang level from this context. Continue naturally 
     const orderJson = JSON.stringify(speakerOrder);
     const topicLine = topicHint ? `\n# TOPIC SEED (single thread, keep it casual)\nSeed topic key: "${topicHint}"\n` : '';
 
+    const rulesBlock = `
+# TOPIC VARIETY & RULES (STRICT)
+- Keep topics everyday and lightweight
+- Allowed seeds (examples): kids_birthday, night_out, meet_partner, work_colleagues,
+  coffee_catchup, traffic_parking, delivery_pickup, phone_battery, quick_groceries,
+  school_pickup, tv_series, quick_workout
+- Avoid niche hobbies, politics, or deep analysis
+- No book discussions unless it naturally appears in PREVIOUS CONTEXT (then keep it to a passing mention only)
+`.trim();
+
     return `
 Create a realistic WhatsApp-style conversation between two ${languageName} speakers, use only conversation at same language include names.
 
@@ -228,16 +240,7 @@ ${previousContext ? previousContext + '\n\n' : ''}Participants:
    - Hobbies: ${b.hobbies?.join(', ')}
 
 🎯 Language: ${languageName}
-${topicLine}# TOPIC VARIETY & RULES (STRICT)
-- Avoid weekend/travel unless the seed suggests it.
-- If seed = "kids_birthday": casually plan a child’s birthday (age-appropriate idea, venue or theme, cake/presents, short logistics).
-- If seed = "night_out": reference last night out or plan tonight (brief venue/area, vibe, quick time/ride detail).
-- If seed = "meet_partner": mention meeting a potential partner naturally (how met, quick impression, maybe a short plan to meet again).
-- If seed = "books": if someone asks or mentions reading, include ONE real, well-known book **title** and **author** (no invention).
-  - Use the common local title in ${languageName}; if none, use a natural transliteration.
-  - Keep it short: e.g., “קראת את ‘ספריית חצות’ של מאט הייג?” (or ${languageName} equivalent)
-  - If a recommendation is requested, give exactly one book.
-- If seed = "work_colleagues": chat about overlapping work: tiny detail like tool, deadline, feature, client name (generic), or quick favor.
+${topicLine}${rulesBlock}
 
 # NAME & PROPER NOUN LOCALIZATION (STRICT)
 - Convert ALL proper nouns from the persona details into ${languageName} script before using them in messages.
