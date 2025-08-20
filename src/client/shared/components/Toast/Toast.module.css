@@ -4,8 +4,7 @@
 }
 
 .toast {
-    @apply absolute ltr:-right-[150%] rtl:-left-[150%] transition-all duration-500 ease-in-out min-w-[400px] max-w-[80vw] opacity-0 flex gap-2;
-}
+    @apply absolute ltr:-right-[150%] rtl:-left-[150%] transition-all duration-500 ease-in-out sm:min-w-[80vh] lg:min-w-[500px] xl:min-w-[600px] max-w-[80vh] opacity-0 flex gap-2;}
 
 .toast:hover svg[role="button"] {
     @apply opacity-100;
@@ -20,7 +19,7 @@
 }
 
 .toast-progress {
-    @apply absolute left-1.5 bottom-1 w-[calc(100%-0.375rem)] h-1 bg-current rounded-full overflow-hidden;
+    @apply absolute left-1.5 bottom-1 max-w-[calc(100%-0.375rem*2)] h-1 bg-current rounded-full overflow-hidden;
     animation-name: shrink;
     animation-timing-function: linear;
     animation-fill-mode: forwards;

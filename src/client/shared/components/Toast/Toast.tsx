@@ -33,7 +33,7 @@ const MAX_VISIBLE = 3;
 const TRANSITION_DURATION = 500;
 
 const Item: React.FC<ToastItemProps> = (props) => {
-  const { id, content, y, top, bottom, duration = 3000, closeable = true, className, onRef } = props;
+  const { id, content, y, top, bottom, duration = 5000, closeable = true, className, onRef } = props;
   const [visible, setVisible] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
