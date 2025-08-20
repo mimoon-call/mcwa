@@ -25,8 +25,10 @@ const updateAppAuth = async <T extends object>(phoneNumber: string, data: Partia
     { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
   ).lean<WAAppAuth<T>>();
 
+  const hasNoPersona = !(result as any).name;
+
   // 2) background enrichment (don't await)
-  if ((result as any).name) {
+  if (hasNoPersona) {
     setImmediate(async () => {
       try {
         const ai = new WhatsappAiService();
