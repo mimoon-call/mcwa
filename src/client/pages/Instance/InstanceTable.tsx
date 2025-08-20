@@ -41,7 +41,7 @@ const InstanceTable = () => {
   } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const headers: TableHeaders<InstanceItem> = [
-    { title: 'INSTANCE.PHONE_NUMBER', value: 'phoneNumber', sortable: true },
+    { title: 'INSTANCE.PHONE_NUMBER', value: 'phoneNumber', sortable: true, searchable: true },
     {
       title: 'GENERAL.ACTIVE',
       value: 'isActive',

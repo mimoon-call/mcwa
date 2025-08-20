@@ -16,7 +16,9 @@ const unwrapHighlights = (element: HTMLElement) => {
 };
 
 const highlightMatch = (element: HTMLElement, search: string): boolean => {
-  const regex = new RegExp(`\\b(${escapeRegExp(search)})`, 'i');
+  // Remove word boundary restriction to search anywhere in the string
+  const regex = new RegExp(`(${escapeRegExp(search)})`, 'i');
+  
   const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
 
   while (walk.nextNode()) {
@@ -28,7 +30,8 @@ const highlightMatch = (element: HTMLElement, search: string): boolean => {
     const match = nodeValue.match(regex);
     if (match) {
       const matchedText = match[1];
-      const parts = nodeValue.split(new RegExp(`(\\b${escapeRegExp(matchedText)})`, 'i'));
+      // Split by the matched text to preserve case and create proper highlighting
+      const parts = nodeValue.split(new RegExp(`(${escapeRegExp(matchedText)})`, 'i'));
 
       const frag = document.createDocumentFragment();
       for (const part of parts) {
@@ -50,7 +53,10 @@ const highlightMatch = (element: HTMLElement, search: string): boolean => {
 };
 
 const highlightRow = (row: HTMLTableRowElement, search: string) => {
-  Array.from(row.children).forEach((cell) => {
+  // Only highlight cells that are marked as searchable
+  const searchableCells = row.querySelectorAll('[data-searchable="true"]');
+  
+  searchableCells.forEach((cell) => {
     highlightMatch(cell as HTMLElement, search);
   });
 };
@@ -101,10 +107,13 @@ export const useTableBody = (
     rowRefs.current[i] = el;
 
     if (el) {
-      rowTexts.current[i] = Array.from(el.children).map((cell) => (cell.textContent || '').toLowerCase());
+      const children = el.querySelectorAll('[data-searchable="true"]');
+      rowTexts.current[i] = Array.from(children).map((cell) => (cell.textContent || '').toLowerCase());
 
       el.onblur = () => {
-        Array.from(el.children).forEach((cell) => {
+        // Only clear highlights from searchable cells
+        const searchableCells = el.querySelectorAll('[data-searchable="true"]');
+        searchableCells.forEach((cell) => {
           unwrapHighlights(cell as HTMLElement);
         });
       };
@@ -123,9 +132,11 @@ export const useTableBody = (
         return;
       }
 
-      for (const cell of Array.from(row.children)) {
+      // Only clear highlights from searchable cells
+      const searchableCells = row.querySelectorAll('[data-searchable="true"]');
+      searchableCells.forEach((cell) => {
         unwrapHighlights(cell as HTMLElement);
-      }
+      });
     });
   };
 
@@ -137,17 +148,32 @@ export const useTableBody = (
     }
 
     const searchValue = searchText.current.toLowerCase();
-    const matches: { index: number; firstMatchWordIndex: number }[] = [];
+    const matches: { index: number; firstMatchWordIndex: number; matchPosition: number }[] = [];
 
     rowTexts.current.forEach((text, index) => {
-      const wordIndex = text.findIndex((word) => word.startsWith(searchValue) || word.split(' ').some((val) => val.startsWith(searchValue)));
-
-      if (wordIndex !== -1) {
-        matches.push({ index, firstMatchWordIndex: wordIndex });
-      }
+      text.forEach((word, wordIndex) => {
+        // Use regex to search anywhere in the string, not just at the beginning
+        const regex = new RegExp(escapeRegExp(searchValue), 'i');
+        const match = word.match(regex);
+        
+        if (match) {
+          matches.push({ 
+            index, 
+            firstMatchWordIndex: wordIndex, 
+            matchPosition: match.index || 0 
+          });
+        }
+      });
     });
 
-    matches.sort((a, b) => a.firstMatchWordIndex - b.firstMatchWordIndex);
+    // Sort by match position (earlier matches first) and then by word index
+    matches.sort((a, b) => {
+      if (a.matchPosition !== b.matchPosition) {
+        return a.matchPosition - b.matchPosition;
+      }
+      return a.firstMatchWordIndex - b.firstMatchWordIndex;
+    });
+    
     clearHighlights();
 
     if (matches.length > 0) {

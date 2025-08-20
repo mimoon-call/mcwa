@@ -163,7 +163,7 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
 
         if (header.component) {
           return (
-            <td key={headerIndex} colSpan={colSpan} data-value={header.value}>
+            <td key={headerIndex} colSpan={colSpan} data-value={header.value} data-searchable={header.searchable}>
               <div className={cn('px-1 py-2', columnClass)} style={header.style}>
                 <header.component item={item} />
               </div>
@@ -175,7 +175,7 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
 
         if (React.isValidElement(value)) {
           return (
-            <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style}>
+            <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style} data-searchable={header.searchable}>
               {value}
             </td>
           );
@@ -184,7 +184,7 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
         const formattedValue = header.valueFormatter ? header.valueFormatter(item[value]) : value;
 
         return (
-          <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style}>
+          <td key={headerIndex} className={columnClass} colSpan={colSpan} style={header.style} data-searchable={header.searchable}>
             {formattedValue}
           </td>
         );
@@ -325,7 +325,7 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
 
   return (
     <div className={cn('overflow-x-auto', styles['data-table'], className, props.loading && styles['data-table--loading'])}>
-      <div ref={tableRef}>
+      <div ref={tableRef} className="h-full">
         <table className={cn('flex-grow', props.showGrid && styles['data-table--grid'])}>
           <Header headers={headers} sort={props.pageSort} draggable={props.draggable} actions={actions} onSort={props.onSort} />
 
