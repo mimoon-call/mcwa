@@ -32,8 +32,7 @@
     "IMPORT": "ייבא",
     "ACTIVE": "פעיל",
     "CREATED_AT": "נוצר בתאריך",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?",
-    "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה, סה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}"
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",
@@ -46,7 +45,8 @@
     "ERROR_MESSAGE": "הודעת שגיאה",
     "DAILY_MESSAGE_COUNT": "מונה יומי",
     "OUTGOING_COUNT": "הודעות יוצאות",
-    "INCOMING_COUNT": "הודעות נכנסות"
+    "INCOMING_COUNT": "הודעות נכנסות",
+    "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה, סה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",
