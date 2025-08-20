@@ -35,6 +35,7 @@
     "DISABLE": "Disable",
     "ENABLE": "Enable",
     "REFRESH": "Refresh",
+    "WARNING": "Warning",
     "CREATED_AT": "Created at",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?",
     "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted"
@@ -53,7 +54,8 @@
     "INCOMING_COUNT": "Incoming counter",
     "WARM_END_TOAST": "Warm conversation between {{phoneNumber1}} to {{phoneNumber2}} ended.\nTotal messages: {{totalMessages}}, Total sent: {{sentMessages}}",
     "NEXT_WARM_AT": "Warm session is over, the next session will start at {{nextWarmAt}}",
-    "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed"
+    "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed",
+    "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication."
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

@@ -81,12 +81,6 @@ const InstanceTable = () => {
     navigate(`/instance/${item?.phoneNumber}`);
   };
 
-  const onDelete = async (item: InstanceItem) =>
-    await openDeletePopup({
-      callback: async () => await dispatch(deleteInstance(item.phoneNumber)),
-      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: item.phoneNumber }],
-    });
-
   useEffect(() => {
     if (!instanceList) {
       dispatch(searchInstance({ page: {} }));
@@ -138,6 +132,11 @@ const InstanceTable = () => {
     };
   }, [dispatch]);
 
+  const onDelete = async (item: InstanceItem) =>
+    await openDeletePopup({
+      callback: async () => await dispatch(deleteInstance(item.phoneNumber)),
+      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: item.phoneNumber }],
+    });
   const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
 

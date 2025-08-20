@@ -35,6 +35,7 @@
     "DISABLE": "בטל",
     "ENABLE": "הפעל",
     "REFRESH": "רענן",
+    "WARNING": "אזהרה",
     "CREATED_AT": "נוצר בתאריך",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?",
     "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה"
@@ -53,7 +54,8 @@
     "INCOMING_COUNT": "הודעות נכנסות",
     "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה.\nסה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}",
     "NEXT_WARM_AT": "המפגש החם הסתיים, המפגש הבא יתחיל ב-{{nextWarmAt}}",
-    "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה"
+    "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
+    "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",
