@@ -4,7 +4,7 @@
 }
 
 .toast {
-    @apply absolute ltr:-right-[150%] rtl:-left-[150%] transition-all duration-500 ease-in-out sm:min-w-[80vh] lg:min-w-[500px] max-w-[80vh] opacity-0 flex gap-2;}
+    @apply absolute ltr:-right-[150%] rtl:-left-[150%] transition-all duration-500 ease-in-out sm:w-[80vh] lg:w-[500px] xl:w-[560px] max-w-[80vh] opacity-0 flex gap-2;}
 
 .toast:hover svg[role="button"] {
     @apply opacity-100;

@@ -227,6 +227,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const conversationKey = this.getPairKey('phoneNumber', ...pair);
     const [key1, key2] = conversationKey.split(':');
 
+    const [instance1, instance2] = pair;
+
+    if (!instance1.get('isActive') || !instance2.get('isActive')) {
+      return;
+    }
+
     // Check if conversation is already active or being created
     if (activeConversations.some((val) => val.includes(key1) || val.includes(key2)) || this.creatingConversation.has(conversationKey)) {
       this.log('debug', `[${conversationKey}] Skipping - conversation already active or being created`);
@@ -489,6 +495,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       return setTimeout(async () => {
         try {
+          const [key1, key2] = conversationKey.split(':');
+          const instance1 = this.getInstance(key1);
+          const instance2 = this.getInstance(key2);
+
+          if (!instance1?.get('isActive') || !instance2?.get('isActive')) {
+            throw new Error('One or more of the instances deactivated');
+          }
+
           const currentState = this.activeConversation.get(conversationKey);
           const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
           const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);

@@ -103,7 +103,7 @@ const InstanceTable = () => {
     const warmEndToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
 
-      toast.success(text);
+      (data.sentMessages === 0 ? toast.error : toast.success)(text);
     };
 
     const warmStartToast = (data: WarmUpdate) => {
