@@ -6,7 +6,7 @@ import '@client/locale/i18n';
 import { createStore, type RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
 
-export function renderAppHtml(url: string, authState?: Partial<RootState[StoreEnum.AUTH]>): string {
+export function renderAppHtml(url: string, authState?: Partial<RootState[StoreEnum.auth]>): string {
   const store = createStore(authState);
 
   // Return a simple loading state for SSR to avoid hydration issues

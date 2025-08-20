@@ -1,5 +1,5 @@
 import type { Pagination } from '@models';
-import type { TableHeader, TableHeaders } from '@components/Table/Table.type';
+import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem, InstanceUpdate, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
@@ -10,7 +10,7 @@ import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
-import { searchInstance, instanceActions, deleteInstance } from '@client/pages/Instance/store/instance.slice';
+import { searchInstance, instanceActions, deleteInstance, toggleInstanceActivate } from '@client/pages/Instance/store/instance.slice';
 import { INSTANCE_LOADING, INSTANCE_SEARCH_DATA, INSTANCE_SEARCH_PAGINATION } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
@@ -32,7 +32,7 @@ const InstanceTable = () => {
     [INSTANCE_SEARCH_DATA]: instanceList,
     [INSTANCE_SEARCH_PAGINATION]: instancePagination,
     [INSTANCE_LOADING]: instanceLoading,
-  } = useSelector((state: RootState) => state[StoreEnum.INSTANCE]);
+  } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const headers: TableHeaders<InstanceItem> = [
     { title: 'INSTANCE.PHONE_NUMBER', value: 'phoneNumber', sortable: true },
@@ -114,6 +114,12 @@ const InstanceTable = () => {
     };
   }, [dispatch]);
 
+  const onActiveToggle = async (item: InstanceItem) => await dispatch(toggleInstanceActivate(item.phoneNumber));
+
+  const customActions: TableProps<InstanceItem>['customActions'] = [
+    { label: (item) => (item.isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'), iconName: 'svg:check-circle', onClick: onActiveToggle },
+  ];
+
   return (
     <>
       <Table
@@ -126,6 +132,7 @@ const InstanceTable = () => {
         onSort={onSort}
         rowClickable={true}
         onRowClick={onRowClick}
+        customActions={customActions}
         {...instancePagination}
       />
 

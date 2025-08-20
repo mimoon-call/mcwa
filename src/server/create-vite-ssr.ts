@@ -29,24 +29,20 @@ const buildHtml = (indexHtml: string, renderHtml: string, data?: Record<string, 
 
 // dev: use Vite's middleware, NO manifest
 const ssrDev = async (app: Pick<Express, 'use'>) => {
-  const vite = await createViteServer({ 
-    server: { middlewareMode: true }, 
+  const vite = await createViteServer({
+    server: { middlewareMode: true },
     appType: 'custom',
-    configFile: path.resolve(__dirname, '../../vite.config.dev.ts')
+    configFile: path.resolve(__dirname, '../../vite.config.dev.ts'),
   });
   app.use(vite.middlewares);
 
   return async (req: Request, res: Response) => {
-    const ssrData = { [StoreEnum.AUTH]: { [IS_AUTHENTICATED]: !!req[CookieEnum.ACCESS_TOKEN] } };
+    const ssrData = { [StoreEnum.auth]: { [IS_AUTHENTICATED]: !!req[CookieEnum.ACCESS_TOKEN] } };
     const url = req.originalUrl;
     const indexHtml = await fs.promises.readFile('public/index.html', 'utf-8');
-    
+
     // Skip HTML transformation in development to avoid React plugin issues
-    const cheerioApi = buildHtml(
-      indexHtml,
-      renderAppHtml(url, { isAuthenticated: !!req[CookieEnum.ACCESS_TOKEN] }),
-      ssrData
-    );
+    const cheerioApi = buildHtml(indexHtml, renderAppHtml(url, { isAuthenticated: !!req[CookieEnum.ACCESS_TOKEN] }), ssrData);
 
     res.status(200).type('html').end(cheerioApi.html());
   };
@@ -78,20 +74,20 @@ const ssrProd = async (_app: Pick<Express, 'use'>, isProduction: boolean) => {
 
   return async (req: Request, res: Response) => {
     try {
-      const ssrData = { [StoreEnum.AUTH]: { [IS_AUTHENTICATED]: !!req[CookieEnum.ACCESS_TOKEN] } };
+      const ssrData = { [StoreEnum.auth]: { [IS_AUTHENTICATED]: !!req[CookieEnum.ACCESS_TOKEN] } };
       const url = req.originalUrl;
-      
+
       // Use correct path for production
       const indexPath = isProduction ? path.join(__dirname, '../../public/index.html') : 'public/index.html';
-      
+
       const indexHtml = await fs.promises.readFile(indexPath, 'utf-8');
       const cheerioApi = buildHtml(indexHtml, renderAppHtml(url, { isAuthenticated: !!req[CookieEnum.ACCESS_TOKEN] }), ssrData);
-      
+
       // Remove the development script and inject production assets
       cheerioApi('#client-script').remove();
       cheerioApi('head').append(styleTags);
       cheerioApi('body').append(scriptTag);
-      
+
       const finalHtml = cheerioApi.html();
       return res.status(200).type('html').end(finalHtml);
     } catch (error) {

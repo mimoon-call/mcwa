@@ -1,4 +1,4 @@
 export enum StoreEnum {
-  AUTH = 'AUTH',
-  INSTANCE = 'INSTANCE',
+  auth = 'auth',
+  instance = 'instance',
 }

@@ -9,11 +9,11 @@ import type { MenuItem } from '@components/Menu/Menu.type';
 export type DefaultTableItem = any;
 
 export type TableItemAction<T extends object = DefaultTableItem> = {
-  label: string;
-  iconName: IconName;
+  label: string | ((item: T) => string);
+  iconName: IconName | ((item: T) => IconName);
   loading?: boolean;
   className?: ClassValue;
-  onClick: (item: T) => Promise<void> | void;
+  onClick: (item: T) => Promise<unknown> | unknown;
 };
 
 export type TableBodyProps = Pick<TableProps, 'headers' | 'items' | 'loading' | 'rowClickable' | 'onRowClick' | 'keyboardDisabled'>;

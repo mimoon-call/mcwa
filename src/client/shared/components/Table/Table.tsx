@@ -22,7 +22,7 @@ import { cn } from '@client/plugins';
 import { Menu } from '@components/Menu/Menu';
 
 const getHeadersWithActions = (props: Pick<TableProps, 'headers' | 'updateCallback' | 'deleteCallback' | 'previewCallback' | 'customActions'>) => {
-  const actions: Array<TableItemAction> = props.customActions || [];
+  const actions: Array<TableItemAction> = [...(props.customActions || [])];
 
   if (props.previewCallback) {
     actions.push({ label: 'GENERAL.VIEW', onClick: props.previewCallback, iconName: 'svg:eye' });
@@ -253,7 +253,10 @@ const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; it
   const ref = useRef<HTMLDivElement | null>(null);
   const { call, loading } = useAsyncFn(action.onClick);
 
-  useTooltip(ref, { text: t(action.label) });
+  const label = action.label instanceof Function ? action.label(item) : action.label;
+  const iconName = action.iconName instanceof Function ? action.iconName(item) : action.iconName;
+
+  useTooltip(ref, { text: t(label) });
 
   const onActionClick = async (ev: MouseEvent<SVGSVGElement>) => {
     ev.preventDefault();
@@ -269,13 +272,7 @@ const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; it
         </div>
       )}
 
-      <Icon
-        className={cn(loading && 'opacity-25', action.className)}
-        size="1.25rem"
-        name={action.iconName}
-        aria-label={t(action.label)}
-        onClick={onActionClick}
-      />
+      <Icon className={cn(loading && 'opacity-25', action.className)} size="1.25rem" name={iconName} aria-label={t(label)} onClick={onActionClick} />
     </div>
   );
 };

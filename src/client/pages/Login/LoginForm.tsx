@@ -19,7 +19,7 @@ const LoginForm = () => {
     [AUTH_STATE_LOADING]: loading,
     [AUTH_STATE_ERROR]: error,
     [IS_AUTHENTICATED]: isAuthenticated,
-  } = useSelector((state: RootState) => state[StoreEnum.AUTH]);
+  } = useSelector((state: RootState) => state[StoreEnum.auth]);
 
   const { [LOGIN]: login } = authSlice;
 

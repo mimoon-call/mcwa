@@ -31,6 +31,8 @@
     "EXPORT": "Export",
     "IMPORT": "Import",
     "ACTIVE": "Active",
+    "DISABLE": "Disable",
+    "ENABLE": "Enable",
     "CREATED_AT": "Created at",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?"
   },

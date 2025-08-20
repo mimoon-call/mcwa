@@ -19,11 +19,11 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   const component = useRoutes(router);
   const dispatch = useDispatch<AppDispatch>();
   const { [REFRESH_TOKEN]: refreshToken } = authSlice;
-  const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.AUTH]);
+  const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.auth]);
 
   useEffect(() => {
-    if (data?.[StoreEnum.AUTH]) {
-      dispatch(authSlice[SET_AUTH_STATE](data[StoreEnum.AUTH]));
+    if (data?.[StoreEnum.auth]) {
+      dispatch(authSlice[SET_AUTH_STATE](data[StoreEnum.auth]));
     }
 
     dispatch(refreshToken());

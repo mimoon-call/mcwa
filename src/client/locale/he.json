@@ -31,6 +31,8 @@
     "EXPORT": "ייצא",
     "IMPORT": "ייבא",
     "ACTIVE": "פעיל",
+    "DISABLE": "בטל",
+    "ENABLE": "הפעל",
     "CREATED_AT": "נוצר בתאריך",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?"
   },

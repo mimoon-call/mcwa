@@ -45,9 +45,9 @@ const disconnectSocket = () => {
 };
 
 // Async thunk for logout
-const logout = createAsyncThunk(`${StoreEnum.AUTH}/${LOGOUT}`, async (_, { rejectWithValue }) => {
+const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejectWithValue }) => {
   try {
-    await Http.post(`/${StoreEnum.AUTH}/${LOGOUT}`, {});
+    await Http.post(`/${StoreEnum.auth}/${LOGOUT}`, {});
     disconnectSocket();
 
     return true;
@@ -57,9 +57,9 @@ const logout = createAsyncThunk(`${StoreEnum.AUTH}/${LOGOUT}`, async (_, { rejec
 });
 
 // Async thunk for login
-const login = createAsyncThunk(`${StoreEnum.AUTH}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue }) => {
+const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue }) => {
   try {
-    await Http.post(`/${StoreEnum.AUTH}/${LOGIN}`, payload);
+    await Http.post(`/${StoreEnum.auth}/${LOGIN}`, payload);
     connectSocket();
 
     return true;
@@ -71,8 +71,8 @@ const login = createAsyncThunk(`${StoreEnum.AUTH}/${LOGIN}`, async (payload: Log
 });
 
 // Async thunk for checking authentication status (returnCode 1 means not authenticated)
-const refreshToken = createAsyncThunk(`${StoreEnum.AUTH}/${REFRESH_TOKEN}`, async (_, { dispatch }) => {
-  const res = await Http.get<BaseResponse>(`/${StoreEnum.AUTH}/${REFRESH_TOKEN}`);
+const refreshToken = createAsyncThunk(`${StoreEnum.auth}/${REFRESH_TOKEN}`, async (_, { dispatch }) => {
+  const res = await Http.get<BaseResponse>(`/${StoreEnum.auth}/${REFRESH_TOKEN}`);
 
   if (res?.returnCode === 1) {
     disconnectSocket();
@@ -84,7 +84,7 @@ const refreshToken = createAsyncThunk(`${StoreEnum.AUTH}/${REFRESH_TOKEN}`, asyn
 });
 
 const authSlice = createSlice({
-  name: StoreEnum.AUTH,
+  name: StoreEnum.auth,
   initialState,
   reducers: {
     [SET_AUTHENTICATED](state, action: PayloadAction<boolean>) {

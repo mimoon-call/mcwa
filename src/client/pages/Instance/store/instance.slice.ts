@@ -4,6 +4,7 @@ import { Http } from '@services/http';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';
 import {
+  ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
   INSTANCE_ERROR,
@@ -31,33 +32,47 @@ const initialState: InstanceState = {
 
 // Async thunk for search instance
 const searchInstance = createAsyncThunk(
-  `${StoreEnum.INSTANCE}/${SEARCH_INSTANCE}`,
+  `${StoreEnum.instance}/${SEARCH_INSTANCE}`,
   async (payload: SearchInstanceReq = {}, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.INSTANCE]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
+      const currentPagination = state[StoreEnum.instance]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
       const data = { page: { ...currentPagination, ...(payload?.page || {}) } };
 
-      return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.INSTANCE}/${SEARCH_INSTANCE}`, data);
+      return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
   }
 );
 
-const instanceQr = createAsyncThunk(`${StoreEnum.INSTANCE}/${ADD_INSTANCE}`, async (phoneNumber: string) => {
-  const { image } = await Http.get<AddInstanceRes>(`${StoreEnum.INSTANCE}/${ADD_INSTANCE}/${phoneNumber}`);
+const instanceQr = createAsyncThunk(`${StoreEnum.instance}/${ADD_INSTANCE}`, async (phoneNumber: string) => {
+  const { image } = await Http.get<AddInstanceRes>(`${StoreEnum.instance}/${ADD_INSTANCE}/${phoneNumber}`);
 
   return image;
 });
 
-const deleteInstance = createAsyncThunk(`${StoreEnum.INSTANCE}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
-  await Http.delete<void>(`${StoreEnum.INSTANCE}/${DELETE_INSTANCE}/${phoneNumber}`);
+const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
+  await Http.delete<void>(`${StoreEnum.instance}/${DELETE_INSTANCE}/${phoneNumber}`);
   await dispatch(searchInstance({}));
 });
 
+const toggleInstanceActivate = createAsyncThunk(
+  `${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}`,
+  async (phoneNumber: string, { dispatch, getState }) => {
+    const state = getState() as RootState;
+    const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
+
+    const isActive = !!currentInstance?.isActive;
+
+    await Http.post<void>(`${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
+
+    dispatch(updateInstance({ phoneNumber, isActive: !isActive }));
+  }
+);
+
 const instanceSlice = createSlice({
-  name: StoreEnum.INSTANCE,
+  name: StoreEnum.instance,
   initialState,
   reducers: {
     updateInstance: (state, action) => {
@@ -94,5 +109,6 @@ const instanceSlice = createSlice({
 
 // Export the slice and actions correctly
 export const { actions: instanceActions } = instanceSlice;
+export const { updateInstance } = instanceSlice.actions;
 export default instanceSlice.reducer;
-export { searchInstance, instanceQr, deleteInstance };
+export { searchInstance, instanceQr, deleteInstance, toggleInstanceActivate };

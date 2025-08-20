@@ -6,15 +6,15 @@ import { SET_AUTH_STATE } from '@client/store/auth.constants';
 import instanceSlice, { type InstanceState } from '@client/pages/Instance/store/instance.slice';
 
 export type RootState = {
-  [StoreEnum.AUTH]: AuthState;
-  [StoreEnum.INSTANCE]: InstanceState;
+  [StoreEnum.auth]: AuthState;
+  [StoreEnum.instance]: InstanceState;
 };
 
-export const createStore = (authState?: Partial<RootState[StoreEnum.AUTH]>) => {
+export const createStore = (authState?: Partial<RootState[StoreEnum.auth]>) => {
   const store = configureStore({
     reducer: {
-      [StoreEnum.AUTH]: authSlice.reducer,
-      [StoreEnum.INSTANCE]: instanceSlice,
+      [StoreEnum.auth]: authSlice.reducer,
+      [StoreEnum.instance]: instanceSlice,
     },
   });
 

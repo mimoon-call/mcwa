@@ -1,6 +1,7 @@
 import express from 'express';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import {
+  ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
@@ -25,4 +26,7 @@ instanceRoute.post(
 
 instanceRoute.get(`/${ADD_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[ADD_INSTANCE]));
 instanceRoute.delete(`/${DELETE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[DELETE_INSTANCE]));
+
+instanceRoute.post(`/${ACTIVE_TOGGLE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[ACTIVE_TOGGLE_INSTANCE]));
+
 export default instanceRoute;

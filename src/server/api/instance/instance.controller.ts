@@ -10,6 +10,7 @@ import {
 } from '@server/api/instance/instance.types';
 import RecordValidator from '@server/services/record-validator';
 import {
+  ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
@@ -69,6 +70,14 @@ export const instanceController = {
   [DELETE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
     const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
     await instanceService[DELETE_INSTANCE](phoneNumber);
+
+    res.send();
+  },
+
+  [ACTIVE_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+
+    await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
 
     res.send();
   },

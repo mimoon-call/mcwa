@@ -1,6 +1,7 @@
 import type { EntityList, Pagination } from '@models';
 import type { GetInstanceConversationRes, GetInstanceConversationsRes, InstanceItem } from '@server/api/instance/instance.types';
 import {
+  ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
   GET_INSTANCE_CONVERSATION,
@@ -9,6 +10,7 @@ import {
 } from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey, WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
+import ServerError from '@server/middleware/errors/server-error';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
@@ -100,5 +102,16 @@ export const instanceService = {
   [DELETE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
     await WhatsAppAuth.deleteOne({ phoneNumber });
     await WhatsAppKey.deleteMany({ phoneNumber });
+  },
+
+  [ACTIVE_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
+    const instance = wa.getInstance(phoneNumber);
+
+    if (!instance) {
+      throw new ServerError('Instance not found');
+    }
+
+    const isActive = instance.get('isActive');
+    await instance.update({ isActive: !isActive });
   },
 };

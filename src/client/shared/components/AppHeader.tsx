@@ -18,7 +18,7 @@ interface NavWrapperProps {
 export default function AppHeader({ headerSlot, actionsSlot }: NavWrapperProps) {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
-  const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.AUTH]);
+  const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.auth]);
   const { [LOGOUT]: logout } = authSlice;
 
   const handleLogout = () => {
