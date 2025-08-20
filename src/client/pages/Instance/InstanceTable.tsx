@@ -19,12 +19,14 @@ import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import { liveUpdateHandler } from '@helpers/live-update-handler';
+import { useToast } from '@hooks';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
   const modelRef = useRef<ModalRef>(null);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const toast = useToast({ y: 'bottom' });
 
   const {
     [INSTANCE_SEARCH_DATA]: instanceList,
@@ -96,12 +98,19 @@ const InstanceTable = () => {
       {} as Record<keyof InstanceItem, TableHeader['valueFormatter']>
     );
 
-    const socketUpdate = liveUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
+    const instanceUpdate = liveUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
+    const warmToast = (data: Record<string, string | number>) => {
+      const text = t('INSTANCE.WARM_END_TOAST', data).toString();
 
-    socket?.on(InstanceEventEnum.INSTANCE_UPDATE, socketUpdate);
+      toast.success(text);
+    };
+
+    socket?.on(InstanceEventEnum.WARM_END, warmToast);
+    socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
 
     return () => {
-      socket?.off(InstanceEventEnum.INSTANCE_UPDATE, socketUpdate);
+      socket?.off(InstanceEventEnum.WARM_END, warmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
     };
   }, [dispatch]);
 

@@ -53,6 +53,10 @@ export const wa = new WhatsappWarmService({
 (async () => {
   await MongoService.connect();
 
+  wa.onConversationEnd((...arg: any[]) => {
+    app.socket.broadcast(InstanceEventEnum.WARM_END, arg);
+  });
+
   wa.onReady(() => {
     wa.startWarmingUp();
   });

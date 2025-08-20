@@ -45,7 +45,8 @@
     "ERROR_MESSAGE": "Error message",
     "DAILY_MESSAGE_COUNT": "Daily counter",
     "OUTGOING_COUNT": "Outgoing counter",
-    "INCOMING_COUNT": "Incoming counter"
+    "INCOMING_COUNT": "Incoming counter",
+    "WARM_END_TOAST": "Warm conversation between {{phoneNumber1}} to {{phoneNumber2}} ended, total messages: {{totalMessages}} total sent: {{sentMessages}}"
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

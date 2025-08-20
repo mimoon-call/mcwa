@@ -25,6 +25,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly lastConversation = new LRUCache<string, WAConversation[]>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
   private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
+  private conversationEndCallback: ((...arg: any[]) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -276,6 +277,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const unsentMessages = conversation.filter(({ sentAt }) => !sentAt).length;
     const isUpdateNeeded = sentMessages > 0;
 
+    const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
+    this.conversationEndCallback?.({ phoneNumber1, phoneNumber2, totalMessages, sentMessages, unsentMessages });
+
     this.log('debug', `[${conversationKey}]`, `total messages: ${totalMessages}, sent: ${sentMessages}, unsent: ${unsentMessages}`);
 
     const prevConversation = this.lastConversation.get(conversationKey) || [];
@@ -403,7 +407,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
 
-          this.log('debug', `Next warming session scheduled for tomorrow (in ${hours}h ${minutes}m)`);
+          this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
         }
 
         return;
@@ -540,6 +544,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     this.timeoutConversation.set(conversationKey, send());
+  }
+
+  onConversationEnd(callback?: (...arg: any[]) => unknown) {
+    this.conversationEndCallback = callback;
   }
 
   onMessage(callback?: WAMessageIncomingCallback) {

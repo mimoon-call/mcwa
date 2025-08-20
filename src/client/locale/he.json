@@ -32,7 +32,8 @@
     "IMPORT": "ייבא",
     "ACTIVE": "פעיל",
     "CREATED_AT": "נוצר בתאריך",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?"
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?",
+    "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה, סה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",
