@@ -100,8 +100,14 @@ const InstanceTable = () => {
 
     const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
 
-    const warmToast = (data: WarmUpdate) => {
+    const warmEndToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
+
+      toast.success(text);
+    };
+
+    const warmStartToast = (data: WarmUpdate) => {
+      const text = t('INSTANCE.WARM_START_TOAST', data).toString();
 
       toast.success(text);
     };
@@ -119,13 +125,15 @@ const InstanceTable = () => {
       toast.success(text);
     };
 
-    socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmToast);
+    socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
+    socket?.on(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
     socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
     socket?.on(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
 
     return () => {
-      socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
+      socket?.off(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
       socket?.off(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
       socket?.off(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);

@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import getLocalNow from '@server/helpers/get-local-now';
+import { WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
@@ -32,7 +33,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly lastConversation = new LRUCache<string, WAConversation[]>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
   private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
-  private conversationEndCallback: ((data: any) => unknown) | undefined;
+  private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
+  private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
@@ -262,7 +264,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           setTimeout(async () => await this.handleConversationMessage(conversationKey), delay)
         );
 
-        this.log('debug', `[${conversationKey}] Conversation created successfully (messages: ${script?.length}, delay: ${delay / 1000}s)`);
+        const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
+        this.conversationStartCallback?.({ phoneNumber1, phoneNumber2, totalMessages: script.length, startInSeconds: delay / 1000 });
+        this.log('debug', `[${conversationKey}] Conversation created successfully (messages: ${script.length}, delay: ${delay / 1000}s)`);
       } else {
         this.log('error', `[${conversationKey}]`, 'creating script failed', script);
       }
@@ -560,8 +564,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.nextCheckUpdate = callback;
   }
 
-  onConversationEnd(callback?: (data: WAAppAuth<WAPersona>) => unknown) {
+  onConversationEnd(callback?: (data: WAWarmUpdate) => unknown) {
     this.conversationEndCallback = callback;
+  }
+
+  onConversationStart(callback?: (data: WAWarmUpdate) => unknown) {
+    this.conversationStartCallback = callback;
   }
 
   onMessage(callback?: WAMessageIncomingCallback) {
