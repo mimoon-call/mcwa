@@ -25,7 +25,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly lastConversation = new LRUCache<string, WAConversation[]>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
   private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
-  private conversationEndCallback: ((...arg: any[]) => unknown) | undefined;
+  private conversationEndCallback: ((data: any) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -546,7 +546,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.timeoutConversation.set(conversationKey, send());
   }
 
-  onConversationEnd(callback?: (...arg: any[]) => unknown) {
+  onConversationEnd(callback?: (data: any) => unknown) {
     this.conversationEndCallback = callback;
   }
 

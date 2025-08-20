@@ -1,7 +1,7 @@
 import type { Pagination } from '@models';
 import type { TableHeader, TableHeaders } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
-import type { InstanceItem } from '@client/pages/Instance/store/instance.types';
+import type { InstanceItem, InstanceUpdate, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -98,8 +98,8 @@ const InstanceTable = () => {
       {} as Record<keyof InstanceItem, TableHeader['valueFormatter']>
     );
 
-    const instanceUpdate = liveUpdateHandler('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
-    const warmToast = (data: Record<string, string | number>) => {
+    const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
+    const warmToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
 
       toast.success(text);
