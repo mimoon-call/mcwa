@@ -143,6 +143,11 @@ const InstanceTable = () => {
 
   const customActions: TableProps<InstanceItem>['customActions'] = [
     {
+      label: 'GENERAL.REAUTHENTICATE',
+      iconName: 'svg:scan-qr',
+      onClick: ({ phoneNumber }) => modelRef.current?.open(phoneNumber),
+    },
+    {
       label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),
       iconName: ({ isActive }) => (isActive ? 'svg:wifi-disconnected' : 'svg:wifi'),
       onClick: onActiveToggle,

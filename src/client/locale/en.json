@@ -5,6 +5,7 @@
     "PASSWORD": "Password",
     "LOGIN": "Login",
     "LOGOUT": "Logout",
+    "REAUTHENTICATE": "Reauthenticate",
     "EMPTY": "No items available",
     "CANCEL": "Cancel",
     "SUBMIT": "Submit",

@@ -1,7 +1,7 @@
 import type { ModalRef } from '@components/Modal/Modal.types';
 import type { StepperModalProps } from '@components/StepperModal/StepperModal.types';
 import { OverlayEnum } from '@components/Overlay/Overlay.enum';
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import StepperModal from '@components/StepperModal/StepperModal';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@client/store';
@@ -10,10 +10,14 @@ import ServerError from '@services/http/server-error';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 
-const AddInstanceModal = forwardRef<ModalRef>((_props, ref) => {
+type AddInstanceModalRef = Omit<ModalRef, 'open'> & { open: (phoneNumber?: string) => void };
+
+const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [qrData, setQrData] = useState<string | null>(null);
+  const [isNumberInjected, setNumberInjected] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const modalRef = useRef<ModalRef>(null);
 
   const addInstanceQr = async () => {
     if (!phoneNumber) {
@@ -48,13 +52,28 @@ const AddInstanceModal = forwardRef<ModalRef>((_props, ref) => {
   ) : null;
 
   const steps: StepperModalProps['steps'] = [
-    { title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr },
+    ...(!isNumberInjected ? [{ title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr }] : []),
     { component: InstanceQr, hideBack: true },
   ];
 
+  useImperativeHandle(ref, () => ({
+    open: async (instanceNumber?: string): Promise<void> => {
+      setNumberInjected(!!instanceNumber);
+      setPhoneNumber(instanceNumber || '');
+
+      if (instanceNumber) {
+        await addInstanceQr();
+      }
+
+      modalRef.current?.open();
+    },
+    close: (...args: Array<unknown>) => modalRef.current?.close(...args),
+    validate: () => !!modalRef.current?.validate(),
+  }));
+
   return (
     <StepperModal
-      ref={ref}
+      ref={modalRef}
       submitText="GENERAL.CLOSE"
       steps={steps}
       size={OverlayEnum.SM}

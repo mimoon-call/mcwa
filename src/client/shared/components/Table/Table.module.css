@@ -41,6 +41,7 @@
 .data-table--actions {
     @apply flex gap-4 opacity-0 transition-opacity duration-300 max-w-fit;
     
+    tr:hover,
     tr:focus & {
         @apply opacity-100;
     }
