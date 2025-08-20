@@ -317,7 +317,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
 export default function Table({ className, pageIndex, ...props }: TableProps) {
   const { t } = useTranslation();
   const tableRef = useRef<HTMLDivElement | null>(null);
-  const { items, totalPages } = useTableItems(props, tableRef);
+  const { items, totalPages } = useTableItems(props);
   const emptyState = props.emptyState || <span className="text-xl font-medium">{t('GENERAL.EMPTY')}</span>;
   const headers = getHeadersWithActions(props);
   const actions = TableActions(props);

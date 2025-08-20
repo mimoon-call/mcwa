@@ -1,9 +1,9 @@
 // src/client/shared/components/Table/hooks/useTableItems.ts
 import type { TableProps } from '../Table.type.ts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sortElementArray } from '../helpers';
 
-export const useTableItems = (props: TableProps, tableRef: ReturnType<typeof useRef<HTMLDivElement | null>>, defaultPageSize?: number) => {
+export const useTableItems = (props: TableProps, defaultPageSize?: number) => {
   const [items, setItems] = useState<TableProps['items']>(props.items || []);
   const pageSize = props.pageSize || defaultPageSize;
   const totalPages = props.totalPages || (pageSize ? Math.ceil((props.items || []).length / pageSize) : 1);
@@ -12,7 +12,6 @@ export const useTableItems = (props: TableProps, tableRef: ReturnType<typeof use
     const sortPage = props.pageSort;
     const isServedResult = props.totalPages !== undefined;
     const items = sortElementArray(props.items || [], sortPage);
-    tableRef.current?.scrollTo({ top: 0, behavior: 'instant' });
 
     // If no page size is set or total pages is 1, show all items
     if (!pageSize || totalPages === 1 || isServedResult) {
