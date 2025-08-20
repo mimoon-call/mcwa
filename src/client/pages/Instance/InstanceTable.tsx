@@ -117,7 +117,11 @@ const InstanceTable = () => {
   const onActiveToggle = async (item: InstanceItem) => await dispatch(toggleInstanceActivate(item.phoneNumber));
 
   const customActions: TableProps<InstanceItem>['customActions'] = [
-    { label: (item) => (item.isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'), iconName: 'svg:check-circle', onClick: onActiveToggle },
+    // {
+    //   label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),
+    //   iconName: ({ isActive }) => (isActive ? 'svg:wifi-disconnected' : 'svg:wifi'),
+    //   onClick: onActiveToggle,
+    // },
   ];
 
   return (

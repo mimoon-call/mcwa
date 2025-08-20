@@ -11,6 +11,7 @@ import {
 import { WhatsAppAuth, WhatsAppKey, WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
+import logger from '@server/helpers/logger';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
@@ -105,13 +106,14 @@ export const instanceService = {
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
-    const instance = wa.getInstance(phoneNumber);
+    const instances = wa.getAllInstances();
+    const instance = instances.find((instance) => instance.phoneNumber === phoneNumber);
 
     if (!instance) {
       throw new ServerError('Instance not found');
     }
 
-    const isActive = instance.get('isActive');
-    await instance.update({ isActive: !isActive });
+    const isActive = !!instance.get('isActive');
+    await (isActive ? instance.disable : instance.enable)();
   },
 };
