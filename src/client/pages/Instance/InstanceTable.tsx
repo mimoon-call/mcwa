@@ -104,12 +104,20 @@ const InstanceTable = () => {
 
       toast.success(text);
     };
+    const nextWarmToast = (nextAt: Date | string) => {
+      const nextWarmAt = dayjs(nextAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
+      const text = t('INSTANCE.NEXT_WARM_AT', { nextWarmAt }).toString();
+
+      toast.success(text);
+    };
 
     socket?.on(InstanceEventEnum.WARM_END, warmToast);
+    socket?.on(InstanceEventEnum.NEXT_WARM_AT, nextWarmToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
 
     return () => {
       socket?.off(InstanceEventEnum.WARM_END, warmToast);
+      socket?.off(InstanceEventEnum.NEXT_WARM_AT, nextWarmToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
     };
   }, [dispatch]);

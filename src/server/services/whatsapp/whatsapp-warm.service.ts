@@ -7,6 +7,7 @@ import { clearTimeout } from 'node:timers';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import getLocalNow from '@server/helpers/get-local-now';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
@@ -26,6 +27,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
   private conversationEndCallback: ((data: any) => unknown) | undefined;
+  private nextCheckUpdate: ((nextWarmAt: Date) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -320,6 +322,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
         const { hours, minutes } = this.getHoursAndMinutes(delay);
         const totalMinutes = hours * 60 + minutes;
+        const nextCheckAt = new Date(getLocalNow().valueOf() + delay);
+        this.nextCheckUpdate?.(nextCheckAt);
         this.log('debug', `[${conversationKey}]`, `Will check again in ${totalMinutes} minutes`);
 
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), delay);
@@ -544,6 +548,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     this.timeoutConversation.set(conversationKey, send());
+  }
+
+  onSchedule(callback?: (nextWarmAt: Date) => unknown) {
+    this.nextCheckUpdate = callback;
   }
 
   onConversationEnd(callback?: (data: any) => unknown) {
