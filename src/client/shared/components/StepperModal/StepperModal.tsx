@@ -31,6 +31,7 @@ const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
 
   const submitCaption = stepIndex === steps.length - 1 ? submitText : 'GENERAL.NEXT';
   const cancelCaption = stepIndex === 0 ? cancelText : 'GENERAL.BACK';
+  const hideBack = stepIndex > 0 && !!steps[stepIndex].hideBack;
 
   useImperativeHandle(ref, () => ({
     open: (...args: Array<unknown>) => modalRef.current?.open(...args),
@@ -47,6 +48,7 @@ const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
       submitCallback={onNextCallback}
       cancelText={cancelCaption}
       cancelCallback={onCancelCallback}
+      hideCancelButton={hideBack}
       {...rest}
     >
       {steps[stepIndex].component}

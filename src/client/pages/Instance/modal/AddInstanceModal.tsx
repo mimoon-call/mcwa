@@ -49,7 +49,7 @@ const AddInstanceModal = forwardRef<ModalRef>((_props, ref) => {
 
   const steps: StepperModalProps['steps'] = [
     { title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr },
-    { component: InstanceQr },
+    { component: InstanceQr, hideBack: true },
   ];
 
   return (

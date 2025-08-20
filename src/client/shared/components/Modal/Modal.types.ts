@@ -7,6 +7,7 @@ export type ModalProps = Omit<OverlayProps, 'loading'> & {
   subtitle?: string | ReactNode;
   submitText?: string;
   submitCallback?: (...arg: Array<any>) => Promise<void>;
+  hideCancelButton?: boolean;
   cancelText?: string;
   cancelCallback?: (...arg: Array<any>) => Promise<void>;
   additionalActions?: ReactNode;

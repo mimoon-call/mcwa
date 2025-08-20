@@ -3,6 +3,7 @@ import Button from '@components/Button/Button';
 import { useTranslation } from 'react-i18next';
 import { OverlayHandler } from '@components/Overlay/Overlay.handler';
 import { useAsyncFn } from '@hooks/useAsyncFn';
+import { useToast } from '@hooks';
 
 type Options = {
   title?: string;
@@ -10,6 +11,7 @@ type Options = {
   callback?: () => Promise<unknown> | unknown;
   confirmText?: string;
   cancelText?: string;
+  successMessage?: string;
 };
 
 export const openDeletePopup = async (options: Options) => {
@@ -17,18 +19,29 @@ export const openDeletePopup = async (options: Options) => {
     const { close, create } = OverlayHandler({ closeCallback: () => resolve() });
 
     const OverlayContent = () => {
+      const toast = useToast({ y: 'bottom' });
       const { t } = useTranslation();
       const {
         title = 'GENERAL.DELETE',
         confirmText = 'GENERAL.CONFIRM',
         cancelText = options.callback ? 'GENERAL.CANCEL' : 'GENERAL.CLOSE',
         callback,
+        successMessage = 'GENERAL.ITEM_DELETE_SUCCESSFULLY',
       } = options;
 
       const description = Array.isArray(options.description) ? options.description[0] : options.description;
       const variables = Array.isArray(options.description) ? options.description[1] : undefined;
 
-      const { call, loading } = useAsyncFn(callback, { successCallback: close, errorCallback });
+      const { call, loading } = useAsyncFn(callback, {
+        successCallback: () => {
+          if (successMessage) {
+            toast.success(t(successMessage));
+          }
+
+          close();
+        },
+        errorCallback,
+      });
 
       return (
         <div className="flex flex-col gap-2 p-4 bg-white shadow-2xl">

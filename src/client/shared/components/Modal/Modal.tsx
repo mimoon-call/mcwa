@@ -20,6 +20,7 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
     subtitle,
     submitText = 'GENERAL.SUBMIT',
     cancelText = 'GENERAL.CANCEL',
+    hideCancelButton,
     children,
     openEvent,
     closeEvent,
@@ -89,9 +90,11 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
             {additionalActions}
 
             <div className="flex gap-2">
-              <Button disabled={submitLoading || cancelLoading} loading={cancelLoading} onClick={onCancel}>
-                {t(submitCallback ? cancelText : 'GENERAL.CLOSE')}
-              </Button>
+              {!hideCancelButton && (
+                <Button disabled={submitLoading || cancelLoading} loading={cancelLoading} onClick={onCancel}>
+                  {t(submitCallback ? cancelText : 'GENERAL.CLOSE')}
+                </Button>
+              )}
 
               {submitCallback && (
                 <Button disabled={submitLoading || cancelLoading} loading={submitLoading} onClick={onSubmit}>

@@ -336,7 +336,7 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
         </table>
       </div>
 
-      {!items?.length && <div className="flex align-middle justify-center">{emptyState}</div>}
+      {!items?.length && <div className="flex items-center justify-center flex-grow opacity-50 select-none">{emptyState}</div>}
 
       <Pagination keyboardDisabled={props.keyboardDisabled} pageIndex={pageIndex} totalPages={totalPages} onPageChange={props.onPageChange} />
     </div>

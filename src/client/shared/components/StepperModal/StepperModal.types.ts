@@ -7,5 +7,6 @@ export type StepperModalProps = Omit<ModalProps, 'cancelCallback'> & {
     subtitle?: ModalProps['subtitle'];
     component: ReactNode;
     onSubmit?: () => Promise<void> | void;
+    hideBack?: boolean;
   }[];
 };

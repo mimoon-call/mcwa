@@ -35,7 +35,8 @@
     "ENABLE": "הפעל",
     "REFRESH": "רענן",
     "CREATED_AT": "נוצר בתאריך",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?"
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?",
+    "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

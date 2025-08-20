@@ -35,7 +35,8 @@
     "ENABLE": "Enable",
     "REFRESH": "Refresh",
     "CREATED_AT": "Created at",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?"
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?",
+    "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",
