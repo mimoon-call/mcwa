@@ -1162,11 +1162,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           const typingSpeed = 50;
           const typingDuration = Math.min(record.text.length * typingSpeed, 5000);
 
-          this.socket.sendPresenceUpdate('composing', toNumber);
+          this.socket.sendPresenceUpdate('composing', jid);
           await new Promise((resolve) => setTimeout(resolve, typingDuration));
 
           this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
-          this.socket.sendPresenceUpdate('paused', toNumber);
+          this.socket.sendPresenceUpdate('paused', jid);
           return await this.socket.sendMessage(jid, content);
         })();
 
