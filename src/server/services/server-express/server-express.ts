@@ -7,12 +7,12 @@ import path from 'path';
 import { SocketService } from '@server/services/socket/socket.service';
 import { AccessToken } from '@server/services/token/token.type';
 import { CookieEnum } from '@server/constants';
-import { BaseResponse } from '@server/models';
 import { HttpServer } from 'vite';
 import { signatureMiddleware } from '@server/middleware/signature-middleware';
 import CustomError from '@server/middleware/errors/custom-error';
 import logger from '@server/helpers/logger';
 import dir from '../../../dir';
+import { BaseResponse } from '@server/models/base-response';
 
 type Config = Partial<{
   routes: Array<[`/${string}`, ReturnType<typeof express.Router>]>;
