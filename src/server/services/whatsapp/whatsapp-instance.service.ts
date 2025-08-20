@@ -844,7 +844,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
 
           // Check if socket is healthy and update status code if needed
-          if (this.connected && this.appState?.statusCode !== 200) {
+          if (this.connected) {
             await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
           }
         }
@@ -869,7 +869,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
 
           // Check if socket is healthy and update status code if needed
-          if (this.connected && this.appState?.statusCode !== 200) {
+          if (this.connected) {
             await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
           }
         }
@@ -1471,10 +1471,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   async update(data: Partial<WAAppAuth<T>>): Promise<void> {
-    this.set(data);
+    if (Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value)) {
+      this.set(data);
 
-    this.set((await this.updateAppAuth(data, null)) || this.appState);
-    this.onUpdate(data);
+      this.set((await this.updateAppAuth(data, null)) || this.appState);
+      this.onUpdate(data);
+    }
   }
 
   set(data: Partial<WAAppAuth<T>>): void {
