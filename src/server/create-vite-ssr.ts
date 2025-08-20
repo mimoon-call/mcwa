@@ -18,7 +18,10 @@ const buildHtml = (indexHtml: string, renderHtml: string, data?: Record<string, 
   const { direction = 'ltr', title, ...state } = data || {};
   const cheerioApi = cheerio.load(indexHtml);
 
-  cheerioApi('head').append(`<title>${title}</title>`);
+  if (title) {
+    cheerioApi('head').append(`<title>${title}</title>`);
+  }
+
   // cheerioApi('head').append(`<link rel="manifest" href="/manifest.json">`);
   cheerioApi('body').attr('dir', direction as string);
   cheerioApi('body').append(`<script id="ssr">window.__SSR_DATA__=${JSON.stringify(state)};document.getElementById('ssr').remove();</script>`);

@@ -1,5 +1,5 @@
 // src/server/server-express.ts
-import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -7,12 +7,12 @@ import path from 'path';
 import { SocketService } from '@server/services/socket/socket.service';
 import { AccessToken } from '@server/services/token/token.type';
 import { CookieEnum } from '@server/constants';
-import { HttpServer } from 'vite';
 import { signatureMiddleware } from '@server/middleware/signature-middleware';
-import CustomError from '@server/middleware/errors/custom-error';
-import logger from '@server/helpers/logger';
+import { HttpServer } from 'vite';
 import dir from '../../../dir';
 import { BaseResponse } from '@server/models/base-response';
+
+const __public = process.env.NODE_ENV === 'production' ? '/app/public/sw.js' : path.join(dir, '/../public/');
 
 type Config = Partial<{
   routes: Array<[`/${string}`, ReturnType<typeof express.Router>]>;
@@ -56,13 +56,20 @@ export class ServerExpress {
     // Ensure service worker is served with correct MIME type FIRST
     this.app.get('/sw.js', (req: Request, res: Response) => {
       try {
-        // In production, the server runs from /app/dist/server, so we need to go up to /app/public
-        const swPath = process.env.NODE_ENV === 'production' ? '/app/public/sw.js' : path.join(dir, '/../public/sw.js');
         res.setHeader('Content-Type', 'application/javascript');
-        res.sendFile(swPath);
+        res.sendFile(__public + 'sw.js');
       } catch (error) {
         console.error('Error serving service worker:', error);
         res.status(500).send('Service Worker Error');
+      }
+    });
+
+    this.app.get('/favicon.ico', (req: Request, res: Response) => {
+      try {
+        res.setHeader('Content-Type', 'image/x-icon');
+        res.sendFile(__public + 'favicon.ico');
+      } catch (_error) {
+        res.status(404);
       }
     });
 
@@ -126,29 +133,6 @@ export class ServerExpress {
         res.status(200).send({ returnCode: isSent ? 0 : 1 });
       }
     );
-
-    // Global error handler - must be added after all routes
-    this.app.use(this.errorHandler.bind(this));
-  }
-
-  private errorHandler(error: Error, req: Request, res: Response, _next: NextFunction) {
-    logger.error(`Global error handler: ${req.originalUrl}`, { error });
-
-    // Set cache control to prevent caching of error responses
-    res.set('Cache-control', 'no-store');
-
-    if (error instanceof CustomError) {
-      const response = error.serializeErrors();
-      res.status(response.errorCode).json(response);
-    } else {
-      // Handle unexpected errors
-      res.status(500).json({
-        errorCode: 500,
-        errorType: 'INTERNAL_SERVER_ERROR',
-        errorData: undefined,
-        errorMessage: [{ message: 'An unexpected error occurred' }],
-      });
-    }
   }
 
   listen(port?: number) {
