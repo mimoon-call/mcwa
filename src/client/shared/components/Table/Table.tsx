@@ -97,7 +97,11 @@ const Header = ({ headers, draggable, sort, onSort, actions }: TableHeaderProps)
             >
               <div className={cn('border-s p-1', headerClass)}>
                 {headerTitle}
-                {isSortable && <Icon size="1rem" {...sortIcon} />}
+                {isSortable && (
+                  <div className="ps-2">
+                    <Icon size="1rem" {...sortIcon} />
+                  </div>
+                )}
               </div>
             </td>
           );
