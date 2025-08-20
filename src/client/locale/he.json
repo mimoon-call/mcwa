@@ -46,7 +46,7 @@
     "DAILY_MESSAGE_COUNT": "מונה יומי",
     "OUTGOING_COUNT": "הודעות יוצאות",
     "INCOMING_COUNT": "הודעות נכנסות",
-    "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה, סה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}"
+    "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה.\nסה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",

@@ -82,7 +82,7 @@ const Item: React.FC<ToastItemProps> = (props) => {
           </div>
         )}
 
-        <div className="py-2">{content}</div>
+        <div className="py-2 whitespace-pre-line">{content}</div>
 
         <div className={styles['toast-progress']} style={{ animationDuration: `${duration}ms` }} />
       </div>
