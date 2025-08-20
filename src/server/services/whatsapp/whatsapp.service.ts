@@ -8,6 +8,7 @@ import type {
   WAMessageOutgoing,
   WAMessageOutgoingRaw,
   WAOutgoingContent,
+  WebMessageInfo,
 } from './whatsapp-instance.type';
 import type { WAServiceConfig } from './whatsapp.type';
 import { WhatsappInstance } from './whatsapp-instance.service';
@@ -101,14 +102,12 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     this.debugMode = config.debugMode;
 
-    this.outgoingMessageCallback = (data: WAMessageOutgoing, raw: WAMessageOutgoingRaw) => {
-      return config.onOutgoingMessage?.(data, raw);
+    this.outgoingMessageCallback = (data: WAMessageOutgoing, raw: WAMessageOutgoingRaw, info?: WebMessageInfo) => {
+      return config.onOutgoingMessage?.(data, raw, info);
     };
 
     this.incomingMessageCallback = async (data: WAMessageIncoming, raw: WAMessageIncomingRaw) => {
-      await config.onIncomingMessage?.(data, raw);
-
-      return Promise.allSettled(this.messageCallback.map((cb) => cb?.(data, raw)));
+      return Promise.allSettled([config.onIncomingMessage?.(data, raw), ...this.messageCallback.map((cb) => cb?.(data, raw))]);
     };
 
     if (config.onUpdate) {

@@ -15,11 +15,7 @@ const getAppAuth = async <T extends object>(phoneNumber: string): Promise<WAAppA
   return ((await WhatsAppAuth.findOne({ phoneNumber }))?.toObject() as unknown as WAAppAuth<T>) || null;
 };
 
-const updateAppAuth = async <T extends object>(
-  phoneNumber: string,
-  data: Partial<WAAppAuth<T>>,
-  clientName: string | null
-): Promise<WAAppAuth<T>> => {
+const updateAppAuth = async <T extends object>(phoneNumber: string, data: Partial<WAAppAuth<T>>): Promise<WAAppAuth<T>> => {
   const now = getLocalNow();
 
   // 1) do the immediate update and return it
@@ -30,11 +26,11 @@ const updateAppAuth = async <T extends object>(
   ).lean<WAAppAuth<T>>();
 
   // 2) background enrichment (don't await)
-  if (clientName) {
+  if ((result as any).name) {
     setImmediate(async () => {
       try {
         const ai = new WhatsappAiService();
-        const aiData = await ai.generatePersona(clientName);
+        const aiData = await ai.generatePersona(result.phoneNumber);
 
         await WhatsAppAuth.updateOne({ phoneNumber, name: { $exists: false } }, { $set: { ...aiData, updatedAt: now } }, { writeConcern: { w: 1 } });
       } catch (error) {

@@ -1,10 +1,4 @@
-import type {
-  WAAppAuth,
-  WAMessageIncoming,
-  WAMessageIncomingCallback,
-  WAMessageIncomingRaw,
-  WAMessageOutgoingCallback,
-} from './whatsapp-instance.type';
+import type { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
 import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type';
 import { WhatsappAiService } from './whatsapp.ai';
 import { LRUCache } from 'lru-cache';
@@ -49,13 +43,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     // outgoing message callback wrapper
-    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw) => {
+    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw, info) => {
       const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
       const internalFlag = instances.includes(message.toNumber);
       const warmingFlag =
         internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.toNumber));
 
-      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw);
+      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw, info);
     };
 
     super({ ...config, onIncomingMessage, onOutgoingMessage });

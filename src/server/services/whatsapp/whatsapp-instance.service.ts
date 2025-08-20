@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import type {
+import {
   IMessage,
   IWebMessageInfo,
   WAAppAuth,
@@ -12,6 +12,7 @@ import type {
   WAOutgoingContent,
   WASendOptions,
   AuthenticationCreds,
+  WebMessageInfo,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -53,13 +54,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   // Callbacks
   private readonly getAppAuth: () => Promise<WAAppAuth<T> | null>;
-  private readonly updateAppAuth: (data: Partial<WAAppAuth<T>>, clientName: string | null) => Promise<WAAppAuth<T>>;
+  private readonly updateAppAuth: (data: Partial<WAAppAuth<T>>) => Promise<WAAppAuth<T>>;
   private readonly deleteAppAuth: () => Promise<void>;
   private readonly updateAppKey: (keyType: string, keyId: string, data: Partial<any>) => Promise<void>;
   private readonly getAppKeys: () => Promise<any[]>;
   private readonly onRemove: () => Promise<unknown> | unknown;
   private readonly onIncomingMessage: (data: Omit<WAMessageIncoming, 'toNumber'>, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
-  private readonly onOutgoingMessage: (data: Omit<WAMessageOutgoing, 'fromNumber'>, raw: WAMessageOutgoingRaw) => Promise<unknown> | unknown;
+  private readonly onOutgoingMessage: (
+    data: Omit<WAMessageOutgoing, 'fromNumber'>,
+    raw: WAMessageOutgoingRaw,
+    info?: WebMessageInfo
+  ) => Promise<unknown> | unknown;
   private readonly onMessageBlocked: WAMessageBlockCallback;
   private readonly onReady: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
   private readonly onDisconnect: (reason: string) => Promise<unknown> | unknown;
@@ -78,7 +83,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     // Store callbacks
     this.getAppAuth = () => config.getAppAuth(phoneNumber);
-    this.updateAppAuth = (data: Partial<WAAppAuth<T>>, clientName: string | null) => config.updateAppAuth(phoneNumber, data, clientName);
+    this.updateAppAuth = (data: Partial<WAAppAuth<T>>) => config.updateAppAuth(phoneNumber, data);
     this.deleteAppAuth = () => config.deleteAppAuth(phoneNumber);
     this.updateAppKey = (keyType: string, keyId: string, data: Partial<any>) => config.updateAppKey(phoneNumber, keyType, keyId, data);
     this.getAppKeys = () => config.getAppKeys(phoneNumber);
@@ -87,7 +92,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onRemove = () => config.onRemove?.(phoneNumber);
     this.onDisconnect = (reason: string) => config.onDisconnect?.(phoneNumber, reason);
     this.onIncomingMessage = (data, raw) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, raw);
-    this.onOutgoingMessage = (data, raw) => config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw);
+    this.onOutgoingMessage = (data, raw, info) => config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw, info);
     this.onMessageBlocked = async (fromNumber: string, toNumber: string, blockReason: string) => {
       await this.update({ blockedCount: (this.appState?.blockedCount || 0) + 1 } as WAAppAuth<T>);
 
@@ -432,7 +437,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       };
 
-      const handleFileChange = async (newSessionFlag: boolean) => {
+      const handleFileChange = async () => {
         const fileList = await readdir(this.TEMP_DIR);
 
         // Save creds.json
@@ -440,13 +445,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           try {
             // Try to recover corrupted JSON data
             const creds = await readJsonFile<AuthenticationCreds>('creds.json');
-            const clientName = !newSessionFlag ? null : creds.me?.verifiedName || creds.me?.name || this.phoneNumber;
             const credsForStorage = convertBufferToPlain(creds);
 
-            await this.updateAppAuth(
-              { creds: credsForStorage, ...(this.connected ? { statusCode: 200, errorMessage: null } : {}) } as WAAppAuth<T>,
-              clientName
-            );
+            await this.updateAppAuth({ creds: credsForStorage, ...(this.connected ? { statusCode: 200, errorMessage: null } : {}) } as WAAppAuth<T>);
 
             this.log('info', 'creds.json has been updated');
           } catch (error) {
@@ -490,7 +491,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             this.log('info', 'Registration complete, saving to database');
             this.onRegister();
 
-            await handleFileChange(true);
+            await handleFileChange();
             hasBeenSavedToDatabase = true;
           } else {
             this.log('info', 'Registration not complete yet, skipping database save');
@@ -498,7 +499,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         } else if (!isNewSession) {
           this.log('info', 'Updating session data');
 
-          await handleFileChange(false);
+          await handleFileChange();
         }
       } catch (_error) {
         this.log('error', 'Error in saveCreds');
@@ -1154,7 +1155,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
 
-        const result = await (async () => {
+        const result: WebMessageInfo | undefined = await (async () => {
           if (!this.connected || !this.socket) {
             throw new Error(`Instance is not connected`);
           }
@@ -1180,7 +1181,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Trigger outgoing message callback
         try {
-          await this.onOutgoingMessage?.(record, content);
+          await this.onOutgoingMessage?.(record, content, result);
         } catch (error) {
           this.log('error', 'Error in outgoing message callback:', error);
         }
@@ -1485,7 +1486,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value)) {
       this.set(data);
 
-      this.set((await this.updateAppAuth(data, null)) || this.appState);
+      this.set((await this.updateAppAuth(data)) || this.appState);
       this.onUpdate(data);
     }
   }

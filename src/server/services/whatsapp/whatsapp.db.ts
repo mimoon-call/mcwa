@@ -77,6 +77,7 @@ export const WhatsAppMessage = new MongoService<WAMessage & { raw: WAMessageInco
     internalFlag: { type: Boolean },
     warmingFlag: { type: Boolean },
     raw: { type: Schema.Types.Mixed },
+    info: { type: Schema.Types.Mixed },
     createdAt: { type: Date },
   },
   { timestamps: false },

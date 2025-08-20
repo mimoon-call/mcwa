@@ -44,9 +44,9 @@ export const wa = new WhatsappWarmService({
     const now = getLocalNow();
     WhatsAppMessage.insertOne({ ...msg, raw, createdAt: now });
   },
-  onOutgoingMessage: (msg, raw) => {
+  onOutgoingMessage: (msg, raw, info) => {
     const now = getLocalNow();
-    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: now });
+    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: now });
   },
 });
 
@@ -62,38 +62,6 @@ export const wa = new WhatsappWarmService({
   wa.onReady(() => {
     wa.startWarmingUp();
   });
-
-  // app.get('/qr/:number', async (req, res) => {
-  //   const number = req.params.number;
-  //
-  //   try {
-  //     const qrBase64 = await wa.addInstanceQR(number); // data:image/png;base64,...
-  //
-  //     res.send(`
-  //         <!DOCTYPE html>
-  //         <html lang="en">
-  //         <head>
-  //           <meta charset="UTF-8" />
-  //           <title>Scan WhatsApp QR: ${number}</title>
-  //           <style>
-  //             body { font-family: sans-serif; text-align: center; margin-top: 40px; }
-  //             img { width: 300px; height: 300px; }
-  //           </style>
-  //         </head>
-  //         <body>
-  //           <h1>Scan QR Code for <code>${number}</code></h1>
-  //           <img src="${qrBase64}" alt="WhatsApp QR for ${number}" />
-  //           <p>Open WhatsApp → Menu → Linked Devices → Link a Device</p>
-  //         </body>
-  //         </html>
-  //       `);
-  //   } catch (err: any) {
-  //     res.status(500).send(`
-  //         <h1>❌ Error generating QR for ${number}</h1>
-  //         <p>${err.message}</p>
-  //       `);
-  //   }
-  // });
 
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));
 

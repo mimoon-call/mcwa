@@ -3,6 +3,7 @@ import { AnyMessageContent, proto } from '@whiskeysockets/baileys';
 
 import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
+import WebMessageInfo = proto.WebMessageInfo;
 import { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
 
 export type WAAppAuth<T extends object> = T & {
@@ -38,7 +39,7 @@ export type WAAppKey = {
 export type WASendOptions = {
   maxRetries?: number;
   retryDelay?: number;
-  onSuccess?: (result: any) => void;
+  onSuccess?: (...arg: any[]) => void;
   onFailure?: (error: any, attempts: number) => void;
 };
 
@@ -50,6 +51,7 @@ export type WAMessage = {
   toJid?: string;
   internalFlag?: boolean;
   warmingFlag?: boolean;
+  info?: WebMessageInfo;
 };
 
 export type WAMessageIncoming = WAMessage;
@@ -59,7 +61,7 @@ export type WAMessageIncomingRaw = IWebMessageInfo;
 export type WAMessageOutgoingRaw = AnyMessageContent;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
-export type WAMessageOutgoingCallback = (message: WAMessageOutgoing, raw: WAMessageOutgoingRaw) => Promise<unknown> | unknown;
+export type WAMessageOutgoingCallback = (message: WAMessageOutgoing, raw: WAMessageOutgoingRaw, info?: WebMessageInfo) => Promise<unknown> | unknown;
 export type WAMessageBlockCallback = (fromNumber: string, toNumber: string, reason: string) => Promise<unknown> | unknown;
 
 export type WAOutgoingContent =
@@ -73,7 +75,7 @@ export type WAOutgoingContent =
 export type WAInstanceConfig<T extends object = Record<never, never>> = {
   // Callbacks for auth key management
   getAppAuth: (phoneNumber: string) => Promise<WAAppAuth<T> | null>;
-  updateAppAuth: (phoneNumber: string, data: Partial<WAAppAuth<T>>, clientName: string | null) => Promise<WAAppAuth<T>>;
+  updateAppAuth: (phoneNumber: string, data: Partial<WAAppAuth<T>>) => Promise<WAAppAuth<T>>;
   updateAppKey: (phoneNumber: string, keyType: string, keyId: string, data: Partial<any>) => Promise<void>;
   deleteAppAuth: (phoneNumber: string) => Promise<void>;
   getAppKeys: (phoneNumber: string) => Promise<any[]>;
@@ -93,4 +95,4 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   onUpdate: (state: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
 }>;
 
-export { IMessage, IWebMessageInfo, AuthenticationCreds };
+export { IMessage, IWebMessageInfo, AuthenticationCreds, WebMessageInfo };
