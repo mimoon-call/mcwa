@@ -58,6 +58,7 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
 
   useImperativeHandle(ref, () => ({
     open: async (instanceNumber?: string): Promise<void> => {
+      setQrData(null);
       setNumberInjected(!!instanceNumber);
       setPhoneNumber(instanceNumber || '');
 
