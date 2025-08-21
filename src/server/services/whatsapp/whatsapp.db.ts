@@ -32,8 +32,8 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     dailyMessageCount: { type: Number, required: true, default: 0 }, // Daily count for warm-up - resets daily
     maxDailyMessages: { type: Number, required: false, default: 200 },
     lastSentMessage: { type: String, required: false }, // Date of last sent message (YYYY-MM-DD)
-    profileName: { type: String },
     hasPrivacyUpdated: { type: Boolean },
+    profilePictureUrl: { type: String },
     createdAt: { type: Date },
     updatedAt: { type: Date },
     // warm

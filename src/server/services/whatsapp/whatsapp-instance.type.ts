@@ -18,7 +18,7 @@ export type WAAppAuth<T extends object> = T & {
   dailyMessageCount: number; // Daily count for warm-up - resets daily
   lastSentMessage: string; // Date of last sent message (YYYY-MM-DD)
   hasPrivacyUpdated?: boolean;
-  profileName?: string;
+  profilePictureUrl?: string;
   // warm up
   warmUpDay: number;
   maxDailyMessages: number;

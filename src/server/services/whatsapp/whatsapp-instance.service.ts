@@ -572,18 +572,26 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private async updateProfile(sock: WASocket): Promise<void> {
+    const name = (this.appState as any).name;
+    const socketName = this.socket?.user?.name;
+
+    if (socketName === name) {
+      return;
+    }
+
     try {
-      const name = (this.appState as any).name;
       await sock.updateProfileName(name);
       this.log('info', `Name: Profile name set to ${name}`);
-
-      await this.update({ profileName: name } as WAAppAuth<T>);
     } catch (_error) {
       this.log('warn', 'Failed to set profile settings');
     }
   }
 
   private async updatePrivacy(sock: WASocket): Promise<void> {
+    if (this.appState?.hasPrivacyUpdated) {
+      return;
+    }
+
     // Set privacy settings immediately after connection
     try {
       // Set last seen to "nobody" (invisible)
@@ -615,13 +623,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         this.log('info', 'Connected successfully');
         this.connected = true;
 
-        if (!this.appState?.hasPrivacyUpdated) {
-          await this.updatePrivacy(sock);
-        }
-
-        if (!this.appState?.profileName) {
-          await this.updateProfile(sock);
-        }
+        await this.updatePrivacy(sock);
+        await this.updateProfile(sock);
 
         // Start keep-alive and health check
         this.startKeepAlive();
@@ -992,6 +995,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     });
   }
 
+  private async updateProfileUrl() {
+    if (!this.socket) {
+      return;
+    }
+
+    const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user!.id, 'image');
+    await this.update({ profilePictureUrl } as WAAppAuth<T>);
+  }
+
   /**
    * Restore existing instance
    */
@@ -1048,6 +1060,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         };
 
         checkConnection();
+        this.updateProfileUrl();
 
         // Overall timeout after 15 seconds
         setTimeout(() => {
