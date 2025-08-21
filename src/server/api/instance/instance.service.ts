@@ -22,6 +22,7 @@ export const instanceService = {
           $project: {
             phoneNumber: 1,
             isActive: 1,
+            profilePictureUrl: 1,
             dailyMessageCount: 1,
             outgoingMessageCount: 1,
             incomingMessageCount: 1,
@@ -31,6 +32,8 @@ export const instanceService = {
             dailyWarmUpCount: 1,
             dailyWarmConversationCount: 1,
             hasWarmedUp: 1,
+            gender: 1,
+            name: 1,
             createdAt: 1,
           },
         },

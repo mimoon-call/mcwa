@@ -27,6 +27,7 @@ import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-eve
 import { liveUpdateHandler } from '@helpers/live-update-handler';
 import { useToast } from '@hooks';
 import Icon from '@components/Icon/Icon';
+import Avatar from '@components/Avatar/Avatar';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -57,7 +58,14 @@ const InstanceTable = () => {
         })();
 
         return (
-          <div className="flex justify-between">
+          <div className="flex items-center gap-2">
+            <Avatar
+              tooltip
+              size="24px"
+              src={item?.profilePictureUrl}
+              alt={item?.name || 'GENERAL.PROFILE_PICTURE'}
+              iconName={item?.gender === 'female' ? 'svg:avatar-female' : 'svg:avatar-male'}
+            />
             <span>{item?.phoneNumber}</span>
             <div className="flex justify-center items-center ps-2 h-full">
               <Icon className={iconColorClass} name="svg:warm" />

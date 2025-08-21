@@ -1,5 +1,5 @@
 // src/client/shared/hooks/useTooltip.ts
-import { type CSSProperties, type RefObject, useEffect } from 'react';
+import { type CSSProperties, type RefObject, useEffect, useRef } from 'react';
 import { getLastZIndex } from '@helpers/get-last-z-index';
 
 const WIDTH_LIMIT = 300;
@@ -77,10 +77,12 @@ const setTooltipProps = (event: MouseEvent, tooltipEl: HTMLElement, color: strin
   });
 };
 
-export function useTooltip(ref: RefObject<HTMLElement | null>, options: TooltipOptions = {}) {
+export function useTooltip<T extends HTMLElement = HTMLElement>(options: TooltipOptions = {}) {
   if (typeof window === 'undefined') {
     return;
   }
+
+  const ref: RefObject<T | null> = useRef<T | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -137,4 +139,6 @@ export function useTooltip(ref: RefObject<HTMLElement | null>, options: TooltipO
       }
     };
   }, [ref, options]);
+
+  return ref;
 }

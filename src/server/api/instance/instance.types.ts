@@ -1,10 +1,18 @@
 import type { WAAppAuth, WAMessage } from '@server/services/whatsapp/whatsapp-instance.type';
 import type { WAPersona } from '@server/services/whatsapp/whatsapp.type';
-import type { Pagination, EntityList } from '../../../client/shared/models';
+import type { Pagination, EntityList } from '@models';
 
 export type InstanceItem = Pick<
   WAAppAuth<WAPersona>,
-  'phoneNumber' | 'isActive' | 'warmUpDay' | 'dailyWarmUpCount' | 'dailyWarmConversationCount' | 'hasWarmedUp'
+  | 'phoneNumber'
+  | 'isActive'
+  | 'warmUpDay'
+  | 'dailyWarmUpCount'
+  | 'dailyWarmConversationCount'
+  | 'hasWarmedUp'
+  | 'profilePictureUrl'
+  | 'gender'
+  | 'name'
 >;
 
 export type SearchInstanceReq = { page: Pagination };

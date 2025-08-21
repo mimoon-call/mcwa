@@ -3,6 +3,7 @@ import type { EntityList, Pagination } from '@models';
 export type InstanceItem = {
   phoneNumber: string;
   isActive: boolean;
+  profilePictureUrl?: string;
   dailyMessageCount: number;
   outgoingMessageCount: number;
   incomingMessageCount: number;
@@ -14,6 +15,8 @@ export type InstanceItem = {
   hasWarmedUp: boolean;
   createdAt: string;
   isWarmingUp?: boolean;
+  name: string;
+  gender: 'male' | 'female' | 'other';
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;
