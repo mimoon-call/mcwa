@@ -531,20 +531,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   private shouldSkipRetry(errorCode?: number, reason?: string): boolean {
     // Skip retry for authentication/authorization errors or disabled
-    if (errorCode === 401 || errorCode === 403 || errorCode === 408 || this.appState?.isActive === false || this.hasManualDisconnected) {
+    if (errorCode === 401 || errorCode === 403 || this.appState?.isActive === false || this.hasManualDisconnected) {
       return true;
     }
 
     // Also check reason string for these error types
     if (reason) {
       const lowerReason = reason.toLowerCase();
-      return (
-        lowerReason.includes('401') ||
-        lowerReason.includes('403') ||
-        lowerReason.includes('408') ||
-        lowerReason.includes('unauthorized') ||
-        lowerReason.includes('forbidden')
-      );
+      return lowerReason.includes('401') || lowerReason.includes('403') || lowerReason.includes('unauthorized') || lowerReason.includes('forbidden');
     }
 
     return false;
