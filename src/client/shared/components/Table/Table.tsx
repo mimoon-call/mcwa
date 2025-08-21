@@ -325,7 +325,7 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
 
   return (
     <div className={cn('overflow-x-auto', styles['data-table'], className, props.loading && styles['data-table--loading'])}>
-      <div ref={tableRef} className="h-full">
+      <div ref={tableRef} className={cn(props.items?.length && 'h-full')}>
         <table className={cn('flex-grow', props.showGrid && styles['data-table--grid'])}>
           <Header headers={headers} sort={props.pageSort} draggable={props.draggable} actions={actions} onSort={props.onSort} />
 
