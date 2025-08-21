@@ -127,7 +127,13 @@ const InstanceTable = () => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
       activeWarm(data, false);
 
-      (data.sentMessages === 0 ? toast.error : toast.success)(text);
+      if (data.sentMessages === 0) {
+        toast.error(text);
+      } else if (data.sentMessages !== data.totalMessages) {
+        toast.warning(text);
+      } else {
+        toast.success(text);
+      }
     };
 
     const warmStartToast = (data: WarmUpdate) => {

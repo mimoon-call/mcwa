@@ -44,6 +44,19 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     );
   };
 
+  const warning = (message: string | ReactNode, options: ToastOptions = {}) => {
+    const content = typeof message === 'string' ? t(message) : message;
+
+    openToast?.(
+      <div className="flex gap-1 align-middle">
+        <Icon name="svg:warning" size="1.5rem" />
+
+        <span className="self-center">{content}</span>
+      </div>,
+      { className: 'bg-yellow-50 text-yellow-700', ...options }
+    );
+  };
+
   const success = (message: string | ReactNode, options: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
 
@@ -57,5 +70,5 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     );
   };
 
-  return { error, success };
+  return { error, success, warning };
 };
