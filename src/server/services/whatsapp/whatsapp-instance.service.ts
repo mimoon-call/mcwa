@@ -251,10 +251,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       }
       try {
         await fs.promises.rmdir(this.TEMP_DIR);
-      } catch (_error) {
+      } catch {
         // Ignore cleanup errors
       }
-    } catch (_error) {
+    } catch {
       // Ignore cleanup errors
     }
 
@@ -571,22 +571,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     };
   }
 
-  private async updateProfile(sock: WASocket): Promise<void> {
-    const name = (this.appState as any).name;
-    const socketName = this.socket?.user?.name;
-
-    if (socketName === name) {
-      return;
-    }
-
-    try {
-      await sock.updateProfileName(name);
-      this.log('info', `Name: Profile name set to ${name}`);
-    } catch (_error) {
-      this.log('warn', 'Failed to set profile settings');
-    }
-  }
-
   private async updateProfileUrl() {
     if (!this.socket || !this.socket.user?.id) {
       return;
@@ -598,32 +582,44 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user.id, 'image');
       await this.update({ profilePictureUrl } as WAAppAuth<T>);
       this.log('debug', 'Profile picture URL updated successfully');
-    } catch (error: any) {
-      if (error?.message?.includes('Connection Closed') || error?.output?.payload?.message === 'Connection Closed') {
-        this.log('warn', 'Connection closed during profile update, skipping');
-        return;
-      }
-
-      this.log('warn', 'Failed to update profile picture URL:', error?.message || error);
+    } catch {
+      return;
     }
   }
 
-  private async updatePrivacy(sock: WASocket): Promise<void> {
-    if (this.appState?.hasPrivacyUpdated) {
+  private async updateProfile(): Promise<void> {
+    await this.updateProfileUrl();
+    const name = (this.appState as any).name;
+    const userName = this.socket?.user?.name;
+
+    if (!this.socket || userName === name) {
+      return;
+    }
+
+    try {
+      await this.socket?.updateProfileName(name);
+      this.log('info', `Name: Profile name set to ${name}`);
+    } catch (_error) {
+      this.log('warn', 'Failed to set profile settings');
+    }
+  }
+
+  private async updatePrivacy(): Promise<void> {
+    if (!this.socket || this.appState?.hasPrivacyUpdated) {
       return;
     }
 
     // Set privacy settings immediately after connection
     try {
       // Set last seen to "nobody" (invisible)
-      await sock.updateLastSeenPrivacy('none');
+      await this.socket.updateLastSeenPrivacy('none');
       this.log('info', 'Privacy: Last seen set to invisible');
 
       // Set online status to invisible
-      await sock.updateOnlinePrivacy('match_last_seen');
+      await this.socket.updateOnlinePrivacy('match_last_seen');
       this.log('info', 'Privacy: Online status set to invisible');
 
-      await sock.updateGroupsAddPrivacy('contacts');
+      await this.socket.updateGroupsAddPrivacy('contacts');
       this.log('info', 'Privacy: Add to groups enabled by contacts only');
 
       await this.update({ hasPrivacyUpdated: true } as WAAppAuth<T>);
@@ -644,15 +640,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         this.log('info', 'Connected successfully');
         this.connected = true;
 
-        await this.updatePrivacy(sock);
-        await this.updateProfile(sock);
-
         // Start keep-alive and health check
         this.startKeepAlive();
         this.startHealthCheck();
 
         // Only trigger ready callback if session is actually ready (has valid credentials)
         if (this.appState?.creds?.me || this.appState?.creds?.registered) {
+          await this.updatePrivacy();
+          await this.updateProfile();
+
           // Trigger ready callback
           await this.onReady(this);
         } else {
@@ -908,57 +904,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.healthCheckInterval = undefined;
   }
 
-  /**
-   * Handle connection errors gracefully without crashing the instance
-   */
-  private async handleConnectionError(error: any, context: string): Promise<void> {
-    const errorMessage = error?.message || 'Unknown error';
-    const errorCode = error?.output?.statusCode || error?.statusCode;
-
-    this.log('error', `Connection error in ${context}:`, errorMessage);
-
-    // Handle specific error types
-    if (errorCode === 428 || errorMessage.includes('Connection Closed')) {
-      this.log('warn', '🔌 Connection closed, attempting graceful recovery...');
-
-      try {
-        // Mark as disconnected but don't crash
-        this.connected = false;
-
-        // Try to reconnect after a delay
-        setTimeout(async () => {
-          try {
-            if (!this.connected && this.appState?.isActive !== false) {
-              this.log('info', '🔄 Attempting automatic reconnection...');
-              await this.connect();
-            }
-          } catch (reconnectError: any) {
-            this.log('warn', '❌ Automatic reconnection failed:', reconnectError?.message || reconnectError);
-          }
-        }, 5000);
-
-        return;
-      } catch (recoveryError) {
-        this.log('error', '❌ Error during connection recovery:', recoveryError);
-      }
-    }
-
-    // For other errors, just log them without crashing
-    this.log('warn', `Non-critical connection error in ${context}, continuing...`);
-  }
-
-  /**
-   * Enhanced error handling for socket operations
-   */
-  private async safeSocketOperation<T>(operation: () => Promise<T>, fallback: T, context: string): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      await this.handleConnectionError(error, context);
-      return fallback;
-    }
-  }
-
   // Public methods
 
   /**
@@ -1002,19 +947,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (connection === 'open') {
           this.log('info', 'Connected');
 
-          // Set privacy settings immediately after connection
-          try {
-            // Set last seen to "nobody" (invisible)
-            await sock.updateLastSeenPrivacy('none');
-            this.log('info', 'Privacy: Last seen set to invisible');
-
-            // Set online status to invisible
-            await sock.updateOnlinePrivacy('match_last_seen');
-            this.log('info', 'Privacy: Online status set to invisible');
-          } catch (error) {
-            this.log('warn', 'Failed to set privacy settings:', error);
-          }
-
+          await this.updatePrivacy();
+          await this.updateProfile();
           this.connected = true;
 
           // Start keep-alive and health check
@@ -1123,11 +1057,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         };
 
         checkConnection();
-
-        // Try to update profile URL but don't let it fail the connection
-        this.updateProfileUrl().catch((error) => {
-          this.log('warn', 'Profile URL update failed during connection, continuing:', error?.message || error);
-        });
 
         // Overall timeout after 15 seconds
         setTimeout(() => {
