@@ -47,17 +47,24 @@ const InstanceTable = () => {
       value: 'phoneNumber',
       sortable: true,
       searchable: true,
-      component: ({ item }) => (
-        <div className="flex justify-between">
-          <span>{item?.phoneNumber}</span>
-          {item?.isWarmingUp ||
-            (!item.hasWarmedUp && (
-              <div className="flex justify-center items-center ps-2 h-full">
-                <Icon className={cn(item.isWarmingUp ? 'text-red-800' : 'text-gray-500')} name="svg:warm" />
-              </div>
-            ))}
-        </div>
-      ),
+      component: ({ item }) => {
+        const iconColorClass = (() => {
+          if (item?.hasWarmedUp) {
+            return 'text-green-600';
+          }
+
+          return item.isWarmingUp ? 'text-red-600' : 'text-gray-400';
+        })();
+
+        return (
+          <div className="flex justify-between">
+            <span>{item?.phoneNumber}</span>
+            <div className="flex justify-center items-center ps-2 h-full">
+              <Icon className={iconColorClass} name="svg:warm" />
+            </div>
+          </div>
+        );
+      },
     },
     {
       title: 'GENERAL.ACTIVE',
