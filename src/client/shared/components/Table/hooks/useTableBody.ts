@@ -18,7 +18,7 @@ const unwrapHighlights = (element: HTMLElement) => {
 const highlightMatch = (element: HTMLElement, search: string): boolean => {
   // Remove word boundary restriction to search anywhere in the string
   const regex = new RegExp(`(${escapeRegExp(search)})`, 'i');
-  
+
   const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
 
   while (walk.nextNode()) {
@@ -55,7 +55,7 @@ const highlightMatch = (element: HTMLElement, search: string): boolean => {
 const highlightRow = (row: HTMLTableRowElement, search: string) => {
   // Only highlight cells that are marked as searchable
   const searchableCells = row.querySelectorAll('[data-searchable="true"]');
-  
+
   searchableCells.forEach((cell) => {
     highlightMatch(cell as HTMLElement, search);
   });
@@ -122,7 +122,11 @@ export const useTableBody = (
 
   useEffect(() => {
     if (rowRefs.current.length > 0) {
-      rowRefs.current[0]?.focus();
+      // Only focus first row if no row is currently focused
+      const hasFocusedRow = rowRefs.current.some((row) => row === document.activeElement);
+      if (!hasFocusedRow) {
+        rowRefs.current[0]?.focus();
+      }
     }
   }, [items]);
 
@@ -155,12 +159,12 @@ export const useTableBody = (
         // Use regex to search anywhere in the string, not just at the beginning
         const regex = new RegExp(escapeRegExp(searchValue), 'i');
         const match = word.match(regex);
-        
+
         if (match) {
-          matches.push({ 
-            index, 
-            firstMatchWordIndex: wordIndex, 
-            matchPosition: match.index || 0 
+          matches.push({
+            index,
+            firstMatchWordIndex: wordIndex,
+            matchPosition: match.index || 0,
           });
         }
       });
@@ -173,7 +177,7 @@ export const useTableBody = (
       }
       return a.firstMatchWordIndex - b.firstMatchWordIndex;
     });
-    
+
     clearHighlights();
 
     if (matches.length > 0) {
