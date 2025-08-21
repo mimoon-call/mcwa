@@ -12,7 +12,7 @@ import { HttpServer } from 'vite';
 import dir from '../../../dir';
 import { BaseResponse } from '@server/models/base-response';
 
-const __public = process.env.NODE_ENV === 'production' ? '/app/public/sw.js' : path.join(dir, '/../public/');
+const __public = process.env.NODE_ENV === 'production' ? '/app/public/' : path.join(dir, '/../public/');
 
 type Config = Partial<{
   routes: Array<[`/${string}`, ReturnType<typeof express.Router>]>;
