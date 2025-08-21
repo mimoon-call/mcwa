@@ -26,6 +26,7 @@ import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import { liveUpdateHandler } from '@helpers/live-update-handler';
 import { useToast } from '@hooks';
+import Icon from '@components/Icon/Icon';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -41,7 +42,22 @@ const InstanceTable = () => {
   } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const headers: TableHeaders<InstanceItem> = [
-    { title: 'INSTANCE.PHONE_NUMBER', value: 'phoneNumber', sortable: true, searchable: true },
+    {
+      title: 'INSTANCE.PHONE_NUMBER',
+      value: 'phoneNumber',
+      sortable: true,
+      searchable: true,
+      component: ({ item }) => (
+        <div className="flex justify-between">
+          <span>{item?.phoneNumber}</span>
+          {item?.isWarmingUp && (
+            <div className="flex justify-center items-center ps-2 h-full">
+              <Icon className="text-red-800" name="svg:warm" />
+            </div>
+          )}
+        </div>
+      ),
+    },
     {
       title: 'GENERAL.ACTIVE',
       value: 'isActive',
@@ -102,12 +118,18 @@ const InstanceTable = () => {
 
     const warmEndToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
+      const { phoneNumber1, phoneNumber2 } = data;
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp: false }));
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp: false }));
 
       (data.sentMessages === 0 ? toast.error : toast.success)(text);
     };
 
     const warmStartToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_START_TOAST', data).toString();
+      const { phoneNumber1, phoneNumber2 } = data;
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp: true }));
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp: true }));
 
       toast.success(text);
     };

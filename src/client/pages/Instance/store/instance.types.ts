@@ -13,6 +13,7 @@ export type InstanceItem = {
   dailyWarmConversationCount: number;
   hasWarmedUp: boolean;
   createdAt: string;
+  isWarmingUp?: boolean;
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;
