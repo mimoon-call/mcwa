@@ -55,6 +55,7 @@
     "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה.\nסה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}",
     "WARM_START_TOAST": "מתחיל שיחת חימום בין {{phoneNumber1}} לבין {{phoneNumber2}} בעוד {{startInSeconds}} שניות",
     "NEXT_WARM_AT": "המפגש החם הסתיים, המפגש הבא יתחיל ב-{{nextWarmAt}}",
+    "NEXT_WARM_IN": "החימום הבא יתחיל בעוד {{timeUntil}}",
     "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
     "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים"
   },

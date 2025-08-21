@@ -6,7 +6,7 @@ import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { DateFormat } from '@client-constants';
+import { DateFormat, formatTimeUntil } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
@@ -144,8 +144,8 @@ const InstanceTable = () => {
     };
 
     const nextWarmToast = ({ nextAt }: { nextAt: Date | string }) => {
-      const nextWarmAt = dayjs(nextAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
-      const text = t('INSTANCE.NEXT_WARM_AT', { nextWarmAt }).toString();
+      const timeUntil = formatTimeUntil(nextAt);
+      const text = t('INSTANCE.NEXT_WARM_IN', { timeUntil }).toString();
 
       toast.success(text);
     };
