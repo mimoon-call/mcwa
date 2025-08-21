@@ -39,18 +39,26 @@ export const instanceService = {
     );
   },
 
-  [GET_INSTANCE_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string): Promise<GetInstanceConversationRes['messages']> => {
-    return WhatsAppMessage.find(
+  [GET_INSTANCE_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetInstanceConversationRes> => {
+    const { pageSize = 50, ...restPage } = page || {};
+
+    return WhatsAppMessage.pagination({ page: { pageSize, ...restPage } }, [
       {
-        $or: [
-          { fromNumber: phoneNumber, toNumber: withPhoneNumber },
-          { fromNumber: withPhoneNumber, toNumber: phoneNumber },
-        ],
+        $match: {
+          $and: [
+            {
+              $or: [
+                { fromNumber: phoneNumber, toNumber: withPhoneNumber },
+                { fromNumber: withPhoneNumber, toNumber: phoneNumber },
+              ],
+            },
+            { text: { $ne: '' } },
+          ],
+        },
       },
-      { fromNumber: 1, toNumber: 1, text: 1, createdAt: 1, _id: 0 }
-    )
-      .sort({ createdAt: 1 }) // Sort by creation time (oldest first)
-      .lean();
+      { $sort: { createdAt: -1 } },
+      { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, createdAt: 1 } },
+    ]);
   },
 
   [GET_INSTANCE_CONVERSATIONS]: async (phoneNumber: string, page: Pagination): Promise<GetInstanceConversationsRes> => {

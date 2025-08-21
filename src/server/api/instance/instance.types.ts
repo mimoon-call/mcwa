@@ -15,7 +15,7 @@ export type GetInstanceConversationsReq = { page: Pagination };
 export type GetInstanceConversationsRes = EntityList<InstanceConversationItem>;
 
 export type InstanceConversation = Pick<WAMessage, 'fromNumber' | 'toNumber' | 'text'> & { createdAt: Date };
-export type GetInstanceConversationReq = { withPhoneNumber: string };
-export type GetInstanceConversationRes = { messages: InstanceConversation[] };
+export type GetInstanceConversationReq = { withPhoneNumber: string; page: Pagination };
+export type GetInstanceConversationRes = EntityList<InstanceConversation>;
 
 export type AddInstanceRes = { image: string };
