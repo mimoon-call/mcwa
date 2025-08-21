@@ -98,6 +98,9 @@ export class WhatsappService<T extends object = Record<never, never>> {
     this.listAppAuth = config.listAppAuth;
 
     this.updateAppKey = config.updateAppKey;
+    
+    // Setup error handlers
+    this.setupErrorHandlers();
     this.getAppKeys = config.getAppKeys;
 
     this.debugMode = config.debugMode;
@@ -195,16 +198,68 @@ export class WhatsappService<T extends object = Record<never, never>> {
       process.exit(0);
     });
 
+    // Error handlers moved to setupErrorHandlers method for better control
+  }
+
+  private setupErrorHandlers() {
+    process.on('SIGINT', () => {
+      this.log('info', 'Received SIGINT, cleaning up...');
+      this.cleanup();
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+      this.log('info', 'Received SIGTERM, cleaning up...');
+      this.cleanup();
+      process.exit(0);
+    });
+
     process.on('uncaughtException', (error) => {
       this.log('error', 'whatsappService', 'Uncaught Exception:', error);
-      this.cleanup();
-      process.exit(1);
+      
+      // Log the error but don't exit immediately
+      // Give the application a chance to recover
+      this.log('error', 'whatsappService', 'Attempting to recover from uncaught exception...');
+      
+      try {
+        this.cleanup();
+      } catch (cleanupError) {
+        this.log('error', 'whatsappService', 'Error during cleanup:', cleanupError);
+      }
+      
+      // Only exit if this is a critical error that can't be recovered from
+      if (error.message?.includes('ECONNREFUSED') || 
+          error.message?.includes('EADDRINUSE') ||
+          error.message?.includes('ENOTFOUND')) {
+        this.log('error', 'whatsappService', 'Critical error detected, exiting...');
+        process.exit(1);
+      }
     });
 
     process.on('unhandledRejection', (reason, promise) => {
       this.log('error', 'whatsappService', 'Unhandled Rejection at:', promise, 'reason:', reason);
-      this.cleanup();
-      process.exit(1);
+      
+      // Log the error but don't exit immediately
+      this.log('error', 'whatsappService', 'Attempting to recover from unhandled rejection...');
+      
+      try {
+        this.cleanup();
+      } catch (cleanupError) {
+        this.log('error', 'whatsappService', 'Error during cleanup:', cleanupError);
+      }
+      
+      // Only exit for critical promise rejections
+      if (reason instanceof Error) {
+        if (reason.message?.includes('ECONNREFUSED') || 
+            reason.message?.includes('EADDRINUSE') ||
+            reason.message?.includes('ENOTFOUND')) {
+          this.log('error', 'whatsappService', 'Critical promise rejection detected, exiting...');
+          process.exit(1);
+        }
+      }
+      
+      // For other rejections, just log and continue
+      this.log('warn', 'whatsappService', 'Non-critical promise rejection, continuing...');
     });
   }
 

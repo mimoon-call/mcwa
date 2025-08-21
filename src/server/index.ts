@@ -41,12 +41,10 @@ export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
   onIncomingMessage: (msg, raw) => {
-    const now = getLocalNow();
-    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: now });
+    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalNow() });
   },
   onOutgoingMessage: (msg, raw, info) => {
-    const now = getLocalNow();
-    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: now });
+    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalNow() });
   },
 });
 

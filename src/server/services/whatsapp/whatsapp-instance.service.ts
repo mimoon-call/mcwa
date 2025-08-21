@@ -587,6 +587,27 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
+  private async updateProfileUrl() {
+    if (!this.socket || !this.socket.user?.id) {
+      return;
+    }
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user.id, 'image');
+      await this.update({ profilePictureUrl } as WAAppAuth<T>);
+      this.log('debug', 'Profile picture URL updated successfully');
+    } catch (error: any) {
+      if (error?.message?.includes('Connection Closed') || error?.output?.payload?.message === 'Connection Closed') {
+        this.log('warn', 'Connection closed during profile update, skipping');
+        return;
+      }
+
+      this.log('warn', 'Failed to update profile picture URL:', error?.message || error);
+    }
+  }
+
   private async updatePrivacy(sock: WASocket): Promise<void> {
     if (this.appState?.hasPrivacyUpdated) {
       return;
@@ -887,6 +908,57 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.healthCheckInterval = undefined;
   }
 
+  /**
+   * Handle connection errors gracefully without crashing the instance
+   */
+  private async handleConnectionError(error: any, context: string): Promise<void> {
+    const errorMessage = error?.message || 'Unknown error';
+    const errorCode = error?.output?.statusCode || error?.statusCode;
+
+    this.log('error', `Connection error in ${context}:`, errorMessage);
+
+    // Handle specific error types
+    if (errorCode === 428 || errorMessage.includes('Connection Closed')) {
+      this.log('warn', '🔌 Connection closed, attempting graceful recovery...');
+
+      try {
+        // Mark as disconnected but don't crash
+        this.connected = false;
+
+        // Try to reconnect after a delay
+        setTimeout(async () => {
+          try {
+            if (!this.connected && this.appState?.isActive !== false) {
+              this.log('info', '🔄 Attempting automatic reconnection...');
+              await this.connect();
+            }
+          } catch (reconnectError: any) {
+            this.log('warn', '❌ Automatic reconnection failed:', reconnectError?.message || reconnectError);
+          }
+        }, 5000);
+
+        return;
+      } catch (recoveryError) {
+        this.log('error', '❌ Error during connection recovery:', recoveryError);
+      }
+    }
+
+    // For other errors, just log them without crashing
+    this.log('warn', `Non-critical connection error in ${context}, continuing...`);
+  }
+
+  /**
+   * Enhanced error handling for socket operations
+   */
+  private async safeSocketOperation<T>(operation: () => Promise<T>, fallback: T, context: string): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      await this.handleConnectionError(error, context);
+      return fallback;
+    }
+  }
+
   // Public methods
 
   /**
@@ -995,15 +1067,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     });
   }
 
-  private async updateProfileUrl() {
-    if (!this.socket) {
-      return;
-    }
-
-    const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user!.id, 'image');
-    await this.update({ profilePictureUrl } as WAAppAuth<T>);
-  }
-
   /**
    * Restore existing instance
    */
@@ -1060,7 +1123,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         };
 
         checkConnection();
-        this.updateProfileUrl();
+
+        // Try to update profile URL but don't let it fail the connection
+        this.updateProfileUrl().catch((error) => {
+          this.log('warn', 'Profile URL update failed during connection, continuing:', error?.message || error);
+        });
 
         // Overall timeout after 15 seconds
         setTimeout(() => {
