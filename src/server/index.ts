@@ -56,6 +56,7 @@ export const wa = new WhatsappWarmService({
   wa.onSchedule((nextWarmAt) => app.socket.broadcast(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, { nextWarmAt }));
   wa.onConversationEnd((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_END, data));
   wa.onConversationStart((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_START, data));
+  wa.onConversationActive((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_ACTIVE, data));
   wa.onRegister((phoneNumber) => app.socket.broadcast(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
   wa.onUpdate((state) => app.socket.broadcast(InstanceEventEnum.INSTANCE_UPDATE, state));
 

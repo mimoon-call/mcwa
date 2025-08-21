@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import getLocalNow from '@server/helpers/get-local-now';
-import { WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
+import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
@@ -29,6 +29,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly dailyScheduleTimeHour = 9;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
+  private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
@@ -549,6 +550,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             return;
           }
 
+          const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
+          this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
           await this.handleConversationMessage(conversationKey);
         } catch (error) {
           if (attempt < this.maxRetryAttempt) {
@@ -578,6 +581,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   onConversationStart(callback?: (data: WAWarmUpdate) => unknown) {
     this.conversationStartCallback = callback;
+  }
+
+  onConversationActive(callback?: (data: WAActiveWarm) => unknown) {
+    this.conversationActiveCallback = callback;
   }
 
   onMessage(callback?: WAMessageIncomingCallback) {

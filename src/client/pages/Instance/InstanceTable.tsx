@@ -1,7 +1,7 @@
 import type { Pagination } from '@models';
 import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
-import type { InstanceItem, InstanceUpdate, WarmUpdate } from '@client/pages/Instance/store/instance.types';
+import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -116,20 +116,23 @@ const InstanceTable = () => {
 
     const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
 
+    const activeWarm = (data: WarmActive, isWarmingUp: boolean = true) => {
+      const { phoneNumber1, phoneNumber2 } = data;
+
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp }));
+      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp }));
+    };
+
     const warmEndToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_END_TOAST', data).toString();
-      const { phoneNumber1, phoneNumber2 } = data;
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp: false }));
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp: false }));
+      activeWarm(data, false);
 
       (data.sentMessages === 0 ? toast.error : toast.success)(text);
     };
 
     const warmStartToast = (data: WarmUpdate) => {
       const text = t('INSTANCE.WARM_START_TOAST', data).toString();
-      const { phoneNumber1, phoneNumber2 } = data;
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp: true }));
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp: true }));
+      activeWarm(data, true);
 
       toast.success(text);
     };
@@ -150,6 +153,7 @@ const InstanceTable = () => {
     socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
     socket?.on(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
     socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
+    socket?.on(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
     socket?.on(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
 
@@ -157,6 +161,7 @@ const InstanceTable = () => {
       socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
       socket?.off(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
       socket?.off(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
+      socket?.off(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
       socket?.off(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
     };
