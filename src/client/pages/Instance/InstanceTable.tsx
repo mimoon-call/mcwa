@@ -50,11 +50,12 @@ const InstanceTable = () => {
       component: ({ item }) => (
         <div className="flex justify-between">
           <span>{item?.phoneNumber}</span>
-          {item?.isWarmingUp && (
-            <div className="flex justify-center items-center ps-2 h-full">
-              <Icon className="text-red-800" name="svg:warm" />
-            </div>
-          )}
+          {item?.isWarmingUp ||
+            (!item.hasWarmedUp && (
+              <div className="flex justify-center items-center ps-2 h-full">
+                <Icon className={cn(item.isWarmingUp ? 'text-red-800' : 'text-gray-500')} name="svg:warm" />
+              </div>
+            ))}
         </div>
       ),
     },
