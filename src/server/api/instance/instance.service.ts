@@ -97,6 +97,9 @@ export const instanceService = {
   },
 
   [ADD_INSTANCE]: async (phoneNumber: string): Promise<string> => {
+    const instance = wa.getInstance(phoneNumber);
+    await instance?.disable();
+
     return await wa.addInstanceQR(phoneNumber);
   },
 
