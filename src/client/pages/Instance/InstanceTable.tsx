@@ -6,7 +6,7 @@ import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { DateFormat, formatTimeUntil } from '@client-constants';
+import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
@@ -159,13 +159,6 @@ const InstanceTable = () => {
       toast.success(text);
     };
 
-    const nextWarmToast = ({ nextAt }: { nextAt: Date | string }) => {
-      const timeUntil = formatTimeUntil(nextAt);
-      const text = t('INSTANCE.NEXT_WARM_IN', { timeUntil }).toString();
-
-      toast.success(text);
-    };
-
     const registerToast = ({ phoneNumber }: InstanceItem) => {
       const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber }).toString();
       modelRef.current?.close();
@@ -174,7 +167,6 @@ const InstanceTable = () => {
 
     socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
     socket?.on(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
-    socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
     socket?.on(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
     socket?.on(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
@@ -182,7 +174,6 @@ const InstanceTable = () => {
     return () => {
       socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
       socket?.off(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
-      socket?.off(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, nextWarmToast);
       socket?.off(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
       socket?.off(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);

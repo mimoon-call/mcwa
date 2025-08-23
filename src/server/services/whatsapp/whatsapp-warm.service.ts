@@ -5,14 +5,8 @@ import { LRUCache } from 'lru-cache';
 import { WAInstance, WhatsappService } from './whatsapp.service';
 import { clearTimeout } from 'node:timers';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import timezone from 'dayjs/plugin/timezone';
-import getLocalNow from '@server/helpers/get-local-now';
+import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
-
-// Extend dayjs with timezone plugins
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean };
 
@@ -30,7 +24,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
-  private nextCheckUpdate: ((nextWarmAt: Date) => unknown) | undefined;
+  private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -325,16 +319,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     // Only start new warming if we're still in warming mode and no active conversations
     if (!this.isWarming) {
       clearTimeout(this.nextStartWarming);
+      this.nextCheckUpdate?.(null);
       this.stopWarmingUp();
     } else if (this.activeConversation.size === 0) {
       clearTimeout(this.nextStartWarming);
+      this.nextCheckUpdate?.(null);
 
       if (stillNeededWarm.length > 0) {
         const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
         const { hours, minutes } = this.getHoursAndMinutes(delay);
         const totalMinutes = hours * 60 + minutes;
-        const nextCheckAt = new Date(getLocalNow().valueOf() + delay);
-        this.nextCheckUpdate?.(nextCheckAt);
+        const nextWarmUp = new Date(getLocalTime().valueOf() + delay);
+        this.nextCheckUpdate?.(nextWarmUp);
         this.log('debug', `[${conversationKey}]`, `Will check again in ${totalMinutes} minutes`);
 
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), delay);
@@ -413,12 +409,15 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       if (warmUpTodayInstances.length === 0) {
         this.log('debug', 'No instances need warming up, stopping warm-up process');
         clearTimeout(this.nextStartWarming);
+        this.nextCheckUpdate?.(null);
 
         if (stillNeededWarm.length > 0) {
           const nextWarmingTime = this.getNextWarmingTime();
           const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
           this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
+          const nextWarmUp = getLocalTime(nextWarmingTime);
+          this.nextCheckUpdate?.(nextWarmUp);
 
           const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
 
@@ -571,7 +570,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.timeoutConversation.set(conversationKey, send());
   }
 
-  onSchedule(callback?: (nextWarmAt: Date) => unknown) {
+  onSchedule(callback?: (nextWarmAt: Date | null) => unknown) {
     this.nextCheckUpdate = callback;
   }
 

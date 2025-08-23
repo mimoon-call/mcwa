@@ -31,6 +31,8 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     const userId = this.idValue(socket.data.user);
 
     if (!userId) {
+      socket.disconnect();
+
       return;
     }
 

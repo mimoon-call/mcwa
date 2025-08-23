@@ -5,7 +5,7 @@ import { Auth } from '@server/api/auth/auth.db';
 import TokenService from '@server/services/token/token.service';
 import AuthenticationError from '@server/middleware/errors/authentication-error';
 import bcrypt from '@server/helpers/bcrypt';
-import getLocalNow from '@server/helpers/get-local-now';
+import getLocalTime from '@server/helpers/get-local-time';
 
 const authService = {
   [LOGIN]: async (email: string, password: string): Promise<string> => {
@@ -15,14 +15,14 @@ const authService = {
       throw new AuthenticationError('Invalid Credentials');
     }
 
-    const { firstName, lastName, hashPassword } = user;
+    const { _id, firstName, lastName, hashPassword } = user;
 
-    return TokenService.encrypt<AccessToken>({ firstName, lastName, email, hashPassword });
+    return TokenService.encrypt<AccessToken>({ id: _id.toString(), firstName, lastName, email, hashPassword });
   },
 
   [ADD_USER]: async ({ password, ...data }: AddUserReq): Promise<void> => {
     const hashPassword = bcrypt.hash(password);
-    const now = getLocalNow();
+    const now = getLocalTime();
 
     await Auth.create({ ...data, hashPassword, createdAt: now });
   },

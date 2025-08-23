@@ -7,10 +7,10 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 // Get current time in local timezone
-const getLocalNow = () => {
+const getLocalTime = (value?: Date | string | number) => {
   const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
 
-  return dayjs().tz(timezone).toDate();
+  return dayjs(value).tz(timezone).toDate();
 };
 
-export default getLocalNow;
+export default getLocalTime;

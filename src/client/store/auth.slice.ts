@@ -4,6 +4,7 @@ import type { BaseResponse, ErrorResponse } from '@services/http/types';
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { Http } from '@services/http';
+import { setupSocketConnectionHandler } from '@client/shared/helpers/socket-connection-handler';
 import {
   AUTH_STATE_ERROR,
   AUTH_STATE_LOADING,
@@ -28,11 +29,13 @@ const initialState: AuthState = {
   [AUTH_STATE_ERROR]: null,
 };
 
-const connectSocket = () => {
+const connectSocket = (dispatch: any) => {
   const socket = getClientSocket();
 
   if (!socket?.connected) {
     socket?.connect();
+    // Setup connection handler to update nextWarmAt
+    setupSocketConnectionHandler(dispatch);
   }
 };
 
@@ -57,10 +60,10 @@ const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejec
 });
 
 // Async thunk for login
-const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue }) => {
+const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue, dispatch }) => {
   try {
     await Http.post(`/${StoreEnum.auth}/${LOGIN}`, payload);
-    connectSocket();
+    connectSocket(dispatch);
 
     return true;
   } catch (error: unknown) {
@@ -79,7 +82,7 @@ const refreshToken = createAsyncThunk(`${StoreEnum.auth}/${REFRESH_TOKEN}`, asyn
     dispatch(authSlice.actions[SET_AUTHENTICATED](false));
   } else {
     dispatch(authSlice.actions[SET_AUTHENTICATED](true));
-    connectSocket();
+    connectSocket(dispatch);
   }
 });
 

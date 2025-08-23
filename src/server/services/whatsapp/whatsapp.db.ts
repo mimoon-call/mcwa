@@ -1,12 +1,12 @@
 import type { WAAppAuth, WAAppKey, WAMessage, WAMessageIncomingRaw, WAMessageOutgoingRaw } from './whatsapp-instance.type';
 import type { WAPersona } from './whatsapp.type';
 import { Schema } from 'mongoose';
-import getLocalNow from '../../helpers/get-local-now';
+import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
 
 // Pre-save middleware to set timezone-aware timestamps
 const setModifiedAndCreationDate = function (doc: any) {
-  const now = getLocalNow();
+  const now = getLocalTime();
 
   if (doc.isNew) {
     doc.createdAt = now;

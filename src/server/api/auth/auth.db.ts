@@ -1,9 +1,9 @@
 import { MongoService } from '@server/services/database/mongo.service';
 import { AuthUser } from '@server/api/auth/auth.type';
-import getLocalNow from '@server/helpers/get-local-now';
+import getLocalTime from '@server/helpers/get-local-time';
 
 const setModifiedAndCreationDate = function (doc: any) {
-  const now = getLocalNow();
+  const now = getLocalTime();
 
   if (doc.isNew) {
     doc.createdAt = now;

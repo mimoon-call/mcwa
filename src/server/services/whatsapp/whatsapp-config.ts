@@ -3,7 +3,7 @@ import type { WAAppAuth, WAAppKey } from './whatsapp-instance.type';
 import { WhatsAppAuth, WhatsAppKey } from './whatsapp.db';
 import mongoose from 'mongoose';
 import { WhatsappAiService } from './whatsapp.ai';
-import getLocalNow from '../../helpers/get-local-now';
+import getLocalTime from '../../helpers/get-local-time';
 
 const getAppAuth = async <T extends object>(phoneNumber: string): Promise<WAAppAuth<T> | null> => {
   // Ensure mongoose is connected before querying
@@ -16,7 +16,7 @@ const getAppAuth = async <T extends object>(phoneNumber: string): Promise<WAAppA
 };
 
 const updateAppAuth = async <T extends object>(phoneNumber: string, data: Partial<WAAppAuth<T>>): Promise<WAAppAuth<T>> => {
-  const now = getLocalNow();
+  const now = getLocalTime();
 
   // 1) do the immediate update and return it
   const result = await WhatsAppAuth.findOneAndUpdate(
@@ -86,7 +86,7 @@ const listAppAuth = async <T extends object>(): Promise<WAAppAuth<T>[]> => {
 };
 
 const updateAppKey = async <T extends object>(phoneNumber: string, keyType: string, keyId: string, data: Partial<WAAppAuth<T>>): Promise<void> => {
-  const now = getLocalNow();
+  const now = getLocalTime();
 
   // Ensure mongoose is connected before querying
   if (mongoose.connection.readyState !== 1) {

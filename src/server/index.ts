@@ -7,7 +7,7 @@ import authRoute from '@server/api/auth/auth.route';
 import { MongoService } from '@server/services/database/mongo.service';
 import { WhatsappWarmService } from '@server/services/whatsapp/whatsapp-warm.service';
 import { whatsappConfig } from '@server/services/whatsapp/whatsapp-config';
-import getLocalNow from '@server/helpers/get-local-now';
+import getLocalTime from '@server/helpers/get-local-time';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import createViteSSR from '@server/create-vite-ssr';
@@ -41,10 +41,10 @@ export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
   onIncomingMessage: (msg, raw) => {
-    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalNow() });
+    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
   },
   onOutgoingMessage: (msg, raw, info) => {
-    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalNow() });
+    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });
   },
 });
 

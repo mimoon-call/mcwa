@@ -10,6 +10,7 @@ import { BrowserRouter } from 'react-router-dom';
 import AppHeader from '@components/AppHeader';
 import { createStore } from '@client/store';
 import AppFooter from '@components/AppFooter';
+import { NextWarmCountdown } from '@client/components/NextWarmCountdown';
 
 export let store: ReturnType<typeof createStore>;
 
@@ -19,7 +20,7 @@ export let store: ReturnType<typeof createStore>;
 
   // Use createRoot instead of hydrateRoot to avoid hydration issues
   const root = createRoot(document.getElementById('root')!);
-  
+
   root.render(
     <Provider store={store}>
       <AppHeader />
@@ -28,7 +29,9 @@ export let store: ReturnType<typeof createStore>;
           <App data={getSsrData()} />
         </BrowserRouter>
       </main>
-      <AppFooter />
+      <AppFooter>
+        <NextWarmCountdown />
+      </AppFooter>
     </Provider>
   );
 })();
