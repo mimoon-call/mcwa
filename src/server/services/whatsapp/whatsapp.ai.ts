@@ -24,7 +24,6 @@ export class WhatsappAiService {
   }
 
   // Conversation
-  /** Pick a lightweight topic-hint based on personas + recent chat */
   /** Pick a lightweight topic-hint based on personas + recent chat (no books) */
   private buildTopicHint(a: WAPersona, b: WAPersona, prev?: WAConversation[]): string {
     const hasKidsA = (a.children?.length ?? 0) > 0;
@@ -63,6 +62,15 @@ export class WhatsappAiService {
     if ((hasKidsA || hasKidsB) && !mentioned('school')) seeds.push('school_pickup');
     if (!mentioned('series') && !mentioned('episode')) seeds.push('tv_series');
     if (!mentioned('gym') && !mentioned('workout')) seeds.push('quick_workout');
+
+    // New advanced topics with link potential
+    if (!mentioned('travel') && !mentioned('trip')) seeds.push('travel_planning');
+    if (!mentioned('book') && !mentioned('read')) seeds.push('book_recommendation');
+    if (!mentioned('music') && !mentioned('song')) seeds.push('music_discovery');
+    if (!mentioned('youtube') && !mentioned('video')) seeds.push('youtube_video');
+    if (!mentioned('website') && !mentioned('app')) seeds.push('website_review');
+    if (!mentioned('movie') && !mentioned('film')) seeds.push('movie_recommendation');
+    if (!mentioned('restaurant') && !mentioned('food')) seeds.push('restaurant_review');
 
     // If nothing suitable, leave empty so base prompt handles "small talk"
     if (!seeds.length) return '';
@@ -125,7 +133,11 @@ export class WhatsappAiService {
   }
 
   private stripForbiddenPunct(s: string): string {
-    return s.replace(/\s*[!.]+$/u, ''); // no trailing ! or .
+    // Handle emoji-only messages (don't strip if it's just emojis)
+    if (/^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(s)) {
+      return s; // Return emoji-only messages as-is
+    }
+    return s.replace(/\s*[!.]+$/u, ''); // no trailing ! or . for regular text
   }
 
   private enforceSpeakerOrder(
@@ -216,7 +228,8 @@ Infer relationship, tone, and slang level from this context. Continue naturally 
 - Keep topics everyday and lightweight
 - Allowed seeds (examples): kids_birthday, night_out, meet_partner, work_colleagues,
   coffee_catchup, traffic_parking, delivery_pickup, phone_battery, quick_groceries,
-  school_pickup, tv_series, quick_workout
+  school_pickup, tv_series, quick_workout, travel_planning, book_recommendation, 
+  music_discovery, youtube_video, website_review
 - Avoid niche hobbies, politics, or deep analysis
 - No book discussions unless it naturally appears in PREVIOUS CONTEXT (then keep it to a passing mention only)
 `.trim();
@@ -250,12 +263,45 @@ ${topicLine}${rulesBlock}
 
 # GLOBAL STYLE (must follow)
 - Messages are short and chatty: ~3–12 words, one sentence each.
+- **Use casual, friend-like language - avoid formal phrases like "Check out this" or "Please review"**
+- **Natural link sharing**: "Take a look at this", "Found it here", "Listen to this", "Menu here"
 - Minimal punctuation; **do not end messages with "!" or "."**. "?" is allowed.
 - Variety: do NOT make every message a question; never two questions in a row.
-- Emojis optional (≤1), only if they fit the tone.
+- **MANDATORY: Include 2-3 emojis throughout the conversation (mix of emoji-only messages and emojis within text)**
+- **Include 1-2 messages with relevant links to websites, YouTube videos, or music when discussing related topics**
 - Names only when natural.
-- No links/media/system notes.
-- If talking about kids/family/work, add a tiny human detail (not robotic).
+- No system notes.
+
+# LINK INTEGRATION (REALISTIC)
+When discussing these topics, naturally include relevant links:
+- **Travel/Location**: YouTube travel vlogs, booking websites, local attraction sites
+- **Books**: Amazon/BookDepository links, author websites, Goodreads
+- **Music**: Spotify/Apple Music links, YouTube music videos, artist websites
+- **Movies/TV**: IMDb, Netflix, YouTube trailers
+- **Food**: Restaurant websites, delivery apps, recipe sites
+- **Shopping**: Online stores, review sites, comparison platforms
+- **Technology**: Product websites, review sites, comparison tools
+
+# CONVERSATION FLOW EXAMPLES (with required emojis)
+- **Travel**: "Take a look at this video https://youtu.be/abc123" → "🔥🔥🔥" → "I'm so excited to go! 😍"
+- **Books**: "Found it here https://amzn.to/xyz789" → "👍 thanks!" → "Can't wait to read it! 📚"
+- **Music**: "Listen to this https://spoti.fi/def456" → "❤️ love it!" → "This song is amazing! 🎵"
+- **Restaurants**: "Menu here https://restaurant.com" → "😋 looks delicious" → "Let's go there! 🍕"
+
+# EMOJI RESPONSES (CONTEXTUAL) - MANDATORY 2-3 PER CONVERSATION
+**REQUIRED: Every conversation MUST include 2-3 emojis total, distributed as:**
+- **1-2 emoji-only messages** (e.g., "👍", "❤️", "😂", "🔥")
+- **1-2 emojis within regular text messages** (e.g., "That's amazing! 😍", "I'm so tired 😴")
+
+**Emoji categories to use contextually:**
+- Agreement: 👍, 👌, ✅
+- Love/Appreciation: ❤️, 😍, 🥰
+- Laughter: 😂, 🤣, 😆
+- Excitement: 🔥, ⚡, 🚀
+- Surprise: 😱, 😲, 🤯
+- Sadness: 😢, 😭, 😔
+- Anger: 😠, 😡, 🤬
+- Other emotions: 😴 (tired), 🤔 (thinking), 🎉 (celebration), 🌟 (amazing)
 
 # SENDER ORDER (STRICT)
 Follow this exact sequence of senders (runs already embedded). Each object is a message:
@@ -270,6 +316,8 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
 - Return ONLY a valid JSON object with "messages" of length ${messageCount}.
 - Each "text" is ${languageName} only, one sentence, **no trailing "!" or "."**.
 - **NEVER return empty strings for "text" - each message must have meaningful content.**
+- **MANDATORY: Include 2-3 emojis total (mix of emoji-only messages and emojis within text)**
+- **Include 1-2 messages with relevant links when discussing related topics**
 - If you cannot generate valid content for a message, omit that message entirely from the response.
 `.trim();
   }
@@ -321,7 +369,13 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
             properties: {
               fromNumber: { type: 'string', minLength: 1 },
               toNumber: { type: 'string', minLength: 1 },
-              text: { type: 'string', minLength: 1, maxLength: 140, pattern: '^.+[^!.]$' },
+              text: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 200,
+                // Allow emoji-only messages and links, but still prevent trailing ! or .
+                pattern: '^.+[^!.]$',
+              },
             },
           },
         },
@@ -344,8 +398,17 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
 
         if (!msg.text || msg.text.trim() === '') {
           console.error(`[AI Error] Empty text in message ${i}:`, msg);
-
           return null;
+        }
+
+        // Validate emoji-only messages are reasonable length
+        if (
+          /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(msg.text.trim())
+        ) {
+          if (msg.text.trim().length > 10) {
+            console.error(`[AI Error] Emoji-only message too long at index ${i}:`, msg.text);
+            return null;
+          }
         }
       }
     }

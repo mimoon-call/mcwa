@@ -52,6 +52,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.isEmulation = !!isEmulation;
   }
 
+
+
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
@@ -64,14 +66,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return now.format('YYYY-MM-DD');
   }
 
-  private shouldResetDayCounters(): boolean {
-    const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
-    const now = dayjs().tz(timezone);
-    const hour = now.hour();
-
-    return hour >= this.dailyScheduleTimeHour && hour < this.dailyScheduleTimeHour + 14; // Will be ended 14 hours from start
-  }
-
   private getNextWarmingTime(): Date {
     // Get current time in Jerusalem timezone
     const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
@@ -79,11 +73,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     let nextWarmingTime: dayjs.Dayjs;
 
     if (now.hour() < this.dailyScheduleTimeHour) {
-      nextWarmingTime = now.hour(this.dailyScheduleTimeHour).minute(5).second(0).millisecond(0);
+      // Today
+      nextWarmingTime = now.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
     } else {
+      // Tomorrow
       const tomorrow = now.add(1, 'day');
-      nextWarmingTime = tomorrow.hour(this.dailyScheduleTimeHour).minute(5).second(0).millisecond(0);
+      nextWarmingTime = tomorrow.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
     }
+
+    // Add phone-specific jitter for better distribution
+    // Since this is a global warming time, we'll use a consistent but distributed offset
+    const baseJitter = 5 + (Math.floor(Math.random() * 55)); // 5-60 minutes
+    nextWarmingTime = nextWarmingTime.add(baseJitter, 'minute');
 
     return nextWarmingTime.toDate();
   }
@@ -381,14 +382,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
 
       if (instance.get('lastWarmedUpDay') !== this.getTodayDate()) {
-        if (this.shouldResetDayCounters()) {
-          await instance.update({
-            lastWarmedUpDay: this.getTodayDate(),
-            warmUpDay: (instance.get('warmUpDay') || 0) + 1,
-            dailyWarmUpCount: 0,
-            dailyWarmConversationCount: 0,
-          });
-        }
+        await instance.update({
+          lastWarmedUpDay: this.getTodayDate(),
+          warmUpDay: (instance.get('warmUpDay') || 0) + 1,
+          dailyWarmUpCount: 0,
+          dailyWarmConversationCount: 0,
+        });
       }
 
       if (this.needWarmUp(instance)) {
@@ -536,7 +535,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             return;
           }
 
-          await this.sendMessage(currentMessage.fromNumber, currentMessage.toNumber, currentMessage.text);
+          // Format message properly for WhatsApp
+          const messageContent = {
+            type: 'text' as const,
+            text: currentMessage.text,
+          };
+          // Send message using the now-humanized send method
+          const instance = this.getInstance(currentMessage.fromNumber);
+          if (instance) {
+            await instance.send(currentMessage.toNumber, messageContent);
+          } else {
+            throw new Error(`Instance ${currentMessage.fromNumber} not found`);
+          }
           currentMessage.sentAt = new Date();
 
           try {

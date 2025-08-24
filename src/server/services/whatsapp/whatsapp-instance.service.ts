@@ -76,6 +76,28 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public connected: boolean = false;
   private recovering: boolean = false;
 
+  /**
+   * Calculate human-like typing delay based on message length
+   * @param text - The message text to calculate delay for
+   * @returns Delay in milliseconds (typically 1-5 seconds)
+   */
+  private humanDelayFor(text: string): number {
+    const words = Math.max(1, text.split(/\s+/).length);
+    const base = 800 + words * 220; // base typing time
+    const jitter = Math.floor(Math.random() * 1200);
+    return base + jitter; // 1–5s typical
+  }
+
+  /**
+   * Generate random idle time between actions
+   * @param min - Minimum idle time in milliseconds
+   * @param max - Maximum idle time in milliseconds
+   * @returns Random idle time in milliseconds
+   */
+  private randomIdle(min = 800, max = 3500): number {
+    return min + Math.floor(Math.random() * (max - min));
+  }
+
   constructor(phoneNumber: string, config: WAInstanceConfig<T>) {
     this.TEMP_DIR = path.join(process.cwd(), config.tempDir || '.wa-auth-temp', phoneNumber);
     this.phoneNumber = phoneNumber;
@@ -203,7 +225,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const fromJid = info.key.remoteJid!;
     const toJid = sock.user!.id!;
 
-    return [{ fromNumber: this.jidToNumber(fromJid), toNumber: this.jidToNumber(toJid), text }, info];
+    return [
+      {
+        fromNumber: this.jidToNumber(fromJid),
+        toNumber: this.jidToNumber(toJid),
+        text,
+      },
+      info,
+    ];
   }
 
   private handleOutgoingMessage(
@@ -1152,7 +1181,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   /**
-   * Send a message
+   * Send a message with human-like behavior (typing indicators, delays, presence)
    */
   async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<any> {
     if (!this.connected || !this.socket) {
@@ -1182,15 +1211,28 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             throw new Error(`Instance is not connected`);
           }
 
-          const typingSpeed = 50;
-          const typingDuration = Math.min(record.text.length * typingSpeed, 5000);
+          // Subscribe to presence updates
+          await this.socket.presenceSubscribe(jid);
 
-          this.socket.sendPresenceUpdate('composing', jid);
-          await new Promise((resolve) => setTimeout(resolve, typingDuration));
+          // Send typing indicator
+          await this.socket.sendPresenceUpdate('composing', jid);
 
-          this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
-          this.socket.sendPresenceUpdate('paused', jid);
-          return await this.socket.sendMessage(jid, content);
+          // Calculate human-like typing delay
+          const text = typeof payload === 'string' ? payload : (payload as any)?.text || '';
+          const typingDelay = this.humanDelayFor(text);
+          await new Promise((resolve) => setTimeout(resolve, typingDelay));
+
+          // Send paused indicator
+          await this.socket.sendPresenceUpdate('paused', jid);
+
+          // Send the actual message
+          const messageResult = await this.socket.sendMessage(jid, content);
+
+          // Add random idle time after sending
+          const idleTime = this.randomIdle();
+          await new Promise((resolve) => setTimeout(resolve, idleTime));
+
+          return messageResult;
         })();
 
         this.log('info', `Message sent successfully to ${jid}`);
