@@ -174,7 +174,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     let dailyLimit: { maxConversation: number; minMessages: number; maxMessages: number };
 
     if (instance.get('hasWarmedUp')) {
-      dailyLimit = { maxConversation: 100, minMessages: 100, maxMessages: 200 };
+      dailyLimit = { maxConversation: 100, minMessages: 0, maxMessages: 200 };
 
       return dailyLimit;
     }
@@ -192,7 +192,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     } else if (warmUpDay <= 14) {
       dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
     } else {
-      dailyLimit = { maxConversation: 100, minMessages: 100, maxMessages: 200 };
+      dailyLimit = { maxConversation: 100, minMessages: 0, maxMessages: 200 };
     }
 
     return dailyLimit;
@@ -202,6 +202,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const conversationCount = instance.get('dailyWarmConversationCount') || 0;
     const messageCount = instance.get('dailyWarmUpCount') || 0;
     const dailyLimit = this.getDailyLimits(instance);
+    const dayWarmUp = instance.get('warmUpDay');
+    const hasWarmedUp = instance.get('hasWarmedUp');
+
+    if (dayWarmUp > 14 || hasWarmedUp) {
+      return false;
+    }
 
     return conversationCount < dailyLimit.maxConversation && messageCount < dailyLimit.minMessages;
   }

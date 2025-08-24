@@ -42,8 +42,6 @@ export class ServerExpress {
     this.put = this.app.put.bind(this.app);
     this.delete = this.app.delete.bind(this.app);
 
-    console.log('Client Origin:', process.env.CLIENT_ORIGIN);
-
     this.socket = new SocketService<AccessToken>('id', this.server, {
       secretKey: process.env.ACCESS_TOKEN_KEY!,
       cookieKey: CookieEnum.ACCESS_TOKEN,

@@ -46,7 +46,7 @@ const InstanceTable = () => {
     {
       title: 'INSTANCE.PHONE_NUMBER',
       value: 'phoneNumber',
-      sortable: true,
+      sortable: ['hasWarmedUp', 'phoneNumber'],
       searchable: true,
       component: ({ item }) => {
         const iconColorClass = (() => {
