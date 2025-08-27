@@ -1,113 +1,181 @@
-# React SSR TypeScript Starter
+# MCWA - Mimoon Call WhatsApp Automation
 
-A modern full-stack starter template featuring React 19, TypeScript, Vite, Express, Redux Toolkit, Socket.IO, i18n, and TailwindCSS, with server-side rendering (SSR) and authentication. Includes Docker support and production-ready configuration.
+A powerful WhatsApp automation platform built with React 19, TypeScript, and Node.js. Features WhatsApp instance management, AI-powered messaging, conversation warming, and real-time monitoring with a modern web interface.
 
-## Features
+## 🚀 Features
 
-- **React 19** with functional components and hooks
-- **TypeScript** throughout (client & server)
-- **Server-Side Rendering (SSR)** via Express and Vite
-- **Redux Toolkit** for state management
-- **Socket.IO** for real-time communication
-- **Authentication** (login, token refresh, protected routes)
-- **i18n** (internationalization) with `react-i18next`
-- **TailwindCSS** for styling
-- **ESLint** and **Prettier** for code quality
-- **Docker** support for easy deployment
+- **WhatsApp Automation** - Multi-instance WhatsApp management
+- **AI-Powered Messaging** - OpenAI integration for intelligent responses
+- **Conversation Warming** - Automated conversation management and engagement
+- **Real-time Monitoring** - Live instance status and conversation tracking
+- **Multi-language Support** - i18n with Hebrew and English
+- **Modern Web UI** - React 19 with TailwindCSS and responsive design
+- **Real-time Updates** - Socket.IO for live data synchronization
+- **Authentication System** - Secure login with JWT tokens
+- **Database Integration** - MongoDB for data persistence
+- **Docker Support** - Easy deployment and scaling
 
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-react-ssr-ts/
+mcwa/
 ├── src/
-│   ├── client/         # React client app (pages, components, store, router)
-│   ├── server/         # Express server, SSR, API routes, middleware
-│   └── shared/         # Shared code (types, helpers, models)
+│   ├── client/         # React frontend (pages, components, store)
+│   │   ├── pages/      # Home, Instance management, Login
+│   │   ├── components/ # Reusable UI components
+│   │   ├── store/      # Redux Toolkit state management
+│   │   └── locale/     # Internationalization (en, he)
+│   ├── server/         # Node.js backend with Express
+│   │   ├── api/        # REST API endpoints (auth, instance)
+│   │   ├── services/   # WhatsApp, AI, database services
+│   │   └── middleware/ # Authentication and validation
+│   └── shared/         # Common types, helpers, and models
 ├── public/             # Static assets
-├── Dockerfile          # Docker build config
-├── buildspec.yml       # Build pipeline config
-├── package.json        # Scripts and dependencies
-└── README.md           # Project documentation
+├── Dockerfile          # Docker configuration
+├── buildspec.yml       # CI/CD pipeline
+└── package.json        # Dependencies and scripts
 ```
 
-## Getting Started
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19, TypeScript, TailwindCSS, Redux Toolkit
+- **Backend**: Node.js, Express, TypeScript
+- **Database**: MongoDB with Mongoose
+- **Real-time**: Socket.IO
+- **AI**: OpenAI API integration
+- **WhatsApp**: Baileys library
+- **Build**: Vite with SSR support
+- **Deployment**: Docker, AWS CodeBuild
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 22.18+
 - npm 10+
+- MongoDB instance
+- OpenAI API key (for AI features)
 
-### Install dependencies
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd mcwa
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
+3. **Environment Setup**
+Create `.env.development` file:
+```env
+PORT=3000
+MONGODB_URI=your_mongodb_connection_string
+OPENAI_API_KEY=your_openai_api_key
+ACCESS_TOKEN_KEY=your_jwt_secret
+WEBHOOK_SECRET=your_webhook_secret
+```
+
+4. **Database Setup**
+```bash
+npm run run:seed
+```
+
 ### Development
-Start the development server (with SSR):
+
+Start the development server:
 ```bash
 npm run dev
 ```
-- Client: Vite dev server
-- Server: Express with SSR
 
-### Build
-Build both client and server bundles:
+This starts both the client (Vite dev server) and server (Express with SSR) simultaneously.
+
+### Production
+
+Build the application:
 ```bash
 npm run build
 ```
 
-### Production Start
+Start production server:
 ```bash
 npm run start
 ```
 
-### Linting & Formatting
-```bash
-npm run lint
-```
+## 📱 WhatsApp Features
 
-## Environment Variables
-- `.env` and `.env.development` for secrets and config (see `src/server/index.ts` for usage)
-- Example variables:
-  - `ACCESS_TOKEN_KEY` (JWT secret)
-  - `WEBHOOK_SECRET` (for webhook middleware)
-  - `PORT` (server port)
+### Instance Management
+- Create and manage multiple WhatsApp instances
+- QR code generation for device connection
+- Instance status monitoring and health checks
 
-## Docker
+### AI Integration
+- OpenAI-powered message responses
+- Intelligent conversation handling
+- Automated message generation
+
+### Conversation Warming
+- Automated conversation management
+- Engagement tracking and analytics
+- Scheduled warming activities
+
+### Real-time Monitoring
+- Live instance status updates
+- Conversation activity tracking
+- Performance metrics and insights
+
+## 🔐 Authentication
+
+- Email/password login system
+- JWT-based access tokens
+- Protected routes and middleware
+- Token refresh mechanism
+
+## 🌍 Internationalization
+
+- Multi-language support (English, Hebrew)
+- Dynamic language switching
+- Localized date and number formatting
+
+## 🐳 Docker Deployment
+
 Build and run with Docker:
 ```bash
-docker build -t react-ssr-ts .
-docker run -p 3000:3000 react-ssr-ts
+docker build -t mcwa .
+docker run -p 3000:3000 mcwa
 ```
 
-## Authentication
-- Email/password login (see `src/server/api/auth/`)
-- JWT-based access tokens (stored in cookies)
-- Token refresh endpoint
-- Protected routes (redirect to login if not authenticated)
+## 📊 API Endpoints
 
-## Internationalization (i18n)
-- Language files in `src/client/locale/`
-- Uses `react-i18next`
+- `POST /api/auth/login` - User authentication
+- `POST /api/auth/refresh` - Token refresh
+- `GET /api/instance` - List WhatsApp instances
+- `POST /api/instance` - Create new instance
+- `PUT /api/instance/:id` - Update instance
+- `DELETE /api/instance/:id` - Delete instance
 
-## Real-time Communication
-- Socket.IO server and client integration
-- Example: `/webhook/:userId` endpoint to push events
+## 🔧 Development Scripts
 
-## Folder Highlights
-- `src/client/pages/` – React pages (Home, Login)
-- `src/client/shared/components/` – Reusable UI components
-- `src/server/api/` – Express API routes (e.g., auth)
-- `src/server/services/` – Server-side services (token, socket, validation)
-- `src/shared/` – Shared helpers, types, and models
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run run:seed` - Seed database with initial data
 
-## Acknowledgements
-- [Vite](https://vitejs.dev/)
-- [React](https://react.dev/)
-- [Redux Toolkit](https://redux-toolkit.js.org/)
-- [Socket.IO](https://socket.io/)
-- [TailwindCSS](https://tailwindcss.com/)
-- [i18next](https://www.i18next.com/)
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is private and proprietary.
 
 ---
 
-Feel free to contribute or open issues for improvements!
+Built with ❤️ by the Mimoon Call team
