@@ -92,7 +92,6 @@ const InstanceTable = () => {
     { title: 'INSTANCE.INCOMING_COUNT', value: 'incomingMessageCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.DAILY_WARM_MESSAGES', value: 'dailyWarmUpCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.DAILY_WARM_CONVERSATIONS', value: 'dailyWarmConversationCount', class: ['text-center'], sortable: true },
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',

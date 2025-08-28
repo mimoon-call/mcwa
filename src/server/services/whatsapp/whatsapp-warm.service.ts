@@ -52,8 +52,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.isEmulation = !!isEmulation;
   }
 
-
-
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
@@ -83,7 +81,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     // Add phone-specific jitter for better distribution
     // Since this is a global warming time, we'll use a consistent but distributed offset
-    const baseJitter = 5 + (Math.floor(Math.random() * 55)); // 5-60 minutes
+    const baseJitter = 5 + Math.floor(Math.random() * 55); // 5-60 minutes
     nextWarmingTime = nextWarmingTime.add(baseJitter, 'minute');
 
     return nextWarmingTime.toDate();
@@ -174,12 +172,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private getDailyLimits(instance: WAInstance<WAPersona>) {
     let dailyLimit: { maxConversation: number; minMessages: number; maxMessages: number };
 
-    if (instance.get('hasWarmedUp')) {
-      dailyLimit = { maxConversation: 100, minMessages: 0, maxMessages: 200 };
-
-      return dailyLimit;
-    }
-
     const warmUpDay = instance.get('warmUpDay');
 
     if (warmUpDay <= 0) {
@@ -193,7 +185,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     } else if (warmUpDay <= 14) {
       dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
     } else {
-      dailyLimit = { maxConversation: 100, minMessages: 0, maxMessages: 200 };
+      dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
     }
 
     return dailyLimit;
@@ -203,12 +195,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const conversationCount = instance.get('dailyWarmConversationCount') || 0;
     const messageCount = instance.get('dailyWarmUpCount') || 0;
     const dailyLimit = this.getDailyLimits(instance);
-    const dayWarmUp = instance.get('warmUpDay');
-    const hasWarmedUp = instance.get('hasWarmedUp');
-
-    if (dayWarmUp > 14 || hasWarmedUp) {
-      return false;
-    }
 
     return conversationCount < dailyLimit.maxConversation && messageCount < dailyLimit.minMessages;
   }
