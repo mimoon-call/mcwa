@@ -19,5 +19,7 @@ const globalSlice = createSlice({
   },
 });
 
-export const { setNextWarmAt } = globalSlice.actions;
-export default globalSlice.reducer;
+export default {
+  reducer: globalSlice.reducer,
+  setNextWarmAt: globalSlice.actions.setNextWarmAt,
+};

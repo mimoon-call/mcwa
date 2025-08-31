@@ -37,14 +37,15 @@ export const instanceController = {
     req: Request<{ phoneNumber: string }, never, GetInstanceConversationReq>,
     res: Response<GetInstanceConversationRes>
   ) => {
-    const { phoneNumber, withPhoneNumber } = await new RecordValidator({ ...req.params, ...req.body }, [
+    const { phoneNumber, withPhoneNumber, page } = await new RecordValidator({ ...req.params, ...req.body }, [
       ['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }],
       ['withPhoneNumber', { required: [true], type: ['String'] }],
+      ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
+      ['page.pageIndex', { type: ['Number'] }],
+      ['page.pageSort', { type: [['Object', 'Null']] }],
     ]).validate();
 
-    const messages = await instanceService[GET_INSTANCE_CONVERSATION](phoneNumber, withPhoneNumber);
-
-    res.send({ messages });
+    res.send(await instanceService[GET_INSTANCE_CONVERSATION](phoneNumber, withPhoneNumber, page));
   },
 
   [GET_INSTANCE_CONVERSATIONS]: async (

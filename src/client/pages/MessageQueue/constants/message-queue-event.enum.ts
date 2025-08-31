@@ -1,0 +1,4 @@
+export enum MessageQueueEventEnum {
+  QUEUE_MESSAGE_SENT = 'QUEUE_MESSAGE_SENT',
+  QUEUE_MESSAGE_FAILED = 'QUEUE_MESSAGE_FAILED',
+}

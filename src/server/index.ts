@@ -13,6 +13,7 @@ import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import createViteSSR from '@server/create-vite-ssr';
 import instanceRoute from '@server/api/instance/instance.route';
 import { InstanceEventEnum } from '@server/api/instance/instance-event.enum';
+import messageQueueRoute from '@server/api/message-queue/message-queue.route';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -34,17 +35,36 @@ export const app = new ServerExpress({
   routes: [
     ['/auth', authRoute],
     ['/instance', instanceRoute],
+    ['/queue', messageQueueRoute],
   ],
 });
 
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
-  onIncomingMessage: (msg, raw) => {
-    WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
+  onIncomingMessage: async (msg, raw) => {
+    // Internal message
+    if (msg.internalFlag) {
+      await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
+
+      return;
+    }
+
+    // External message
+    const { fromNumber, toNumber } = msg;
+    const previousMessage = await WhatsAppMessage.findOne(
+      { toNumber: fromNumber, fromNumber: toNumber },
+      { projection: { _id: 1 }, sort: { createdAt: -1 } }
+    );
+
+    if (previousMessage?.text) {
+      console.log('previousMessage.text', previousMessage._id, previousMessage.text);
+    }
+
+    await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime(), previousId: previousMessage?._id });
   },
-  onOutgoingMessage: (msg, raw, info) => {
-    WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });
+  onOutgoingMessage: async (msg, raw, info) => {
+    await WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });
   },
 });
 
@@ -58,9 +78,9 @@ export const wa = new WhatsappWarmService({
   wa.onRegister((phoneNumber) => app.socket.broadcast(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
   wa.onUpdate((state) => app.socket.broadcast(InstanceEventEnum.INSTANCE_UPDATE, state));
 
-  wa.onReady(() => {
-    wa.startWarmingUp();
-  });
+  // wa.onReady(() => {
+  //   wa.startWarmingUp();
+  // });
 
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));
 

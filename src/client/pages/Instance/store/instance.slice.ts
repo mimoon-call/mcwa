@@ -13,6 +13,7 @@ import {
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_PAGINATION,
   SEARCH_INSTANCE,
+  UPDATE_INSTANCE,
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
 import type { ErrorResponse } from '@services/http/types';
@@ -68,7 +69,7 @@ const toggleInstanceActivate = createAsyncThunk(
 
     await Http.post<void>(`${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
 
-    dispatch(updateInstance({ phoneNumber, isActive: !isActive }));
+    dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
   }
 );
 
@@ -113,8 +114,12 @@ const instanceSlice = createSlice({
   },
 });
 
-// Export the slice and actions correctly
-export const { actions: instanceActions } = instanceSlice;
-export const { updateInstance } = instanceSlice.actions;
-export default instanceSlice.reducer;
-export { searchInstance, instanceQr, deleteInstance, toggleInstanceActivate, refreshInstance };
+export default {
+  reducer: instanceSlice.reducer,
+  [SEARCH_INSTANCE]: searchInstance,
+  [DELETE_INSTANCE]: deleteInstance,
+  [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
+  [INSTANCE_REFRESH]: refreshInstance,
+  [ADD_INSTANCE]: instanceQr,
+  [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
+};

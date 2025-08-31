@@ -37,8 +37,16 @@
     "REFRESH": "רענן",
     "WARNING": "אזהרה",
     "CREATED_AT": "נוצר בתאריך",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק '{{value}}'?",
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק {{value}}?",
     "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה"
+  },
+  "QUEUE": {
+    "PHONE_NUMBER": "מספר טלפון",
+    "FULL_NAME": "שם",
+    "TEXT_MESSAGE": "הודעה",
+    "SENT_AT": "נשלח בתאריך",
+    "SENT_MESSAGE_SUCCESSFULLY": "שליחת הודעה ל-{{phoneNumber}} הסתיימה בהצלחה",
+    "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

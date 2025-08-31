@@ -5,10 +5,11 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import StepperModal from '@components/StepperModal/StepperModal';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@client/store';
-import { instanceQr, searchInstance } from '@client/pages/Instance/store/instance.slice';
 import ServerError from '@services/http/server-error';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
+import instanceSlice from '@client/pages/Instance/store/instance.slice';
+import { ADD_INSTANCE, SEARCH_INSTANCE } from '@client/pages/Instance/store/instance.constants';
 
 type AddInstanceModalRef = Omit<ModalRef, 'open'> & { open: (phoneNumber?: string) => void };
 
@@ -18,6 +19,8 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
   const [isNumberInjected, setNumberInjected] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
+
+  const { [ADD_INSTANCE]: instanceQr, [SEARCH_INSTANCE]: searchInstance } = instanceSlice;
 
   const addInstanceQr = async () => {
     if (!phoneNumber) {

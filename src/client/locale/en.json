@@ -37,8 +37,16 @@
     "REFRESH": "Refresh",
     "WARNING": "Warning",
     "CREATED_AT": "Created at",
-    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete '{{value}}'?",
+    "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete {{value}}?",
     "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted"
+  },
+  "QUEUE": {
+    "PHONE_NUMBER": "Phone number",
+    "FULL_NAME": "Full name",
+    "TEXT_MESSAGE": "Message",
+    "SENT_AT": "Sent at",
+    "SENT_MESSAGE_SUCCESSFULLY": "Message successfully sent to {{phoneNumber}}",
+    "SENT_MESSAGE_FAILED": "Failed to send message to {{phoneNumber}}"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

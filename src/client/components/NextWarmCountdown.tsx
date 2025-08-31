@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useGlobalState } from '@client/store';
+import { useGlobalState } from '@client/store/global.hooks';
 
 export const NextWarmCountdown: React.FC = () => {
   const { nextWarmAt } = useGlobalState();

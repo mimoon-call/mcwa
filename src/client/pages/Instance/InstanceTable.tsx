@@ -10,14 +10,17 @@ import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
+import instanceStore from '@client/pages/Instance/store/instance.slice';
 import {
-  searchInstance,
-  instanceActions,
-  deleteInstance,
-  toggleInstanceActivate,
-  refreshInstance,
-} from '@client/pages/Instance/store/instance.slice';
-import { INSTANCE_LOADING, INSTANCE_SEARCH_DATA, INSTANCE_SEARCH_PAGINATION } from '@client/pages/Instance/store/instance.constants';
+  ACTIVE_TOGGLE_INSTANCE,
+  DELETE_INSTANCE,
+  INSTANCE_LOADING,
+  INSTANCE_REFRESH,
+  INSTANCE_SEARCH_DATA,
+  INSTANCE_SEARCH_PAGINATION,
+  SEARCH_INSTANCE,
+  UPDATE_INSTANCE,
+} from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import AddInstanceModal from '@client/pages/Instance/modal/AddInstanceModal';
@@ -35,6 +38,14 @@ const InstanceTable = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const toast = useToast({ y: 'bottom' });
+
+  const {
+    [SEARCH_INSTANCE]: searchInstance,
+    [DELETE_INSTANCE]: deleteInstance,
+    [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
+    [INSTANCE_REFRESH]: refreshInstance,
+    [UPDATE_INSTANCE]: updateInstance,
+  } = instanceStore;
 
   const {
     [INSTANCE_SEARCH_DATA]: instanceList,
@@ -129,13 +140,13 @@ const InstanceTable = () => {
       {} as Record<keyof InstanceItem, TableHeader['valueFormatter']>
     );
 
-    const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(instanceActions.updateInstance(data)), fieldFormatter);
+    const instanceUpdate = liveUpdateHandler<InstanceUpdate>('phoneNumber', (data) => dispatch(updateInstance(data)), fieldFormatter);
 
     const activeWarm = (data: WarmActive, isWarmingUp: boolean = true) => {
       const { phoneNumber1, phoneNumber2 } = data;
 
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber1, isWarmingUp }));
-      dispatch(instanceActions.updateInstance({ phoneNumber: phoneNumber2, isWarmingUp }));
+      dispatch(updateInstance({ phoneNumber: phoneNumber1, isWarmingUp }));
+      dispatch(updateInstance({ phoneNumber: phoneNumber2, isWarmingUp }));
     };
 
     const warmEndToast = (data: WarmUpdate) => {
@@ -182,7 +193,7 @@ const InstanceTable = () => {
   const onDelete = async (item: InstanceItem) =>
     await openDeletePopup({
       callback: async () => await dispatch(deleteInstance(item.phoneNumber)),
-      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: item.phoneNumber }],
+      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: `'${item.phoneNumber}'` }],
     });
   const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
