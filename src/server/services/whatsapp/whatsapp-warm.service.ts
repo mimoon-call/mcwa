@@ -395,7 +395,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       this.log('debug', `Warm-up today: ${warmUpTodayInstances.length}`);
 
-      const stillNeededWarm = this.listInstanceNumbers({ hasWarmedUp: false });
+      // const stillNeededWarm = this.listInstanceNumbers({ hasWarmedUp: false });
+      const stillNeededWarm = this.listInstanceNumbers();
 
       if (warmUpTodayInstances.length === 0) {
         this.log('debug', 'No instances need warming up, stopping warm-up process');

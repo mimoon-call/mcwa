@@ -139,15 +139,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onError = async (error: any) => {
       this.log('error', 'Instance error', error);
 
-      // Check if this is a MAC/decryption error or unsupported state error and attempt recovery
+      // Check if this is a MAC/decryption error, unsupported state error, or decrypt message error and attempt recovery
       const errorMessage = error?.message || '';
       if (
         errorMessage.includes('Bad MAC') ||
         errorMessage.includes('decrypt') ||
         errorMessage.includes('Unsupported state') ||
-        errorMessage.includes('unable to authenticate data')
+        errorMessage.includes('unable to authenticate data') ||
+        errorMessage.includes('Failed to decrypt message')
       ) {
-        this.log('warn', '🔐 MAC/decryption or unsupported state error detected in onError, attempting recovery...');
+        this.log('warn', '🔐 MAC/decryption, unsupported state, or decrypt message error detected in onError, attempting recovery...');
 
         try {
           const recovered = await this.handleDecryptionError(error);
@@ -721,16 +722,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('info', 'Logged out');
         }
 
-        // Check if this was due to MAC/decryption errors or unsupported state errors
+        // Check if this was due to MAC/decryption errors, unsupported state errors, or decrypt message errors
         if (reason) {
           const isMacOrStateError =
             reason.includes('Bad MAC') ||
             reason.includes('decrypt') ||
             reason.includes('Unsupported state') ||
-            reason.includes('unable to authenticate data');
+            reason.includes('unable to authenticate data') ||
+            reason.includes('Failed to decrypt message');
 
           if (isMacOrStateError) {
-            this.log('warn', '🔐 Disconnection due to MAC/decryption or unsupported state error detected');
+            this.log('warn', '🔐 Disconnection due to MAC/decryption, unsupported state, or decrypt message error detected');
 
             // Attempt to recover from these errors
             try {
@@ -813,9 +815,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             msgText.includes('decrypt') ||
             msgText.includes('MAC') ||
             msgText.includes('Unsupported state') ||
-            msgText.includes('unable to authenticate data')
+            msgText.includes('unable to authenticate data') ||
+            msgText.includes('Failed to decrypt message')
           ) {
-            this.log('warn', '🔐 MAC/decryption or unsupported state error during processing, attempting recovery…');
+            this.log('warn', '🔐 MAC/decryption, unsupported state, or decrypt message error during processing, attempting recovery…');
             try {
               const recovered = await this.handleDecryptionError({
                 message: msgText,
@@ -1303,13 +1306,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const errorMessage = error?.message || '';
     const isMacError = errorMessage.includes('Bad MAC') || errorMessage.includes('decrypt') || errorMessage.includes('MAC');
     const isUnsupportedStateError = errorMessage.includes('Unsupported state') || errorMessage.includes('unable to authenticate data');
+    const isDecryptError = errorMessage.includes('Failed to decrypt message') || errorMessage.includes('decrypt message');
 
-    if (!isMacError && !isUnsupportedStateError) {
-      this.log('debug', 'Not a MAC or unsupported state error, skipping recovery:', errorMessage);
+    if (!isMacError && !isUnsupportedStateError && !isDecryptError) {
+      this.log('debug', 'Not a MAC, unsupported state, or decrypt error, skipping recovery:', errorMessage);
       return false;
     }
 
-    this.log('warn', `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : 'MAC/decryption'} error, attempting session refresh...`);
+    this.log(
+      'warn',
+      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC/decryption'} error, attempting session refresh...`
+    );
 
     try {
       // For unsupported state errors, try a more aggressive approach first
@@ -1330,7 +1337,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       const refreshSuccess = await this.refresh();
 
       if (refreshSuccess) {
-        this.log('info', `✅ Session refresh successful, ${isUnsupportedStateError ? 'unsupported state' : 'MAC'} error resolved`);
+        this.log(
+          'info',
+          `✅ Session refresh successful, ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error resolved`
+        );
         return true;
       }
 
@@ -1351,10 +1361,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         this.log('info', '🔄 Attempting session restore...');
         await this.connect();
-        this.log('info', `✅ Session reconnection successful after ${isUnsupportedStateError ? 'unsupported state' : 'MAC'} error`);
+        this.log(
+          'info',
+          `✅ Session reconnection successful after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error`
+        );
         return true;
       } catch (restoreError) {
-        this.log('error', `❌ Session reconnection failed after ${isUnsupportedStateError ? 'unsupported state' : 'MAC'} error:`, restoreError);
+        this.log(
+          'error',
+          `❌ Session reconnection failed after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
+          restoreError
+        );
 
         // If restore fails, try one more time with a fresh socket
         this.log('info', '🔄 First restore failed, trying with fresh socket...');
@@ -1371,9 +1388,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         } catch (secondRestoreError) {
           this.log('error', '❌ Second restore attempt also failed:', secondRestoreError);
 
-          // For unsupported state errors, try to clear credentials and re-register
-          if (isUnsupportedStateError) {
-            this.log('warn', '🔄 Unsupported state error persists, attempting credential reset...');
+          // For unsupported state or decrypt errors, try to clear credentials and re-register
+          if (isUnsupportedStateError || isDecryptError) {
+            this.log('warn', `🔄 ${isDecryptError ? 'Decrypt' : 'Unsupported state'} error persists, attempting credential reset...`);
             try {
               // Clear credentials and force re-registration
               await this.deleteAppAuth();
@@ -1382,9 +1399,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               this.log('info', '🧹 Credentials cleared, instance will need re-registration');
 
               // Update status to indicate need for re-authentication
+              const errorType = isDecryptError ? 'decrypt' : 'unsupported state';
               await this.update({
                 statusCode: 401,
-                errorMessage: 'Session corrupted, please re-authenticate',
+                errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
               } as Partial<WAAppAuth<T>>);
 
               // Disable the instance
@@ -1411,12 +1429,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       }
     } catch (refreshError) {
-      this.log('error', `❌ Failed to handle ${isUnsupportedStateError ? 'unsupported state' : 'MAC'} error:`, refreshError);
+      this.log(
+        'error',
+        `❌ Failed to handle ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
+        refreshError
+      );
 
       // Update status to indicate recovery failure
+      const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
       await this.update({
         statusCode: 500,
-        errorMessage: `${isUnsupportedStateError ? 'Unsupported state' : 'MAC'} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
+        errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
       } as Partial<WAAppAuth<T>>);
 
       return false;
@@ -1465,6 +1488,29 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       return recovered;
     } catch (error) {
       this.log('error', '❌ Error during manual MAC error recovery:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Public method to manually trigger decrypt message error recovery
+   * This can be called externally to attempt recovery from decrypt errors
+   */
+  async recoverFromDecryptError(): Promise<boolean> {
+    this.log('info', '🔄 Manual decrypt error recovery triggered');
+
+    try {
+      const recovered = await this.handleDecryptionError({ message: 'Failed to decrypt message - Manual recovery triggered' });
+
+      if (recovered) {
+        this.log('info', '✅ Manual decrypt error recovery successful');
+      } else {
+        this.log('error', '❌ Manual decrypt error recovery failed');
+      }
+
+      return recovered;
+    } catch (error) {
+      this.log('error', '❌ Error during manual decrypt error recovery:', error);
       return false;
     }
   }

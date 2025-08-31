@@ -1,6 +1,6 @@
 import type { WAAppAuth, WAAppKey, WAMessage, WAMessageIncomingRaw, WAMessageOutgoingRaw } from './whatsapp-instance.type';
 import type { WAPersona } from './whatsapp.type';
-import { Schema } from 'mongoose';
+import { mongo, Schema } from 'mongoose';
 import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
 
@@ -68,7 +68,9 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
   }
 );
 
-export const WhatsAppMessage = new MongoService<WAMessage & { raw: WAMessageIncomingRaw | WAMessageOutgoingRaw; createdAt: Date }>(
+export const WhatsAppMessage = new MongoService<
+  WAMessage & { raw: WAMessageIncomingRaw | WAMessageOutgoingRaw; createdAt: Date; previousId: mongo.ObjectId }
+>(
   'WhatsAppMessage',
   {
     fromNumber: { type: String, required: true },
@@ -78,6 +80,7 @@ export const WhatsAppMessage = new MongoService<WAMessage & { raw: WAMessageInco
     warmingFlag: { type: Boolean },
     raw: { type: Schema.Types.Mixed },
     info: { type: Schema.Types.Mixed },
+    previousId: { type: Schema.Types.ObjectId },
     createdAt: { type: Date },
   },
   { timestamps: false },
