@@ -14,6 +14,9 @@ import createViteSSR from '@server/create-vite-ssr';
 import instanceRoute from '@server/api/instance/instance.route';
 import { InstanceEventEnum } from '@server/api/instance/instance-event.enum';
 import messageQueueRoute from '@server/api/message-queue/message-queue.route';
+import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
+import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
+import { WAPersona } from '@server/services/whatsapp/whatsapp.type';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -76,13 +79,13 @@ export const wa = new WhatsappWarmService({
 (async () => {
   await MongoService.connect();
 
-  wa.onSchedule((nextWarmAt) => app.socket.broadcast(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, { nextWarmAt }));
-  wa.onConversationEnd((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_END, data));
-  wa.onConversationStart((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_START, data));
-  wa.onConversationActive((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_ACTIVE, data));
-  wa.onRegister((phoneNumber) => app.socket.broadcast(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
-  wa.onUpdate((state) => app.socket.broadcast(InstanceEventEnum.INSTANCE_UPDATE, state));
-  app.socket.onConnected(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
+  wa.onSchedule((nextWarmAt) => app.socket.broadcast<{ nextWarmAt: Date | null }>(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, { nextWarmAt }));
+  wa.onConversationEnd((data) => app.socket.broadcast<WAWarmUpdate>(InstanceEventEnum.INSTANCE_WARM_END, data));
+  wa.onConversationStart((data) => app.socket.broadcast<WAWarmUpdate>(InstanceEventEnum.INSTANCE_WARM_START, data));
+  wa.onConversationActive((data) => app.socket.broadcast<WAActiveWarm>(InstanceEventEnum.INSTANCE_WARM_ACTIVE, data));
+  wa.onRegister((phoneNumber) => app.socket.broadcast<{ phoneNumber: string }>(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
+  wa.onUpdate((state) => app.socket.broadcast<Partial<WAAppAuth<WAPersona>>>(InstanceEventEnum.INSTANCE_UPDATE, state));
+  app.socket.onConnected<{ nextWarmAt: Date | null }>(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
 
   wa.onReady(() => {
     wa.startWarmingUp();

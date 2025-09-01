@@ -4,7 +4,7 @@ import SocketServer, { SocketManage } from '@server/services/socket/socket-serve
 
 export class SocketService<Token extends object> extends SocketServer<Token> {
   private readonly idKey: keyof Token;
-  private readonly onConnectedCallbacks: Array<[string, Record<string, unknown> | (() => Record<string, unknown>)]> = [];
+  private readonly onConnectedCallbacks: Array<[string, Record<any, any> | (() => Record<any, any>)]> = [];
 
   constructor(idKey: keyof Token, server: ConstructorParameters<typeof SocketServer>[0], options: ConstructorParameters<typeof SocketServer>[1]) {
     super(server, options);
@@ -95,7 +95,7 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     return false;
   }
 
-  send<S extends object = Record<string, unknown>>(userId: string, event: string, payload: S, roomId?: string): boolean {
+  send<S extends object>(userId: string, event: string, payload: S, roomId?: string): boolean {
     const userRoom = this.userRoom(userId);
     const targetRoom = roomId ? this.namedRoom(roomId) : null;
 
@@ -117,7 +117,7 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
   }
 
   // Send message to all active connections with except optional
-  broadcast<S extends object = Record<string, unknown>>(event: string, payload: S, excludeUserIds?: string[]): void {
+  broadcast<S extends object>(event: string, payload: S, excludeUserIds?: string[]): void {
     if (excludeUserIds?.length) {
       const excludeSet = excludeUserIds.reduce<Set<string>>((acc, userId) => {
         const userRoom = this.userRoom(userId);
@@ -148,7 +148,7 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     return !!room && room.size > 0;
   }
 
-  onConnected(event: string, callback: Record<string, unknown> | (() => Record<string, unknown>)): void {
+  onConnected<T extends object>(event: string, callback: T | (() => T)): void {
     if (this.onConnectedCallbacks.find(([e]) => e === event)) {
       return;
     }

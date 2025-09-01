@@ -1,6 +1,6 @@
 import type { Pagination } from '@models';
-import type { AddMessageQueueReq, MessageQueueItem, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
 import type { BaseResponse } from '@server/models/base-response';
+import { AddMessageQueueReq, MessageQueueActiveEvent, MessageQueueItem, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
 import { ObjectId } from 'mongodb';
 import {
   ADD_MESSAGE_QUEUE,
@@ -15,12 +15,13 @@ import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-e
 import replaceStringVariable from '@server/helpers/replace-string-variable';
 import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
 
+let isSending = false;
 let messageCount = 0;
 let messagePass = 0;
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
-    return await MessageQueueDb.pagination<MessageQueueItem>(
+    const data = await MessageQueueDb.pagination<MessageQueueItem>(
       { page },
       [
         { $match: { sentAt: { $exists: !!hasBeenSent } } },
@@ -28,6 +29,11 @@ export const messageQueueService = {
       ],
       []
     );
+
+    messageCount = data.totalItems;
+    app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+
+    return data;
   },
 
   [ADD_MESSAGE_QUEUE]: async (textMessage: string, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
@@ -49,7 +55,10 @@ export const messageQueueService = {
       return { returnCode: 0 };
     }
 
+    app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
+
     (async () => {
+      isSending = true;
       messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
 
       let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
@@ -57,13 +66,14 @@ export const messageQueueService = {
       while (doc) {
         await sendQueueMessage(doc);
 
-        doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
         messagePass++;
-        app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: true });
+        app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+        [doc] = await MessageQueueDb.aggregate([{ $match: { sentAt: { $exists: false } } }, { $sample: { size: 1 } }]);
       }
 
-      app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: false });
+      isSending = false;
       messageCount = 0;
+      app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
 
     return { returnCode: 0 };
@@ -74,8 +84,9 @@ export const messageQueueService = {
       return { returnCode: 1 };
     }
 
+    app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
+    isSending = false;
     messageCount = 0;
-    app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, leftCount: 0, isSending: false });
 
     return { returnCode: 0 };
   },
