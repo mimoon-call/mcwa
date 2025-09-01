@@ -5,9 +5,6 @@ export const START_QUEUE_SEND = 'start-queue-send';
 export const STOP_QUEUE_SEND = 'stop-queue-send';
 
 export const UPDATE_MESSAGE_COUNT = 'update-message-count';
-export const UPDATE_MESSAGE_SENT_COUNT = 'update-message-sent-count';
-export const UPDATE_IN_PROGRESS_STATUS = 'update-in-progress-status';
-export const UPDATE_MESSAGE_QUEUE = 'update-message-queue';
 export const DELETE_MESSAGE_QUEUE = 'delete-message-queue';
 
 export const MESSAGE_SENDING_IN_PROGRESS = 'message-sending-in-progress';

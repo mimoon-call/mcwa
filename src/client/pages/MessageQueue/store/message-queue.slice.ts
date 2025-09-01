@@ -1,6 +1,8 @@
+import type { ErrorResponse } from '@services/http/types';
+import type { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { RootState } from '@client/store';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { StoreEnum } from '@client/store/store.enum';
-import type { ErrorResponse } from '@services/http/types';
 import {
   ADD_MESSAGE_QUEUE,
   DELETE_MESSAGE_QUEUE,
@@ -16,12 +18,7 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
   UPDATE_MESSAGE_COUNT,
-  UPDATE_MESSAGE_SENT_COUNT,
-  UPDATE_MESSAGE_QUEUE,
-  UPDATE_IN_PROGRESS_STATUS,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
-import type { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@client/pages/MessageQueue/store/message-queue.types';
-import type { RootState } from '@client/store';
 import { Http } from '@services/http';
 
 export interface MessageQueueState {
@@ -84,17 +81,12 @@ const messageQueueSlice = createSlice({
       state[MESSAGE_QUEUE_SENT_COUNT] = actions.payload;
     },
     updateMessageCount: (state, actions) => {
-      state[MESSAGE_QUEUE_COUNT] = actions.payload;
+      state[MESSAGE_QUEUE_COUNT] = actions.payload.messageCount || 0;
+      state[MESSAGE_QUEUE_SENT_COUNT] = actions.payload.messagePass || 0;
+      state[MESSAGE_SENDING_IN_PROGRESS] = actions.payload.isSending;
     },
     deleteMessageQueue: (state, actions) => {
       state[MESSAGE_QUEUE_DATA] = (state[MESSAGE_QUEUE_DATA] || []).filter((item) => item._id !== actions.payload);
-    },
-    updateMessageQueue: (state, action) => {
-      console.log(action.payload);
-      state[MESSAGE_QUEUE_DATA] = [...(state[MESSAGE_QUEUE_DATA] || []), action.payload];
-    },
-    updateProgress: (state, action) => {
-      state[MESSAGE_SENDING_IN_PROGRESS] = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -126,9 +118,6 @@ const messageQueueSlice = createSlice({
 export default {
   reducer: messageQueueSlice.reducer,
   [UPDATE_MESSAGE_COUNT]: messageQueueSlice.actions.updateMessageCount,
-  [UPDATE_MESSAGE_QUEUE]: messageQueueSlice.actions.updateMessageQueue,
-  [UPDATE_MESSAGE_SENT_COUNT]: messageQueueSlice.actions.updateMessageQueue,
-  [UPDATE_IN_PROGRESS_STATUS]: messageQueueSlice.actions.updateProgress,
   [DELETE_MESSAGE_QUEUE]: messageQueueSlice.actions.deleteMessageQueue,
   [ADD_MESSAGE_QUEUE]: addMessageQueue,
   [REMOVE_MESSAGE_QUEUE]: removeMessageQueue,
