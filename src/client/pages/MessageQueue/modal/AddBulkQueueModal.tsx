@@ -105,7 +105,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
       ref={modalRef}
       hideHeaderDivider
       hideContentDivider
-      submitText="GENERAL.CLOSE"
+      submitText="GENERAL.ADD"
       steps={steps}
       size={OverlayEnum.MD}
       closeCallback={async () => dispatch(searchQueue({}))}
