@@ -1,5 +1,5 @@
 // src/client/shared/components/Table/hooks/useTableBody.ts
-import { type RefObject, useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef, useCallback } from 'react';
 import type { TableBodyProps } from '@components/Table/Table.type';
 
 const unwrapHighlights = (element: HTMLElement) => {
@@ -74,7 +74,7 @@ export const useTableBody = (
   const rowTexts = useRef<string[][]>([]);
   const searchText = useRef<string>('');
 
-  const setFocus = (itemIndex: number, stepIndex: -1 | 1 | 0) => {
+  const setFocus = useCallback((itemIndex: number, stepIndex: -1 | 1 | 0) => {
     if (keyboardTimeout.current && stepIndex === 0) {
       return;
     }
@@ -101,9 +101,9 @@ export const useTableBody = (
     keyboardTimeout.current = setTimeout(() => {
       keyboardTimeout.current = undefined;
     }, 1000);
-  };
+  }, [items]);
 
-  const setRow = (i: number) => (el: HTMLTableRowElement | null) => {
+  const setRow = useCallback((i: number) => (el: HTMLTableRowElement | null) => {
     rowRefs.current[i] = el;
 
     if (el) {
@@ -118,7 +118,7 @@ export const useTableBody = (
         });
       };
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (rowRefs.current.length > 0) {
@@ -144,7 +144,7 @@ export const useTableBody = (
     });
   };
 
-  const onSearch = () => {
+  const onSearch = useCallback(() => {
     clearTimeout(searchTimeout.current);
 
     if (!searchText.current) {
@@ -204,9 +204,9 @@ export const useTableBody = (
       searchText.current = searchText.current.slice(0, -1);
       onSearch();
     }
-  };
+  }, []);
 
-  const keyboardHandler = (ev: KeyboardEvent) => {
+  const keyboardHandler = useCallback((ev: KeyboardEvent) => {
     if (!tableRef.current?.contains(ev.target as Node)) {
       return;
     }
@@ -222,7 +222,7 @@ export const useTableBody = (
     searchText.current = '';
     clearHighlights();
     clearTimeout(searchTimeout.current);
-  };
+  }, [onSearch]);
 
   useEffect(() => {
     if (!keyboardDisabled) {
@@ -236,7 +236,7 @@ export const useTableBody = (
       window.removeEventListener('keydown', keyboardHandler);
       clearTimeout(searchTimeout.current);
     };
-  }, [keyboardDisabled]);
+  }, [keyboardDisabled, keyboardHandler]);
 
   return {
     setRow,

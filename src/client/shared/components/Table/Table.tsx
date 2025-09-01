@@ -10,7 +10,7 @@ import type {
 } from '@components/Table/Table.type';
 import type { IconName } from '@components/Icon/Icon.type';
 import type { MenuItem } from '@components/Menu/Menu.type';
-import React, { type KeyboardEvent, type MouseEvent, useRef } from 'react';
+import React, { type KeyboardEvent, type MouseEvent, useRef, useMemo } from 'react';
 import Icon from '@components/Icon/Icon';
 import { useTableBody, useTableHeaders, useTableItems, useTablePagination } from '@components/Table/hooks';
 import styles from '@components/Table/Table.module.css';
@@ -319,8 +319,8 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const { items, totalPages } = useTableItems(props);
   const emptyState = props.emptyState || <span className="text-xl font-medium">{t('GENERAL.EMPTY')}</span>;
-  const headers = getHeadersWithActions(props);
-  const actions = TableActions(props);
+  const headers = useMemo(() => getHeadersWithActions(props), [props.headers, props.updateCallback, props.deleteCallback, props.previewCallback, props.customActions]);
+  const actions = useMemo(() => TableActions(props), [props.createCallback, props.exportCallback, props.tableActions]);
 
   return (
     <div className={cn('overflow-x-auto', styles['data-table'], className, props.loading && styles['data-table--loading'])}>

@@ -1,6 +1,6 @@
 // src/client/shared/components/Table/hooks/useTableHeaders.ts
 import type { TableHeader, TableHeaderProps, TableHeaders } from '../Table.type';
-import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState, useCallback } from 'react';
 import { uniqueKey } from '@helpers/unique-key';
 
 type DragData = {
@@ -20,14 +20,14 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
   const dragData = useRef<DragData>(null);
   const didDrag = useRef<boolean>(false);
 
-  const isRtl = () => theadRef.current && window.getComputedStyle(theadRef.current).direction === 'rtl';
+  const isRtl = useCallback(() => theadRef.current && window.getComputedStyle(theadRef.current).direction === 'rtl', []);
 
-  const getColumnWidth = () => {
+  const getColumnWidth = useCallback(() => {
     const key = uniqueKey(headers.map(({ value }) => value));
     const storeValue = localStorage.getItem(key);
 
     return storeValue ? JSON.parse(storeValue) : null;
-  };
+  }, [headers]);
 
   useEffect(() => {
     const columnWidth: Record<string, string> | null = getColumnWidth();
@@ -47,7 +47,7 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     });
   }, [headers]);
 
-  const detectEdge = (e: ReactMouseEvent<HTMLElement>, cell: HTMLElement, headerIndex: number) => {
+  const detectEdge = useCallback((e: ReactMouseEvent<HTMLElement>, cell: HTMLElement, headerIndex: number) => {
     const rect = cell.getBoundingClientRect();
     const x = e.clientX - rect.left;
 
@@ -59,9 +59,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     }
 
     return { onLeft, onRight };
-  };
+  }, [headers.length]);
 
-  const mouseMoveHandler = (e: MouseEvent) => {
+  const mouseMoveHandler = useCallback((e: MouseEvent) => {
     if (!dragData.current || edgeIndex === null) return;
 
     didDrag.current = true;
@@ -80,9 +80,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
 
     left.style.width = `${newLeft}px`;
     right.style.width = `${newRight}px`;
-  };
+  }, [edgeIndex, colRefs, isRtl]);
 
-  const stopResize = () => {
+  const stopResize = useCallback(() => {
     dragData.current = null;
     setEdgeIndex(null);
 
@@ -108,9 +108,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     requestAnimationFrame(() => {
       didDrag.current = false;
     });
-  };
+  }, [mouseMoveHandler, headers, colRefs, theadRef]);
 
-  const onMouseOver = (headerIndex: number) => (e: ReactMouseEvent<HTMLElement>) => {
+  const onMouseOver = useCallback((headerIndex: number) => (e: ReactMouseEvent<HTMLElement>) => {
     const cell = e.currentTarget as HTMLElement;
 
     if (typeof window === 'undefined') {
@@ -129,9 +129,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
       cell.style.cursor = 'default';
       setEdgeIndex(null);
     }
-  };
+  }, [detectEdge, setEdgeIndex]);
 
-  const onMouseDown = (e: ReactMouseEvent<HTMLElement>) => {
+  const onMouseDown = useCallback((e: ReactMouseEvent<HTMLElement>) => {
     if (edgeIndex === null) {
       return;
     }
@@ -154,9 +154,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     document.body.style.cursor = 'ew-resize';
     window.addEventListener('mousemove', mouseMoveHandler);
     window.addEventListener('mouseup', stopResize);
-  };
+  }, [edgeIndex, mouseMoveHandler, stopResize, colRefs]);
 
-  const onClick = (value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
+  const onClick = useCallback((value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
     if (edgeIndex !== null || !sortable || didDrag.current) {
       return;
     }
@@ -175,9 +175,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
 
     (Array.isArray(sortable) ? sortable : sortable ? [value] : [value]).forEach(toggle);
     onSort?.(newSort);
-  };
+  }, [edgeIndex, sort, onSort, didDrag]);
 
-  useEffect(() => () => stopResize(), []); // cleanup on unmount
+  useEffect(() => () => stopResize(), [stopResize]); // cleanup on unmount
 
   return { theadRef, colRefs, tableHeaders, onClick, onMouseOver, onMouseDown };
 };
