@@ -11,6 +11,7 @@ import { signatureMiddleware } from '@server/middleware/signature-middleware';
 import { HttpServer } from 'vite';
 import dir from '../../../dir';
 import { BaseResponse } from '@server/models/base-response';
+import getLocalTime from '@server/helpers/get-local-time';
 
 const __public = process.env.NODE_ENV === 'production' ? '/app/public/' : path.join(dir, '/../public/');
 
@@ -96,24 +97,15 @@ export class ServerExpress {
     this.app.get('/health', (req: Request, res: Response) => {
       res.status(200).json({
         status: 'healthy',
-        timestamp: new Date().toISOString(),
+        timestamp: getLocalTime().toISOString(),
         uptime: process.uptime(),
         environment: process.env.NODE_ENV || 'development',
         version: process.env.npm_package_version || 'unknown',
       });
     });
 
-    // Add a simple health check endpoint (not root to avoid overriding SSR)
-    this.app.get('/api/health', (req: Request, res: Response) => {
-      res.status(200).json({
-        message: 'React SSR Server is running',
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-      });
-    });
-
     // Add error handling middleware
-    this.app.use((err: Error, req: Request, res: Response, _next: () => void) => {
+    this.app.use((err: Error, _req: Request, res: Response, _next: () => void) => {
       console.error('Error:', err);
       res.status(500).json({
         error: 'Internal Server Error',

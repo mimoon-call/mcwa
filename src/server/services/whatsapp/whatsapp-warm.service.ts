@@ -507,7 +507,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
               throw new Error('Emulate error');
             }
 
-            currentMessage.sentAt = new Date();
+            currentMessage.sentAt = getLocalTime();
 
             const remainingMessages = currentState.filter((msg) => !msg.sentAt);
             if (remainingMessages.length === 0) {
@@ -535,7 +535,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
-          currentMessage.sentAt = new Date();
+          currentMessage.sentAt = getLocalTime();
 
           try {
             const client = this.getInstance(currentMessage.fromNumber);

@@ -13,6 +13,7 @@ import type {
 import type { WAServiceConfig } from './whatsapp.type';
 import { WhatsappInstance } from './whatsapp-instance.service';
 import { clearTimeout } from 'node:timers';
+import getLocalTime from '@server/helpers/get-local-time';
 
 // Re-export types for convenience
 export { WAServiceConfig, WAInstanceConfig };
@@ -128,7 +129,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
     const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
 
     if (this.debugMode === true || isValid) {
-      const now = new Date();
+      const now = getLocalTime();
       const time = now.toTimeString().split(' ')[0];
 
       console[type](time, name, ...args);

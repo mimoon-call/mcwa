@@ -30,6 +30,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { clearTimeout } from 'node:timers';
+import getLocalTime from '@server/helpers/get-local-time';
 
 const silentLogger = pino({ level: 'silent', enabled: false });
 
@@ -176,7 +177,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
 
     if (this.debugMode === true || isValid) {
-      const now = new Date();
+      const now = getLocalTime();
       const time = now.toTimeString().split(' ')[0];
       console[type](time, `[${this.phoneNumber}]`, ...args);
     }
@@ -504,7 +505,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             const keyId = idParts.join('-');
             const dataForStorage = convertBufferToPlain(data);
 
-            await this.updateAppKey(keyType, keyId, { keyType, keyId, data: dataForStorage, updatedAt: new Date() });
+            await this.updateAppKey(keyType, keyId, { keyType, keyId, data: dataForStorage, updatedAt: getLocalTime() });
           } catch (error) {
             this.log('error', `Error saving key file ${fileName}:`, error);
           }
@@ -561,7 +562,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private getTodayDate(): string {
-    return new Date().toISOString().split('T')[0];
+    return getLocalTime().toISOString().split('T')[0];
   }
 
   private shouldSkipRetry(errorCode?: number, reason?: string): boolean {
