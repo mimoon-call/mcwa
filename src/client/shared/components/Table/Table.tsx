@@ -254,13 +254,12 @@ const Pagination = (props: TablePaginationProps) => {
 
 const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; item: TableBodyItemProps['item']; actionIndex: number }) => {
   const { t } = useTranslation();
-  const ref = useRef<HTMLDivElement | null>(null);
   const { call, loading } = useAsyncFn(action.onClick);
 
   const label = action.label instanceof Function ? action.label(item) : action.label;
   const iconName = action.iconName instanceof Function ? action.iconName(item) : action.iconName;
 
-  useTooltip(ref, { text: t(label) });
+  const ref = useTooltip<HTMLDivElement>({ text: t(label) });
 
   const onActionClick = async (ev: MouseEvent<SVGSVGElement>) => {
     ev.preventDefault();
@@ -299,7 +298,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   const actions: Array<MenuItem> = [...(props.tableActions || [])];
 
   if (props.createCallback) {
-    actions.push({ label: 'GENERAL.CREATE', iconName: 'svg:plus', onClick: props.createCallback });
+    actions.unshift({ label: 'GENERAL.CREATE', iconName: 'svg:plus', onClick: props.createCallback });
   }
 
   if (props.exportCallback) {

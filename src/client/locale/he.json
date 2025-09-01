@@ -66,7 +66,16 @@
     "NEXT_WARM_AT": "המפגש החם הסתיים, המפגש הבא יתחיל ב-{{nextWarmAt}}",
     "NEXT_WARM_IN": "החימום הבא יתחיל בעוד {{timeUntil}}",
     "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
-    "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים"
+    "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים",
+    "WARMUP": {
+      "STARTED": "החימום התחיל"
+    },
+    "COUNTDOWN": {
+      "NEXT_WARMUP": "החימום הבא יתחיל בעוד {{timeLeft}}",
+      "HOURS": "{{hours}}ש {{minutes}}ד {{seconds}}ש",
+      "MINUTES": "{{minutes}}ד {{seconds}}ש",
+      "SECONDS": "{{seconds}}ש"
+    }
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",

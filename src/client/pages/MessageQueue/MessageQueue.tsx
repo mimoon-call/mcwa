@@ -24,7 +24,6 @@ import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
 import { MessageQueueEventEnum } from '@client/pages/MessageQueue/constants/message-queue-event.enum';
-import replaceStringVariable from '@helpers/replace-string-variable';
 
 const MessageQueue = () => {
   const { t } = useTranslation();
@@ -49,11 +48,7 @@ const MessageQueue = () => {
   const headers: TableHeaders<MessageQueueItem> = [
     { title: 'QUEUE.PHONE_NUMBER', value: 'phoneNumber' },
     { title: 'QUEUE.FULL_NAME', value: 'fullName' },
-    {
-      title: 'QUEUE.TEXT_MESSAGE',
-      value: 'textMessage',
-      component: ({ item }) => <p className="whitespace-pre-line">{replaceStringVariable(item.textMessage, item)}</p>,
-    },
+    { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage', class: ['whitespace-pre-line'] },
   ];
 
   const onPageChange = (pageIndex: number) => {

@@ -66,7 +66,16 @@
     "NEXT_WARM_AT": "Warm session is over, the next session will start at {{nextWarmAt}}",
     "NEXT_WARM_IN": "Next warm up will start in {{timeUntil}}",
     "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed",
-    "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication."
+    "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication.",
+    "WARMUP": {
+      "STARTED": "Warm up started"
+    },
+    "COUNTDOWN": {
+      "NEXT_WARMUP": "Next warm up start in {{timeLeft}}",
+      "HOURS": "{{hours}}h {{minutes}}m {{seconds}}s",
+      "MINUTES": "{{minutes}}m {{seconds}}s",
+      "SECONDS": "{{seconds}}s"
+    }
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

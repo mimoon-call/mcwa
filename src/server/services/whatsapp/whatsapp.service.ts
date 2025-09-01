@@ -20,6 +20,7 @@ export { WAServiceConfig, WAInstanceConfig };
 export type WAInstance<T extends object> = WhatsappInstance<T>;
 
 export class WhatsappService<T extends object = Record<never, never>> {
+  private lastUsedNumbers: string[] = [];
   private readonly debugMode: WAServiceConfig<T>['debugMode'];
 
   // Callbacks for message events
@@ -322,17 +323,51 @@ export class WhatsappService<T extends object = Record<never, never>> {
     return bulk;
   }
 
-  async sendMessage(fromNumber: string, toNumber: string, content: WAOutgoingContent) {
-    const instance = this.instances.get(fromNumber);
+  async sendMessage(fromNumber: string | null, toNumber: string, content: WAOutgoingContent) {
+    const instance = (() => {
+      if (fromNumber) {
+        const selectedInstance = this.instances.get(fromNumber);
 
-    if (!instance?.connected) {
-      this.log('warn', `[${fromNumber}]`, `Not connected, Cannot send message to ${toNumber}`);
+        if (!selectedInstance?.connected) {
+          throw new Error(`Number [${fromNumber}] is already registered and connected.`);
+        }
 
-      return;
-    }
+        return selectedInstance;
+      }
+
+      let availableNumbers: string[];
+      availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true }).filter(
+        (num) => !this.lastUsedNumbers.includes(num)
+      );
+
+      if (!availableNumbers.length) {
+        this.lastUsedNumbers = [];
+      }
+
+      availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true }).filter(
+        (num) => !this.lastUsedNumbers.includes(num)
+      );
+
+      console.log(availableNumbers);
+
+      if (!availableNumbers[0]) {
+        throw new Error(`Instance not available to send message to ${toNumber}`);
+      }
+
+      const selectedInstance = this.instances.get(availableNumbers[0]);
+
+      if (!selectedInstance?.connected) {
+        throw new Error(`Number [${availableNumbers[0]}] is not connected.`);
+      }
+
+      return selectedInstance;
+    })();
 
     // Use the enhanced send method with built-in retry logic and callbacks
     await instance.send(toNumber, content, { maxRetries: this.MAX_DECRYPTION_RETRIES, retryDelay: this.DECRYPTION_RETRY_DELAY });
+    this.lastUsedNumbers.push(instance.phoneNumber);
+
+    return { instanceNumber: instance.phoneNumber, toNumber, content };
   }
 
   onMessage(callback: WAMessageIncomingCallback) {

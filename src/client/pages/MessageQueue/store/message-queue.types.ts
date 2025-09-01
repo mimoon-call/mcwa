@@ -5,7 +5,9 @@ export type MessageQueueItem = {
   phoneNumber: string;
   fullName: string;
   textMessage: string;
-  sentAt?: string;
+  sentAt?: Date;
+  lastError?: string;
+  instanceNumber?: string;
 };
 
 export type SearchMessageQueueRes = EntityList<MessageQueueItem, { isSending: boolean }>;

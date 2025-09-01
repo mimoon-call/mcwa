@@ -15,12 +15,16 @@ import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-e
 import replaceStringVariable from '@server/helpers/replace-string-variable';
 
 let messageCount = 0;
+let leftCount = 0;
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
     const data = await MessageQueueDb.pagination<MessageQueueItem>(
       { page },
-      [{ $match: { sentAt: { $exists: !!hasBeenSent } } }, { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1 } }],
+      [
+        { $match: { sentAt: { $exists: !!hasBeenSent }, failedAt: { $exists: !!hasBeenSent } } },
+        { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1, instanceNumber: 1 } },
+      ],
       []
     );
 
@@ -28,7 +32,7 @@ export const messageQueueService = {
   },
 
   [ADD_MESSAGE_QUEUE]: async (textMessage: string, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
-    const bulk = data.map((value) => ({ ...value, textMessage }));
+    const bulk = data.map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value) }));
     await MessageQueueDb.insertMany(bulk);
 
     return { returnCode: 0 };
@@ -41,37 +45,37 @@ export const messageQueueService = {
     return { returnCode: 0 };
   },
 
-  [START_QUEUE_SEND]: async (): Promise<void> => {
+  [START_QUEUE_SEND]: (): void => {
     if (messageCount) {
       return;
     }
 
-    messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false }, failedAt: { $exists: false } });
-    app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVATED, { messageCount, isSending: messageCount > 0 });
+    (async () => {
+      messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
+      let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
 
-    let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, failedAt: { $exists: false } });
-
-    while (doc && messageCount > 0) {
-      app.socket.onConnected(MessageQueueEventEnum.QUEUE_SEND_ACTIVATED, () => [{ messageCount, isSending: messageCount > 0 }]);
-
-      try {
-        const textMessage = replaceStringVariable(doc.textMessage, doc);
-        await wa.sendMessage('972504381216', doc.phoneNumber, textMessage);
-        await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date() } });
-        app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
-      } catch (e) {
-        await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { failedAt: new Date(), lastError: String(e) } });
-        app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, doc);
-      } finally {
-        doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, failedAt: { $exists: false } });
+      while (doc) {
+        try {
+          const textMessage = replaceStringVariable(doc.textMessage, doc);
+          const { instanceNumber } = await wa.sendMessage(null, doc.phoneNumber, textMessage);
+          await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), instanceNumber } });
+          app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
+        } catch (e) {
+          await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), lastError: String(e) } });
+          app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, { ...doc, error: String(e) });
+        } finally {
+          doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
+          leftCount = leftCount - 1;
+          app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, leftCount, isSending: leftCount > 0 });
+        }
       }
-    }
 
-    messageCount = 0;
+      messageCount = 0;
+    })();
   },
 
   [STOP_QUEUE_SEND]: async (): Promise<void> => {
     messageCount = 0;
-    app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_DEACTIVATED, { messageCount });
+    app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, leftCount: 0, isSending: false });
   },
 };

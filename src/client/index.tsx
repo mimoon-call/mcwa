@@ -11,6 +11,7 @@ import AppHeader from '@components/AppHeader';
 import { createStore } from '@client/store';
 import AppFooter from '@components/AppFooter';
 import { NextWarmCountdown } from '@client/components/NextWarmCountdown';
+import MessageQueueCounter from '@client/components/MessageQueueCounter';
 
 export let store: ReturnType<typeof createStore>;
 
@@ -24,13 +25,18 @@ export let store: ReturnType<typeof createStore>;
   root.render(
     <Provider store={store}>
       <AppHeader />
+
       <main>
         <BrowserRouter>
           <App data={getSsrData()} />
         </BrowserRouter>
       </main>
+
       <AppFooter>
-        <NextWarmCountdown />
+        <div className="flex align-middle text-sm">
+          <NextWarmCountdown className="border-e" />
+          <MessageQueueCounter className="border-e" />
+        </div>
       </AppFooter>
     </Provider>
   );

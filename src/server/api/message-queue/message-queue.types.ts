@@ -5,7 +5,7 @@ export type MessageQueueItem = {
   fullName: string;
   textMessage: string;
   sentAt?: Date;
-  failedAt?: Date;
+  lastError?: string;
   instanceNumber?: string;
 };
 

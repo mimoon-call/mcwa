@@ -7,6 +7,7 @@ import {
   MESSAGE_QUEUE_COUNT,
   MESSAGE_QUEUE_DATA,
   MESSAGE_QUEUE_ERROR,
+  MESSAGE_QUEUE_LEFT,
   MESSAGE_QUEUE_LOADING,
   MESSAGE_QUEUE_PAGINATION,
   MESSAGE_SENDING_IN_PROGRESS,
@@ -15,6 +16,7 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
   UPDATE_MESSAGE_COUNT,
+  UPDATE_MESSAGE_LEFT_COUNT,
   UPDATE_MESSAGE_QUEUE,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
 import type { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@client/pages/MessageQueue/store/message-queue.types';
@@ -23,6 +25,7 @@ import { Http } from '@services/http';
 
 export interface MessageQueueState {
   [MESSAGE_QUEUE_COUNT]: number;
+  [MESSAGE_QUEUE_LEFT]: number;
   [MESSAGE_QUEUE_DATA]: SearchMessageQueueRes['data'] | null;
   [MESSAGE_QUEUE_PAGINATION]: Partial<Omit<SearchMessageQueueRes, 'data'>>;
   [MESSAGE_QUEUE_LOADING]: boolean;
@@ -32,6 +35,7 @@ export interface MessageQueueState {
 
 const initialState: MessageQueueState = {
   [MESSAGE_QUEUE_COUNT]: 0,
+  [MESSAGE_QUEUE_LEFT]: 0,
   [MESSAGE_QUEUE_DATA]: null,
   [MESSAGE_QUEUE_PAGINATION]: { pageSize: 30 },
   [MESSAGE_QUEUE_LOADING]: false,
@@ -75,6 +79,9 @@ const messageQueueSlice = createSlice({
   name: StoreEnum.queue,
   initialState,
   reducers: {
+    updateMessageLeftCount: (state, actions) => {
+      state[MESSAGE_QUEUE_LEFT] = actions.payload;
+    },
     updateMessageCount: (state, actions) => {
       state[MESSAGE_QUEUE_COUNT] = actions.payload;
     },
@@ -118,6 +125,7 @@ export default {
   reducer: messageQueueSlice.reducer,
   [UPDATE_MESSAGE_COUNT]: messageQueueSlice.actions.updateMessageCount,
   [UPDATE_MESSAGE_QUEUE]: messageQueueSlice.actions.updateMessageQueue,
+  [UPDATE_MESSAGE_LEFT_COUNT]: messageQueueSlice.actions.updateMessageQueue,
   [DELETE_MESSAGE_QUEUE]: messageQueueSlice.actions.deleteMessageQueue,
   [ADD_MESSAGE_QUEUE]: addMessageQueue,
   [REMOVE_MESSAGE_QUEUE]: removeMessageQueue,
