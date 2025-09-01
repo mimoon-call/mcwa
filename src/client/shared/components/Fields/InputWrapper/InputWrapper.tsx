@@ -16,9 +16,9 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
 
-  const validate = (newValue: InputWrapperProps['value']) => {
-    // Only validate if validateAlways is true, or if the field has been touched, or if no onChange is provided
-    if (!touched && props.onChange !== undefined) {
+  const validate = (newValue: InputWrapperProps['value'], forceValidate = false) => {
+    // Only validate if validateAlways is true, or if the field has been touched, or if no onChange is provided, or if force validation is requested
+    if (!touched && props.onChange !== undefined && !forceValidate) {
       return null;
     }
 
@@ -95,7 +95,7 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
   useEffect(() => {
     const handleForceValidation = () => {
       setTouched(true); // Mark as touched when force validation is triggered
-      validate(props.value);
+      validate(props.value, true); // Force validation regardless of touched state
     };
 
     const wrapper = document.querySelector(`[data-input-wrapper="${props.name}"]`);
