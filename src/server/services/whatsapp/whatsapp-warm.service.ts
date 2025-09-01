@@ -25,6 +25,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
+  public nextWarmUp: Date | null = null;
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -322,8 +323,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
         const { hours, minutes } = this.getHoursAndMinutes(delay);
         const totalMinutes = hours * 60 + minutes;
-        const nextWarmUp = new Date(getLocalTime().valueOf() + delay);
-        this.nextCheckUpdate?.(nextWarmUp);
+        this.nextWarmUp = new Date(getLocalTime().valueOf() + delay);
+        this.nextCheckUpdate?.(this.nextWarmUp);
         this.log('debug', `[${conversationKey}]`, `Will check again in ${totalMinutes} minutes`);
 
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), delay);
@@ -408,8 +409,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
           this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-          const nextWarmUp = getLocalTime(nextWarmingTime);
-          this.nextCheckUpdate?.(nextWarmUp);
+          this.nextWarmUp = getLocalTime(nextWarmingTime);
+          this.nextCheckUpdate?.(this.nextWarmUp);
 
           const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
 

@@ -50,7 +50,8 @@
     "SENT_MESSAGE_FAILED": "Failed to send message to {{phoneNumber}}",
     "START_SENDING": "Start sending",
     "STOP_SENDING": "Stop sending",
-    "VALIDATE_NO_CONTACT_SELECTED": "Please select at least one contact"
+    "VALIDATE_NO_CONTACT_SELECTED": "Please select at least one contact",
+    "MESSAGE_QUEUE_PROGRESS": "Message queue {{current}} / {{total}}"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

@@ -82,10 +82,11 @@ export const wa = new WhatsappWarmService({
   wa.onConversationActive((data) => app.socket.broadcast(InstanceEventEnum.INSTANCE_WARM_ACTIVE, data));
   wa.onRegister((phoneNumber) => app.socket.broadcast(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
   wa.onUpdate((state) => app.socket.broadcast(InstanceEventEnum.INSTANCE_UPDATE, state));
+  app.socket.onConnected(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
 
-  // wa.onReady(() => {
-  //   wa.startWarmingUp();
-  // });
+  wa.onReady(() => {
+    wa.startWarmingUp();
+  });
 
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));
 

@@ -9,7 +9,6 @@ const getClientSocket = () => {
   }
 
   socket = io();
-  socket.on('refresh', () => {});
 
   return socket;
 };

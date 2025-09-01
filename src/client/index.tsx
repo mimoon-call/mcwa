@@ -33,9 +33,9 @@ export let store: ReturnType<typeof createStore>;
       </main>
 
       <AppFooter>
-        <div className="flex align-middle text-sm">
-          <NextWarmCountdown className="border-e" />
-          <MessageQueueCounter className="border-e" />
+        <div className="flex align-middle text-sm w-full justify-end">
+          <NextWarmCountdown className="border-s" />
+          <MessageQueueCounter className="border-s" />
         </div>
       </AppFooter>
     </Provider>

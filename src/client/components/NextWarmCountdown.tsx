@@ -4,11 +4,17 @@ import type { ClassValue } from 'clsx';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
 import dayjs from '@client/locale/dayjs';
+import getClientSocket from '@helpers/get-client-socket.helper';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '@client/store';
+import globalStore from '@client/store/global.slice';
+import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 
 export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => {
   const { t } = useTranslation();
   const { nextWarmAt } = useGlobalState();
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     if (!nextWarmAt) {
@@ -28,17 +34,11 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
 
       // Use dayjs to format the time difference
       const duration = dayjs.duration(diff);
-      const hours = Math.floor(duration.asHours());
-      const minutes = duration.minutes();
-      const seconds = duration.seconds();
+      const h = String(Math.floor(duration.asHours())).padStart(2, '0').slice(-2);
+      const m = duration.minutes().toString().padStart(2, '0').slice(-2);
+      const s = duration.seconds().toString().padStart(2, '0').slice(-2);
 
-      if (hours > 0) {
-        setTimeLeft(t('INSTANCE.COUNTDOWN.HOURS', '{{hours}}h {{minutes}}m {{seconds}}s', { hours, minutes, seconds }));
-      } else if (minutes > 0) {
-        setTimeLeft(t('INSTANCE.COUNTDOWN.MINUTES', '{{minutes}}m {{seconds}}s', { minutes, seconds }));
-      } else {
-        setTimeLeft(t('INSTANCE.COUNTDOWN.SECONDS', '{{seconds}}s', { seconds }));
-      }
+      setTimeLeft([h, m, s].join(':'));
     };
 
     // Update immediately
@@ -49,6 +49,25 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
 
     return () => clearInterval(interval);
   }, [nextWarmAt, t]);
+
+  useEffect(() => {
+    const socket = getClientSocket();
+
+    const update = ({ nextWarmAt }: { nextWarmAt: Date | string | null }) => {
+      if (nextWarmAt) {
+        const nextWarmTime = new Date(nextWarmAt);
+        dispatch(globalStore.setNextWarmAt(nextWarmTime));
+      } else {
+        dispatch(globalStore.setNextWarmAt(null));
+      }
+    };
+
+    socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, update);
+
+    return () => {
+      socket?.off(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, update);
+    };
+  }, [dispatch]);
 
   if (!nextWarmAt || !timeLeft) {
     return null;
