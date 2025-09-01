@@ -19,8 +19,7 @@ import {
   SEARCH_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
-import { MAX_PAGE_SIZE } from '@server/constants';
-import { INSTANCE_PHONE_NUMBER } from '@server/api/instance/instance.regex';
+import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 
 export const instanceController = {
   [SEARCH_INSTANCE]: async (req: Request<never, never, SearchInstanceReq>, res: Response<SearchInstanceRes>) => {
@@ -38,7 +37,7 @@ export const instanceController = {
     res: Response<GetInstanceConversationRes>
   ) => {
     const { phoneNumber, withPhoneNumber, page } = await new RecordValidator({ ...req.params, ...req.body }, [
-      ['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }],
+      ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
       ['withPhoneNumber', { required: [true], type: ['String'] }],
       ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
       ['page.pageIndex', { type: ['Number'] }],
@@ -53,7 +52,7 @@ export const instanceController = {
     res: Response<GetInstanceConversationsRes>
   ) => {
     const { page, phoneNumber } = await new RecordValidator({ ...req.params, ...req.body }, [
-      ['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }],
+      ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
       ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
       ['page.pageIndex', { type: ['Number'] }],
       ['page.pageSort', { type: [['Object', 'Null']] }],
@@ -63,28 +62,28 @@ export const instanceController = {
   },
 
   [ADD_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<AddInstanceRes>) => {
-    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     const image = await instanceService[ADD_INSTANCE](phoneNumber);
 
     res.send({ image });
   },
 
   [DELETE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
-    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     await instanceService[DELETE_INSTANCE](phoneNumber);
 
     res.send();
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
-    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
 
     res.send();
   },
 
   [INSTANCE_REFRESH]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
-    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [INSTANCE_PHONE_NUMBER] }]]).validate();
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     await instanceService[INSTANCE_REFRESH](phoneNumber);
 
     res.send();

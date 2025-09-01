@@ -1,7 +1,7 @@
 import type { TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { AppDispatch, RootState } from '@client/store';
 import type { Pagination } from '@models';
-import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import Table from '@components/Table/Table';
@@ -77,7 +77,7 @@ const MessageQueue = () => {
     const file = await FileService.uploadFile();
     const data = await (async () => {
       try {
-        return await loadCsvFromFile<AddMessageQueueReq['data']>(file![0], ['fullName', 'phoneNumber'], true, ['phoneNumber']);
+        return await loadCsvFromFile<Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>>(file![0], ['fullName', 'phoneNumber'], true);
       } catch {
         toast.error('VALIDATE.INVALID_FILE');
         throw new Error();

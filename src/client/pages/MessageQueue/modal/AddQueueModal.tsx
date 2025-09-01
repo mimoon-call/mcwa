@@ -33,7 +33,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
       setPayload({ phoneNumber: '', fullName: '', textMessage: '' });
       modalRef.current?.open();
     },
-    close: (...args: Array<unknown>) => modalRef.current?.close(...args),
+    close: (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
 
@@ -53,7 +53,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
             autoComplete="off"
             label="QUEUE.PHONE_NUMBER"
             value={payload.phoneNumber}
-            rules={{ required: [true], regex: [/^972\d{9}$/, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
+            rules={{ required: [true], regex: [RegexPattern.MOBILE_PHONE_IL, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
             pattern={RegexPattern.PHONE_INPUT}
             onChange={(value) => setPayload({ ...payload, phoneNumber: value })}
           />

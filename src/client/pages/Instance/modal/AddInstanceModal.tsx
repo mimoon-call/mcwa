@@ -37,7 +37,7 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
         name="phoneNumber"
         label="INSTANCE.PHONE_NUMBER"
         value={phoneNumber}
-        rules={{ required: [true], regex: [/^972\d{9}$/, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
+        rules={{ required: [true], regex: [RegexPattern.MOBILE_PHONE_IL, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
         pattern={RegexPattern.PHONE_INPUT}
         onChange={setPhoneNumber}
       />
@@ -71,7 +71,7 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
 
       modalRef.current?.open();
     },
-    close: (...args: Array<unknown>) => modalRef.current?.close(...args),
+    close: (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
 

@@ -8,10 +8,9 @@ import {
 } from '@server/api/message-queue/message-queue.map';
 import { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
 import RecordValidator from '@server/services/record-validator';
-import { MAX_PAGE_SIZE } from '@server/constants';
+import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 import { messageQueueService } from '@server/api/message-queue/message-queue.service';
 import { BaseResponse } from '@server/models/base-response';
-import { INSTANCE_PHONE_NUMBER } from '@server/api/instance/instance.regex';
 
 export const messageQueueController = {
   [SEARCH_MESSAGE_QUEUE]: async (req: Request<never, never, SearchMessageQueueReq>, res: Response<SearchMessageQueueRes>) => {
@@ -28,7 +27,7 @@ export const messageQueueController = {
   [ADD_MESSAGE_QUEUE]: async (req: Request<never, never, AddMessageQueueReq>, res: Response<BaseResponse>) => {
     const { textMessage, data } = await new RecordValidator(req.body, [
       ['textMessage', { required: [true] }],
-      ['data.*.phoneNumber', { required: [true], regex: [INSTANCE_PHONE_NUMBER] }],
+      ['data.*.phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
       ['data.*.fullName', { required: [true] }],
     ]).validate();
 

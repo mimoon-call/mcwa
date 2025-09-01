@@ -13,6 +13,7 @@ import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@client/store';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
 import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';
+import { RegexPattern } from '@client-constants';
 
 type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data']) => void };
 type PayloadData = (Pick<MessageQueueItem, 'phoneNumber' | 'fullName'> & { checkFlag?: boolean })[];
@@ -93,10 +94,15 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
 
   useImperativeHandle(ref, () => ({
     open: async (data): Promise<void> => {
-      setPayload({ textMessage: '', data: data.map((value) => ({ ...value, checkFlag: true })) });
+      const payloadData = data
+        .uniqueBy(['phoneNumber'])
+        .filter((value) => RegexPattern.MOBILE_PHONE_IL.test(value.phoneNumber))
+        .map((value) => ({ ...value, checkFlag: true }));
+
+      setPayload({ textMessage: '', data: payloadData });
       modalRef.current?.open();
     },
-    close: (...args: Array<unknown>) => modalRef.current?.close(...args),
+    close: (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
 
