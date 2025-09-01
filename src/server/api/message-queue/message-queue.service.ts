@@ -1,5 +1,7 @@
 import type { Pagination } from '@models';
 import type { AddMessageQueueReq, MessageQueueItem, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
+import type { BaseResponse } from '@server/models/base-response';
+import { ObjectId } from 'mongodb';
 import {
   ADD_MESSAGE_QUEUE,
   REMOVE_MESSAGE_QUEUE,
@@ -8,11 +10,10 @@ import {
   STOP_QUEUE_SEND,
 } from '@server/api/message-queue/message-queue.map';
 import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
-import { BaseResponse } from '@server/models/base-response';
-import { ObjectId } from 'mongodb';
-import { app, wa } from '@server/index';
+import { app } from '@server/index';
 import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
 import replaceStringVariable from '@server/helpers/replace-string-variable';
+import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
 
 let messageCount = 0;
 let messagePass = 0;
@@ -22,7 +23,7 @@ export const messageQueueService = {
     return await MessageQueueDb.pagination<MessageQueueItem>(
       { page },
       [
-        { $match: { sentAt: { $exists: !!hasBeenSent }, failedAt: { $exists: !!hasBeenSent } } },
+        { $match: { sentAt: { $exists: !!hasBeenSent } } },
         { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1, instanceNumber: 1 } },
       ],
       []
@@ -50,30 +51,22 @@ export const messageQueueService = {
 
     (async () => {
       messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
+
       let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
 
       while (doc) {
-        try {
-          const textMessage = replaceStringVariable(doc.textMessage, doc);
-          const { instanceNumber } = await wa.sendMessage(null, doc.phoneNumber, textMessage);
-          await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), instanceNumber } });
-          app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
-          await new Promise((resolve) => setTimeout(resolve, 20000)); // wait 20 seconds between messages
-        } catch (e) {
-          await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), lastError: String(e) } });
-          app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, { ...doc, error: String(e) });
-        } finally {
-          doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
-          messagePass++;
-          app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: true });
-        }
+        await sendQueueMessage(doc);
+
+        doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
+        messagePass++;
+        app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: true });
       }
 
       app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: false });
       messageCount = 0;
     })();
 
-    return { returnCode: messageCount ? 0 : 1 };
+    return { returnCode: 0 };
   },
 
   [STOP_QUEUE_SEND]: (): BaseResponse => {

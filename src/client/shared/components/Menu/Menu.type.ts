@@ -7,7 +7,7 @@ export type MenuItem = {
   label: string | ReactNode;
   iconName?: IconName;
   onClick: () => Promise<unknown> | unknown;
-  disabled?: boolean;
+  disabled?: boolean | (() => boolean);
 };
 
 export type MenuProps = {

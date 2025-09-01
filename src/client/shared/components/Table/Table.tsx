@@ -298,7 +298,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   const actions: Array<MenuItem> = [...(props.tableActions || [])];
 
   if (props.createCallback) {
-    actions.unshift({ label: 'GENERAL.CREATE', iconName: 'svg:plus', onClick: props.createCallback });
+    actions.unshift({ label: 'GENERAL.ADD', iconName: 'svg:plus', onClick: props.createCallback });
   }
 
   if (props.exportCallback) {

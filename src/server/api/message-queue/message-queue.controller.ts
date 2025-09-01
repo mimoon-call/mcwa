@@ -41,7 +41,7 @@ export const messageQueueController = {
     res.send(await messageQueueService[REMOVE_MESSAGE_QUEUE](queueId));
   },
 
-  [START_QUEUE_SEND]: (_req: Request, res: Response<BaseResponse>) => {
+  [START_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
     res.send(messageQueueService[START_QUEUE_SEND]());
   },
 

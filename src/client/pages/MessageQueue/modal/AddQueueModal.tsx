@@ -1,12 +1,12 @@
 import type { ModalRef } from '@components/Modal/Modal.types';
+import type { AppDispatch } from '@client/store';
+import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
 import { OverlayEnum } from '@components/Overlay/Overlay.enum';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import type { AppDispatch } from '@client/store';
 import Modal from '@components/Modal/Modal';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
 import { ADD_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
-import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
@@ -19,7 +19,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
   const [payload, setPayload] = useState<Payload>({
     phoneNumber: '',
     fullName: '',
-    textMessage: ''
+    textMessage: '',
   });
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
@@ -34,11 +34,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
 
   useImperativeHandle(ref, () => ({
     open: async (): Promise<void> => {
-      setPayload({
-        phoneNumber: '',
-        fullName: '',
-        textMessage: ''
-      });
+      setPayload({ phoneNumber: '', fullName: '', textMessage: '' });
       modalRef.current?.open();
     },
     close: (...args: Array<unknown>) => modalRef.current?.close(...args),
@@ -46,7 +42,13 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
   }));
 
   return (
-    <Modal ref={modalRef} size={OverlayEnum.MD} closeCallback={async () => dispatch(searchQueue({}))} submitCallback={submit}>
+    <Modal
+      ref={modalRef}
+      submitText="GENERAL.ADD"
+      size={OverlayEnum.MD}
+      closeCallback={async () => dispatch(searchQueue({}))}
+      submitCallback={submit}
+    >
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
           <TextField

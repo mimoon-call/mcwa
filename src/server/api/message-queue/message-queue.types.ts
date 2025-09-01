@@ -1,6 +1,8 @@
 import type { EntityList, Pagination } from '@models';
+import { ObjectId } from 'mongodb';
 
 export type MessageQueueItem = {
+  _id: ObjectId;
   phoneNumber: string;
   fullName: string;
   textMessage: string;

@@ -1,8 +1,11 @@
+import type { TableHeaders, TableProps } from '@components/Table/Table.type';
+import type { AppDispatch, RootState } from '@client/store';
+import type { Pagination } from '@models';
+import type { MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import Table from '@components/Table/Table';
-import type { TableHeaders, TableProps } from '@components/Table/Table.type';
 import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
 import {
   MESSAGE_QUEUE_DATA,
@@ -14,11 +17,8 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
-import type { Pagination } from '@models';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
-import type { MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
 import AddQueueModal from '@client/pages/MessageQueue/modal/AddQueueModal';
-import type { ModalRef } from '@components/Modal/Modal.types';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
@@ -61,7 +61,10 @@ const MessageQueue = () => {
 
   const onDelete = async (item: MessageQueueItem) => {
     await openDeletePopup({
-      callback: async () => await removeQueue(item._id),
+      callback: async () => {
+        await removeQueue(item._id);
+        dispatch(searchMessageQueue({}));
+      },
       description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: '' }],
     });
   };
@@ -99,7 +102,12 @@ const MessageQueue = () => {
   const tableActions: TableProps<MessageQueueItem>['tableActions'] = [
     isSendingInProgress
       ? { label: 'QUEUE.STOP_SENDING', iconName: 'svg:stop', onClick: stopSend }
-      : { label: 'QUEUE.START_SENDING', iconName: 'svg:missile', onClick: startSend },
+      : {
+          label: 'QUEUE.START_SENDING',
+          iconName: 'svg:missile',
+          onClick: startSend,
+          disabled: () => !!(queuePagination.totalItems === 0 || queueLoading),
+        },
   ];
 
   return (

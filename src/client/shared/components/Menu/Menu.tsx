@@ -1,6 +1,6 @@
 // src/client/shared/components/Menu/Menu.tsx
 import type { MenuProps } from '@components/Menu/Menu.type';
-import React, { type FC, useRef } from 'react';
+import React, { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Popover } from '@components/Popover/Popover';
 import Icon from '@components/Icon/Icon';
@@ -21,7 +21,9 @@ const MenuList: FC<{ items: MenuProps['items']; popoverRef: PopoverProps['ref'] 
       },
     });
 
-    return { ...rest, loading, disabled, onClick: !disabled ? call : undefined };
+    const isDisabled = typeof disabled === 'function' ? disabled() : disabled;
+
+    return { ...rest, loading, disabled: isDisabled, onClick: !isDisabled ? call : undefined };
   });
 
   return items.map(({ label, iconName, disabled, loading, onClick }, index) => {
@@ -58,11 +60,9 @@ export const Menu: FC<MenuProps> = ({ activator, items, showSingleAction, classN
   const showSingleItem = items.length === 1 && !!showSingleAction;
 
   if (showSingleItem) {
-    const actionRef = useRef<HTMLDivElement>(null);
     const { label, iconName, onClick } = items[0]!;
     const { call, loading } = useAsyncFn(onClick, {});
-
-    useTooltip(actionRef, { text: typeof label === 'string' ? t(label) : undefined });
+    const actionRef = useTooltip<HTMLDivElement>({ text: typeof label === 'string' ? t(label) : undefined });
 
     return (
       <div ref={actionRef} className="relative flex items-center justify-center">
