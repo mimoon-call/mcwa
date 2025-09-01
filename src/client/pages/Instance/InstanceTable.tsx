@@ -107,7 +107,7 @@ const InstanceTable = () => {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
       sortable: true,
-      valueFormatter: (value) => dayjs(value).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+      component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
     },
   ];
 
