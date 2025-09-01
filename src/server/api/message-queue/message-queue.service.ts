@@ -19,7 +19,7 @@ let messagePass = 0;
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
-    const data = await MessageQueueDb.pagination<MessageQueueItem>(
+    return await MessageQueueDb.pagination<MessageQueueItem>(
       { page },
       [
         { $match: { sentAt: { $exists: !!hasBeenSent }, failedAt: { $exists: !!hasBeenSent } } },
@@ -27,8 +27,6 @@ export const messageQueueService = {
       ],
       []
     );
-
-    return { ...data, isSending: messageCount > 0 };
   },
 
   [ADD_MESSAGE_QUEUE]: async (textMessage: string, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
@@ -45,9 +43,9 @@ export const messageQueueService = {
     return { returnCode: 0 };
   },
 
-  [START_QUEUE_SEND]: (): void => {
+  [START_QUEUE_SEND]: (): BaseResponse => {
     if (messageCount) {
-      return;
+      return { returnCode: 0 };
     }
 
     (async () => {
@@ -74,10 +72,18 @@ export const messageQueueService = {
       app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: false });
       messageCount = 0;
     })();
+
+    return { returnCode: messageCount ? 0 : 1 };
   },
 
-  [STOP_QUEUE_SEND]: async (): Promise<void> => {
+  [STOP_QUEUE_SEND]: (): BaseResponse => {
+    if (!messageCount) {
+      return { returnCode: 1 };
+    }
+
     messageCount = 0;
     app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, leftCount: 0, isSending: false });
+
+    return { returnCode: 0 };
   },
 };

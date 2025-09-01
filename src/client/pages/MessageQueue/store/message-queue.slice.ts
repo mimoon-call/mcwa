@@ -87,7 +87,6 @@ const messageQueueSlice = createSlice({
       state[MESSAGE_QUEUE_COUNT] = actions.payload;
     },
     deleteMessageQueue: (state, actions) => {
-      console.log(actions.payload);
       state[MESSAGE_QUEUE_DATA] = (state[MESSAGE_QUEUE_DATA] || []).filter((item) => item._id !== actions.payload);
     },
     updateMessageQueue: (state, action) => {
@@ -115,7 +114,6 @@ const messageQueueSlice = createSlice({
           pageSort: action.payload.pageSort,
         };
         state[MESSAGE_QUEUE_LOADING] = false;
-        state[MESSAGE_SENDING_IN_PROGRESS] = action.payload.isSending;
       })
       .addCase(searchMessageQueue.rejected, (state, action) => {
         state[MESSAGE_QUEUE_LOADING] = false;
