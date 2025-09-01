@@ -16,6 +16,7 @@ import { cn } from '@client/plugins';
 export const Popover: FC<PopoverProps> = (props: PopoverProps) => {
   const { t } = useTranslation();
   const { ariaLabel = 'GENERAL.ACTIONS', closeTimeout = 0, offsetX = 4, offsetY = 0 } = props;
+  const popoverRef = useTooltip<HTMLDivElement>({ text: props.tooltip ? t(props.tooltip) : undefined });
 
   const activator = (() => {
     if (!props.activator || typeof props.activator === 'string') {
@@ -28,7 +29,6 @@ export const Popover: FC<PopoverProps> = (props: PopoverProps) => {
   const id = useRef(uniqueKey(Date.now()));
   const zIndex = useRef<number>(getLastZIndex());
   const [isActive, setActive] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const debounceId = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -45,7 +45,7 @@ export const Popover: FC<PopoverProps> = (props: PopoverProps) => {
     (e: Event) => {
       const target = e.target as Node;
 
-      if (popoverRef.current?.contains(target) || contentRef.current?.contains(target)) {
+      if (popoverRef?.current?.contains(target) || contentRef.current?.contains(target)) {
         return;
       }
 
@@ -90,7 +90,7 @@ export const Popover: FC<PopoverProps> = (props: PopoverProps) => {
   useLayoutEffect(() => {
     if (!isActive) return;
 
-    const act = popoverRef.current;
+    const act = popoverRef?.current;
     const content = contentRef.current;
 
     if (!act || !content) return;
@@ -145,7 +145,6 @@ export const Popover: FC<PopoverProps> = (props: PopoverProps) => {
   }, [props.isActive]);
 
   useExposeRef(props, { close, open: onOpen });
-  useTooltip(popoverRef, { text: props.tooltip ? t(props.tooltip) : undefined });
 
   return (
     <div className={styles['popover']}>

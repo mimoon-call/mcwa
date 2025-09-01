@@ -11,5 +11,5 @@ export type InputWrapperProps = {
   rules?: ValidatorFieldRules;
   pattern?: RegExp | string;
   debounce?: number;
-  onChange: (v: Value) => void;
+  onChange?: (v: Value) => void;
 };

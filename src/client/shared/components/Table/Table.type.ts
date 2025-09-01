@@ -61,9 +61,9 @@ export type TableProps<T extends object = DefaultTableItem> = {
   pageIndex?: Pagination['pageIndex'];
   pageSize?: Pagination['pageSize'];
   totalPages?: Pagination['totalPages'];
-  onPageChange: ((index: number) => Promise<void> | void) | undefined;
+  onPageChange?: ((index: number) => Promise<void> | void) | undefined;
   pageSort?: Pagination['pageSort'];
-  onSort: ((sort: Pagination['pageSort']) => Promise<void> | void) | undefined;
+  onSort?: ((sort: Pagination['pageSort']) => Promise<void> | void) | undefined;
   loading?: boolean;
   className?: ClassValue;
   keyboardDisabled?: boolean;

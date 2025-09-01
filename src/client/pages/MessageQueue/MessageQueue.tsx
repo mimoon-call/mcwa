@@ -1,7 +1,7 @@
 import type { TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { AppDispatch, RootState } from '@client/store';
 import type { Pagination } from '@models';
-import type { MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import Table from '@components/Table/Table';
@@ -24,12 +24,16 @@ import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
 import { MessageQueueEventEnum } from '@client/pages/MessageQueue/constants/message-queue-event.enum';
+import FileService from '@services/file.service';
+import loadCsvFromFile from '@helpers/load-csv-from-file.helper';
+import AddBulkQueueModal from '@client/pages/MessageQueue/modal/AddBulkQueueModal';
 
 const MessageQueue = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast({ y: 'bottom' });
   const modelRef = useRef<ModalRef>(null);
+  const bulkModalRef = useRef<ModalRef>(null);
 
   const {
     [MESSAGE_QUEUE_DATA]: queueList,
@@ -69,6 +73,20 @@ const MessageQueue = () => {
     });
   };
 
+  const importFile = async () => {
+    const file = await FileService.uploadFile();
+    const data = await (async () => {
+      try {
+        return await loadCsvFromFile<AddMessageQueueReq['data']>(file![0], ['fullName', 'phoneNumber'], true, ['phoneNumber']);
+      } catch {
+        toast.error('VALIDATE.INVALID_FILE');
+        throw new Error();
+      }
+    })();
+
+    bulkModalRef.current?.open(data);
+  };
+
   useEffect(() => {
     if (!queueList) {
       dispatch(searchMessageQueue({ page: {} }));
@@ -100,6 +118,11 @@ const MessageQueue = () => {
   }, [dispatch, searchMessageQueue, toast, t]);
 
   const tableActions: TableProps<MessageQueueItem>['tableActions'] = [
+    {
+      label: 'GENERAL.IMPORT_FILE',
+      iconName: 'svg:attachment',
+      onClick: importFile,
+    },
     isSendingInProgress
       ? { label: 'QUEUE.STOP_SENDING', iconName: 'svg:stop', onClick: stopSend }
       : {
@@ -126,6 +149,7 @@ const MessageQueue = () => {
       />
 
       <AddQueueModal ref={modelRef} />
+      <AddBulkQueueModal ref={bulkModalRef} />
     </>
   );
 };

@@ -11,7 +11,6 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
   const { className, children, label, debounce } = props;
 
   const isInit = useRef(true);
-  const errorRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +29,7 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
 
   const onChange = (newValue: InputWrapperProps['value']) => {
     validate(newValue);
-    props.onChange(newValue);
+    props.onChange?.(newValue);
   };
 
   const controlledChild = isValidElement(children)
@@ -60,11 +59,16 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
     }, debounce || 0);
   }, [props.value]);
 
-  useTooltip(errorRef, { style: { color: 'red' } });
+  const errorRef = useTooltip<HTMLDivElement>({ style: { color: 'red' } });
 
   return (
     <div className={cn('flex flex-col', className)}>
-      <label className={cn('flex flex-col text-slate-600 text-base mb-1 font-medium form-error:text-red-700', isTouch && 'error:text-red-700')}>
+      <label
+        className={cn(
+          'flex flex-col text-slate-600 text-base mb-1 font-medium form-error:text-red-700',
+          (isTouch || !onChange) && 'error:text-red-700'
+        )}
+      >
         <p className="ps-1">{typeof label === 'string' ? t(label) : label}</p>
         {controlledChild}
       </label>
@@ -72,7 +76,7 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
       <div
         ref={errorRef}
         className={cn(
-          { 'opacity-0': !error || !isTouch },
+          { 'opacity-0': !error || (!isTouch && onChange) },
           'w-full ps-1 text-red-700 text-sm h-4 duration-200 error:opacity-100 mb-0.5 -mt-1 text-ellipsis overflow-hidden whitespace-nowrap form-error:opacity-100'
         )}
         role="alert"

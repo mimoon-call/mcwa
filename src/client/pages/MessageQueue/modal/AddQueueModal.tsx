@@ -16,11 +16,7 @@ type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage'
 const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
-  const [payload, setPayload] = useState<Payload>({
-    phoneNumber: '',
-    fullName: '',
-    textMessage: '',
-  });
+  const [payload, setPayload] = useState<Payload>({ phoneNumber: '', fullName: '', textMessage: '' });
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 

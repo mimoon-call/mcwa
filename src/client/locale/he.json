@@ -29,8 +29,8 @@
     "CLOSE": "סגור",
     "MORE_INFORMATION": "מידע נוסף",
     "ACTIONS": "פעולות",
-    "EXPORT": "ייצא",
-    "IMPORT": "ייבא",
+    "EXPORT_FILE": "ייצא לקובץ",
+    "IMPORT_FILE": "ייבא מקובץ",
     "ACTIVE": "פעיל",
     "DISABLE": "בטל",
     "ENABLE": "הפעל",
@@ -44,6 +44,7 @@
     "PHONE_NUMBER": "מספר טלפון",
     "FULL_NAME": "שם",
     "TEXT_MESSAGE": "הודעה",
+    "CONTACT_LIST": "רשימת אנשי קשר",
     "SENT_AT": "נשלח בתאריך",
     "SENT_MESSAGE_SUCCESSFULLY": "שליחת הודעה ל-{{phoneNumber}} הסתיימה בהצלחה",
     "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה",
@@ -133,6 +134,7 @@
     "COLOR_SHOULD_BE_DARKER": "הצבע צריך להיות כהה יותר",
     "COLOR_SHOULD_BE_LIGHTER": "הצבע צריך להיות בהיר יותר",
     "INVALID_PRICE": "מחיר לא תקין",
-    "INVALID_ID_NUMBER": "מספר זיהוי לא תקין"
+    "INVALID_ID_NUMBER": "מספר זיהוי לא תקין",
+    "INVALID_FILE": "קובץ לא תקין"
   }
 }

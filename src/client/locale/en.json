@@ -29,8 +29,8 @@
     "CLOSE": "Close",
     "MORE_INFORMATION": "More information",
     "ACTIONS": "Actions",
-    "EXPORT": "Export",
-    "IMPORT": "Import",
+    "EXPORT_FILE": "File export",
+    "IMPORT_FILE": "File import",
     "ACTIVE": "Active",
     "DISABLE": "Disable",
     "ENABLE": "Enable",
@@ -44,6 +44,7 @@
     "PHONE_NUMBER": "Phone number",
     "FULL_NAME": "Full name",
     "TEXT_MESSAGE": "Message",
+    "CONTACT_LIST": "Contact list",
     "SENT_AT": "Sent at",
     "SENT_MESSAGE_SUCCESSFULLY": "Message successfully sent to {{phoneNumber}}",
     "SENT_MESSAGE_FAILED": "Failed to send message to {{phoneNumber}}",
@@ -133,6 +134,7 @@
     "COLOR_SHOULD_BE_DARKER": "Color should be darker",
     "COLOR_SHOULD_BE_LIGHTER": "Color should be lighter",
     "INVALID_PRICE": "Invalid price",
-    "INVALID_ID_NUMBER": "Invalid ID number"
+    "INVALID_ID_NUMBER": "Invalid ID number",
+    "INVALID_FILE": "Invalid file"
   }
 }
