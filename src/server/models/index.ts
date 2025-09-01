@@ -1,3 +1,4 @@
 export * from './type-of';
 export * from './value-of';
-// Removed circular dependency to client HTTP types
+export * from './base-response';
+export type { ErrorResponseMessage } from '@client/shared/services/http/types/error-response';

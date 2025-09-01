@@ -13,7 +13,7 @@ type RouteOptions = Partial<{
   isAuthRequired: boolean;
 }>;
 
-export const routeMiddleware = (options?: RouteOptions, callback?: (...arg: Array<any>) => Promise<void> | void) => {
+export const routeMiddleware = (options?: RouteOptions, callback?: (...arg: any[]) => Promise<void> | void) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       delete req.headers['if-none-match'];

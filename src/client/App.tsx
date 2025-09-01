@@ -1,9 +1,9 @@
+import type { AppDispatch, RootState } from './store';
 import React, { useEffect } from 'react';
 import { useRoutes } from 'react-router-dom';
 import router from '@client/router';
 import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from './store';
 import authSlice from '@client/store/auth.slice';
 import { REFRESH_TOKEN } from '@server/api/auth/auth.map';
 import { IS_AUTHENTICATED, SET_AUTH_STATE } from '@client/store/auth.constants';

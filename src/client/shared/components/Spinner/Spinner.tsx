@@ -1,6 +1,6 @@
 import React, { type FC, type ReactNode } from 'react';
 import styles from './Spinner.module.css';
-import { SizeUnit } from '@models';
+import type { SizeUnit } from '@models';
 import { useTranslation } from 'react-i18next';
 
 type SpinnerProps = Partial<{ loading?: boolean; ariaLabel?: string; size?: SizeUnit; children?: ReactNode }>;

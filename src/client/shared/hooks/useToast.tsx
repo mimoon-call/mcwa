@@ -1,5 +1,5 @@
 // src/client/shared/hooks/useToast.tsx
-import { ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
 import Toast, { type ToastOptions, type ToastProps, type ToastRef } from '@components/Toast/Toast';

@@ -6,10 +6,10 @@ export type ModalProps = Omit<OverlayProps, 'loading'> & {
   title?: string | ReactNode;
   subtitle?: string | ReactNode;
   submitText?: string;
-  submitCallback?: (...arg: Array<any>) => Promise<void>;
+  submitCallback?: (...arg: unknown[]) => Promise<void>;
   hideCancelButton?: boolean;
   cancelText?: string;
-  cancelCallback?: (...arg: Array<any>) => Promise<void>;
+  cancelCallback?: (...arg: unknown[]) => Promise<void>;
   additionalActions?: ReactNode;
   hideContentDivider?: boolean;
   hideHeaderDivider?: boolean;
@@ -18,7 +18,7 @@ export type ModalProps = Omit<OverlayProps, 'loading'> & {
 };
 
 export type ModalRef = {
-  open: (...arg: Array<any>) => void;
-  close: (...arg: Array<any>) => void;
+  open: (...arg: unknown[]) => void;
+  close: (...arg: unknown[]) => void;
   validate: FormRef['validate'];
 };

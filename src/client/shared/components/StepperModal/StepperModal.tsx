@@ -1,14 +1,14 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import type { StepperModalProps } from '@components/StepperModal/StepperModal.types';
+import type { ModalRef } from '@components/Modal/Modal.types';
 import Modal from '@components/Modal/Modal';
-import { ModalRef } from '@components/Modal/Modal.types';
 
 const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
   const { steps, submitCallback, submitText, cancelText, title, subtitle, ...rest } = props;
   const modalRef = useRef<ModalRef>(null);
   const [stepIndex, setStepIndex] = useState(0);
 
-  const onNextCallback = async (...args: Array<unknown>) => {
+  const onNextCallback = async (...args: unknown[]) => {
     if (!modalRef.current?.validate()) {
       return;
     }
@@ -38,12 +38,12 @@ const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
   const hideBack = stepIndex > 0 && steps[stepIndex].hideBack;
 
   useImperativeHandle(ref, () => ({
-    open: (...args: Array<unknown>) => {
+    open: (...args: unknown[]) => {
       setStepIndex(0);
 
       modalRef.current?.open(...args);
     },
-    close: (...args: Array<unknown>) => modalRef.current?.close(...args),
+    close: (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
 

@@ -27,7 +27,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, ...rest })
     <input
       className={cn(global['field'], styles['text-field'], className)}
       value={value}
-      onChange={onFieldChangeEvent(onChange, localValue.current, pattern)}
+      onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern) : undefined}
       {...rest}
     />
   );
@@ -38,7 +38,7 @@ const TextField: FC<TextFieldProps> = (props) => {
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange}>
-      <Input {...rest} value={value} onChange={(ev) => onChange(ev.target.value)} />
+      <Input {...rest} value={value} onChange={(ev) => onChange?.(ev.target.value)} />
     </InputWrapper>
   );
 };

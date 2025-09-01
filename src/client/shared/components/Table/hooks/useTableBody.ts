@@ -70,8 +70,8 @@ export const useTableBody = (
   const keyboardTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const currentIndex = useRef<number>(0);
-  const rowRefs = useRef<Array<HTMLTableRowElement | null>>([]);
-  const rowTexts = useRef<Array<Array<string>>>([]);
+  const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
+  const rowTexts = useRef<string[][]>([]);
   const searchText = useRef<string>('');
 
   const setFocus = (itemIndex: number, stepIndex: -1 | 1 | 0) => {

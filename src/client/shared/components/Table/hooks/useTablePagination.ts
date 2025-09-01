@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 export const useTablePagination = ({ pageIndex = 0, totalPages = 1, keyboardDisabled, onPageChange }: TablePaginationProps) => {
   const pageNumMap = Array.from({ length: totalPages }).map((_, i) => i + 1);
   const pageNumRef = useRef<HTMLDivElement | null>(null);
-  const pageNumRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const pageNumRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const setItemRefs = (i: number) => (el: HTMLSpanElement | null) => {
     pageNumRefs.current[i] = el;
   };

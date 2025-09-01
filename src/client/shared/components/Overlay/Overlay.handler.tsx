@@ -20,13 +20,13 @@ export const OverlayHandler = (props: Omit<OverlayProps, 'ref'>): OverlayRef & {
         container.remove();
       };
 
-      const handleClose = async (...args: Array<any>) => {
+      const handleClose = async (...args: unknown[]) => {
         await props.closeCallback?.(...args);
 
         cleanup();
       };
 
-      const handleOpen = async (node: ReactNode, ...args: Array<any>) => {
+      const handleOpen = async (...args: unknown[]) => {
         await props.openCallback?.(...args);
       };
 

@@ -38,7 +38,7 @@ export type TablePaginationProps = {
 export type TableHeader<T extends object = Record<never, never>> = {
   title: string | ReactNode;
   value: string;
-  sortable?: boolean | Array<string>;
+  sortable?: boolean | string[];
   searchable?: boolean;
   style?: CSSProperties;
   class?: ClassValue[];

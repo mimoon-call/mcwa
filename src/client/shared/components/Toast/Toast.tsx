@@ -1,12 +1,12 @@
 // src/client/shared/components/Toast/Toast.tsx
-import React, { forwardRef, ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from '@components/Toast/Toast.module.css';
 import { cn } from '@client/plugins';
 import { getLastZIndex } from '@helpers/get-last-z-index';
 import { uniqueKey } from '@helpers/unique-key';
 import Icon from '@components/Icon/Icon';
-import { ClassValue } from 'clsx';
+import type { ClassValue } from 'clsx';
 import { esc } from '@client/App';
 
 type ToastEntry = {

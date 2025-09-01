@@ -2,7 +2,7 @@ import type { ClassValue } from 'clsx';
 import type { ValidatorFieldRules } from '@services/field-validator/field-validator.type';
 import type { ReactNode } from 'react';
 
-type Value = any | Record<string, any> | Array<any>;
+type Value = any | Record<string, any> | unknown[];
 
 export type InputWrapperProps = {
   name: string;

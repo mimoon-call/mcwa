@@ -199,7 +199,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
     return /(?<=\s)\w+(|])/.exec(Object.prototype.toString.call(obj))![0] as TypeOf;
   }
 
-  private toArray<T = any>(value: any): Array<T> {
+  private toArray<T extends object = any>(value: any): T[] {
     return Array.isArray(value) ? value : [value];
   }
 
@@ -214,7 +214,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
     }
   }
 
-  private isValidType(value: any, accept: Array<TypeOf>) {
+  private isValidType(value: any, accept: TypeOf[]) {
     return accept.includes(this.typeOf(value));
   }
 
@@ -238,7 +238,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
       const valueTypes = inputValue.map((value: any): TypeOf => this.typeOf(value));
       const validatorTypes = this.toArray(acceptTypes);
 
-      return [valueTypes.some((type: TypeOf) => validatorTypes.includes(type)), errorMessage, this.toArray(acceptTypes)];
+      return [valueTypes.some((type: TypeOf) => validatorTypes.includes(type)), errorMessage, acceptTypes];
     },
     type: (inputValue: any, [acceptTypes, errorMessage = RecordValidatorMessage.INVALID_TYPE]): ReturnType<ValidatorFunction> => {
       const valueType = this.typeOf(inputValue);
@@ -283,10 +283,10 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
       if (!inputValue) {
         return [true];
       } else if (Array.isArray(inputValue)) {
-        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values : undefined];
+        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values as string[] : undefined];
       }
 
-      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values : undefined];
+      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values as string[] : undefined];
     },
     max: (inputValue: any, [maxValue, errorMessage = RecordValidatorMessage.MAX]): ReturnType<ValidatorFunction> => {
       return [inputValue === null || inputValue === undefined || (!isNaN(+inputValue) && +inputValue <= maxValue), errorMessage, maxValue];

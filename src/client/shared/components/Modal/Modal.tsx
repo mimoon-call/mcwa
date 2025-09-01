@@ -1,7 +1,8 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import Overlay from '@components/Overlay/Overlay';
 import type { ModalProps, ModalRef } from '@components/Modal/Modal.types';
 import type { OverlayRef } from '@components/Overlay/Overlay.type';
+import type { FormRef } from '@components/Form/Form.types';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import Overlay from '@components/Overlay/Overlay';
 import Button from '@components/Button/Button';
 import { useTranslation } from 'react-i18next';
 import { useAsyncFn } from '@hooks/useAsyncFn';
@@ -9,7 +10,6 @@ import { emitter } from '@client/App';
 import ErrorAlert from '@components/ErrorAlert/ErrorAlert';
 import { cn } from '@client/plugins';
 import Form from '@components/Form/Form';
-import type { FormRef } from '@components/Form/Form.types';
 
 const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
   const { t } = useTranslation();
@@ -49,14 +49,14 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
   const formRef = useRef<FormRef>(null);
 
   useImperativeHandle(ref, () => ({
-    open: (...args: Array<unknown>) => {
+    open: (...args: unknown[]) => {
       if (openEvent) {
         emitter.emit(openEvent, ...args);
       } else {
         overlayRef.current?.open(...args);
       }
     },
-    close: (...args: Array<unknown>) => {
+    close: (...args: unknown[]) => {
       if (closeEvent) {
         emitter.emit(closeEvent, ...args);
       } else {

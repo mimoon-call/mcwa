@@ -14,7 +14,7 @@ export default function Tabs({ className, panelClassName, fitHeight, ...props }:
   const { tabs, tabPanelRef, setTabItemRefs, activeTab, onTabClick, onTabFocus, showBackButton, onTabBackClick, showNextButton, onTabNextClick } =
     useTabs(props);
 
-  const tabRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const tabRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   return (
     <div className={cn(styles['tabs'], className, !fitHeight && 'h-full')}>

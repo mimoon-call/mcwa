@@ -34,7 +34,7 @@ const Overlay = forwardRef<OverlayRef, OverlayProps>((props, ref) => {
   };
 
   const open = useCallback(
-    async (...arg: Array<any>) => {
+    async (...arg: unknown[]) => {
       setOpen(true);
       setTimeout(() => setShown(true), 500);
 
@@ -49,7 +49,7 @@ const Overlay = forwardRef<OverlayRef, OverlayProps>((props, ref) => {
   );
 
   const close = useCallback(
-    async (...arg: Array<any>) => {
+    async (...arg: unknown[]) => {
       await closeCallback(...arg);
       setShown(false);
       setTimeout(() => setOpen(false), 500);

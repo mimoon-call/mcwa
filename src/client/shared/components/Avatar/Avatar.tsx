@@ -1,10 +1,10 @@
+import type { SizeUnit } from '@models';
+import type { IconName } from '@components/Icon/Icon.type';
 import React, { type FC } from 'react';
 import styles from './Avatar.module.css';
 import { cn } from '@client/plugins';
-import { SizeUnit } from '@models';
 import Icon from '@components/Icon/Icon';
 import { useTranslation } from 'react-i18next';
-import type { IconName } from '@components/Icon/Icon.type';
 import { useTooltip } from '@hooks';
 
 type AvatarProps = {

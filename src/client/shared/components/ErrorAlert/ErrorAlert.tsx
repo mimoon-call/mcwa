@@ -1,13 +1,11 @@
 // src/client/shared/components/ErrorAlert/ErrorAlert.tsx
+import type { ErrorResponse } from '@models';
 import React, { type FC } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ErrorResponse } from '@models';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 
-type Props = {
-  error?: ErrorResponse | null;
-};
+type Props = { error?: ErrorResponse | null };
 
 const ErrorAlert: FC<Props> = ({ error }: Props) => {
   const { t } = useTranslation();

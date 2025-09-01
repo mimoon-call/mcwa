@@ -11,8 +11,8 @@ export type OverlayProps = Partial<{
   height: string;
   fitContent: boolean;
   transperant: boolean;
-  openCallback: (...arg: Array<any>) => Promise<unknown> | unknown;
-  closeCallback: (...arg: Array<any>) => Promise<unknown> | unknown;
+  openCallback: (...arg: unknown[]) => Promise<unknown> | unknown;
+  closeCallback: (...arg: unknown[]) => Promise<unknown> | unknown;
   openEvent: string;
   closeEvent: string;
   disableEscape: boolean;
@@ -20,6 +20,6 @@ export type OverlayProps = Partial<{
 }>;
 
 export type OverlayRef = {
-  open: (...arg: Array<any>) => void;
-  close: (...arg: Array<any>) => void;
+  open: (...arg: unknown[]) => void;
+  close: (...arg: unknown[]) => void;
 };

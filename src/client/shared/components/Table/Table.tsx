@@ -10,7 +10,7 @@ import type {
 } from '@components/Table/Table.type';
 import type { IconName } from '@components/Icon/Icon.type';
 import type { MenuItem } from '@components/Menu/Menu.type';
-import React, { KeyboardEvent, MouseEvent, useRef } from 'react';
+import React, { type KeyboardEvent, type MouseEvent, useRef } from 'react';
 import Icon from '@components/Icon/Icon';
 import { useTableBody, useTableHeaders, useTableItems, useTablePagination } from '@components/Table/hooks';
 import styles from '@components/Table/Table.module.css';

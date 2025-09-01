@@ -111,7 +111,7 @@ export default class FileService {
     });
   }
 
-  public static async uploadFile(options?: { accept?: Array<string>; multiple?: boolean; max?: number; folder?: boolean }): Promise<FileList> {
+  public static async uploadFile(options?: { accept?: string[]; multiple?: boolean; max?: number; folder?: boolean }): Promise<FileList> {
     const { accept, multiple, max, folder } = options || {};
 
     return new Promise((resolve, reject) => {

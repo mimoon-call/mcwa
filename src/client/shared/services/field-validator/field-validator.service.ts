@@ -34,7 +34,7 @@ export default class FieldValidator {
       const valueTypes = inputValue.map((value: any): TypeOf => this.typeOf(value));
       const validatorTypes = this.toArray(acceptTypes);
 
-      return [valueTypes.some((type: TypeOf) => validatorTypes.includes(type)), errorMessage, this.toArray(acceptTypes)];
+      return [valueTypes.some((type: TypeOf) => validatorTypes.includes(type)), errorMessage, acceptTypes];
     },
     regex: (inputValue: any, [regExPatterns, errorMessage = FieldValidatorEnum.MISMATCH, options]): ReturnType<ValidatorFunction> => {
       const { checkMode, valueReturn } = options || {};
@@ -74,10 +74,10 @@ export default class FieldValidator {
       if (inputValue === undefined) {
         return [true];
       } else if (Array.isArray(inputValue)) {
-        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values : undefined];
+        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values as string[] : undefined];
       }
 
-      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values : undefined];
+      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values as string[] : undefined];
     },
     max: (inputValue: any, [maxValue, errorMessage = FieldValidatorEnum.MAX]): ReturnType<ValidatorFunction> => {
       return [
@@ -162,7 +162,7 @@ export default class FieldValidator {
     return typeString.slice(8, -1) as TypeOf;
   }
 
-  private toArray<T = any>(value: any): Array<T> {
+  private toArray<T extends object = any>(value: any): T[] {
     return Array.isArray(value) ? value : [value];
   }
 
@@ -170,7 +170,7 @@ export default class FieldValidator {
     return (Array.isArray(value) ? value : (value || '').toString()).length;
   }
 
-  private isValidType(value: any, accept: Array<TypeOf>) {
+  private isValidType(value: any, accept: TypeOf[]) {
     return accept.includes(this.typeOf(value));
   }
 }

@@ -1,5 +1,5 @@
+import type { ClassValue } from 'clsx';
 import React from 'react';
-import { ClassValue } from 'clsx';
 import { cn } from '@client/plugins';
 
 type CheckboxProps = {

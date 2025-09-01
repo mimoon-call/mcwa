@@ -238,7 +238,7 @@ export class MongoService<TDoc extends object> {
   /**
    * Generate a cache key from filter, projection, and options
    */
-  private generateCacheKey(...arg: any[]): string {
+  private generateCacheKey(...arg: unknown[]): string {
     return crypto.createHash('sha256').update(JSON.stringify(arg)).digest('hex');
   }
 
@@ -314,7 +314,7 @@ export class MongoService<TDoc extends object> {
     return agg.exec();
   }
 
-  async pagination<TRow, TExtra extends object = Record<never, never>>(
+  async pagination<TRow extends object, TExtra extends object = Record<never, never>>(
     options: AggregatePaginatedOpts,
     beforePipeline: ReadonlyArray<PipelineStage>,
     afterPipeline: ReadonlyArray<PipelineStage> = []

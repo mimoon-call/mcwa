@@ -1,6 +1,6 @@
+import type { AppDispatch, RootState } from '@client/store';
 import React, { type FormEvent, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
 import authSlice from '@client/store/auth.slice';
 import { AUTH_STATE_ERROR, AUTH_STATE_LOADING, IS_AUTHENTICATED } from '@client/store/auth.constants';

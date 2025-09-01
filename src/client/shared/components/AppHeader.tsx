@@ -1,7 +1,7 @@
+import type { AppDispatch, RootState } from '@client/store';
 import React, { type ReactNode } from 'react';
 import { IS_AUTHENTICATED } from '@client/store/auth.constants';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
 import { LOGOUT } from '@server/api/auth/auth.map';
 import authSlice from '@client/store/auth.slice';

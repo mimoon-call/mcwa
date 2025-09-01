@@ -6,7 +6,7 @@ import { Popover } from '@components/Popover/Popover';
 import Icon from '@components/Icon/Icon';
 import { useAsyncFn } from '@hooks/useAsyncFn';
 import Spinner from '@components/Spinner/Spinner';
-import { PopoverProps } from '@components/Popover/Popover.type';
+import type { PopoverProps } from '@components/Popover/Popover.type';
 import { useExposeRef } from '@hooks/useExposeRef';
 import { cn } from '@client/plugins';
 import { useTooltip } from '@hooks';

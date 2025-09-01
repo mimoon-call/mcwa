@@ -16,7 +16,7 @@ export const useTabs = (props: TabProps) => {
   const [tabs, setTabs] = useState(props.items);
   const activeIndex = useRef<number>(0);
   const tabPanelRef = useRef<HTMLDivElement | null>(null);
-  const tabItemRef = useRef<Array<HTMLSpanElement | null>>([]);
+  const tabItemRef = useRef<(HTMLSpanElement | null)[]>([]);
   const setTabItemRefs = (i: number) => (el: HTMLSpanElement | null) => {
     tabItemRef.current[i] = el;
   };

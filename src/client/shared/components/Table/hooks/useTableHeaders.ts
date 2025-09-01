@@ -14,7 +14,7 @@ const MIN_WIDTH = 60;
 
 export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => {
   const theadRef = useRef<HTMLTableSectionElement | null>(null);
-  const colRefs = useRef<Array<HTMLTableCellElement | null>>([]);
+  const colRefs = useRef<(HTMLTableCellElement | null)[]>([]);
   const [tableHeaders, setTableHeaders] = useState<TableHeaders>(headers);
   const [edgeIndex, setEdgeIndex] = useState<number | null>(null);
   const dragData = useRef<DragData>(null);
