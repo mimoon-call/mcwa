@@ -56,7 +56,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const timezone = process.env.TIMEZONE || 'Asia/Jerusalem';
-    const now = dayjs().tz(timezone);
+    const now = dayjs(getLocalTime()).tz(timezone);
 
     if (now.hour() < this.dailyScheduleTimeHour) {
       return now.subtract(1, 'day').format('YYYY-MM-DD');
