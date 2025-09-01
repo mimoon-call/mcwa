@@ -1,5 +1,4 @@
-import type { ValidatorFunction, ValidatorFieldRules, CustomValidator, CoreValidators } from './field-validator.type';
-import type { TypeOf } from '@server/models';
+import type { ValidatorFunction, ValidatorFieldRules, CustomValidator, CoreValidators, TypeOf } from './field-validator.type';
 import { FieldValidatorEnum } from './field-validator.enum';
 import { numberWithCommas } from '@helpers/number-with-commas';
 

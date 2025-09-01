@@ -1,5 +1,3 @@
-import type { TypeOf } from '@server/models';
-
 type Message = string | null;
 type Type = TypeOf | Array<TypeOf>;
 type Equal = number | string | Record<string, any> | Array<number | string>;
@@ -22,8 +20,7 @@ export interface CoreValidators {
   regex: [RegEx, Message?, { checkMode?: CheckMode; valueReturn?: true }?];
 }
 
+export type TypeOf = 'String' | 'Number' | 'Object' | 'Array' | 'Null' | 'Boolean' | 'Undefined';
 export type CustomValidator = ValidatorFunction | ReturnType<ValidatorFunction>;
-
 export type ValidatorFieldRules = Partial<CoreValidators & { custom: Array<CustomValidator> }>;
-
 export type ValidatorFunction<T = any> = (value?: T, ...arg: Array<any>) => [boolean, string?, (string | number | Array<string>)?];
