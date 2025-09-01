@@ -348,8 +348,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
         (num) => !this.lastUsedNumbers.includes(num)
       );
 
-      console.log(availableNumbers);
-
       if (!availableNumbers[0]) {
         throw new Error(`Instance not available to send message to ${toNumber}`);
       }

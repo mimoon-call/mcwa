@@ -15,7 +15,7 @@ import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-e
 import replaceStringVariable from '@server/helpers/replace-string-variable';
 
 let messageCount = 0;
-let leftCount = 0;
+let messagePass = 0;
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
@@ -60,16 +60,18 @@ export const messageQueueService = {
           const { instanceNumber } = await wa.sendMessage(null, doc.phoneNumber, textMessage);
           await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), instanceNumber } });
           app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
+          await new Promise((resolve) => setTimeout(resolve, 20000)); // wait 20 seconds between messages
         } catch (e) {
           await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: new Date(), lastError: String(e) } });
           app.socket.broadcast(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, { ...doc, error: String(e) });
         } finally {
           doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
-          leftCount = leftCount - 1;
-          app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, leftCount, isSending: leftCount > 0 });
+          messagePass++;
+          app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: true });
         }
       }
 
+      app.socket.broadcast(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: false });
       messageCount = 0;
     })();
   },
