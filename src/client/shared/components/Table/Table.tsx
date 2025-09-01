@@ -296,7 +296,7 @@ const Actions = ({ item, actions }: { item: TableBodyItemProps['item']; actions:
 };
 
 const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback' | 'tableActions'>) => {
-  const actions: Array<MenuItem> = props.tableActions || [];
+  const actions: Array<MenuItem> = [...(props.tableActions || [])];
 
   if (props.createCallback) {
     actions.push({ label: 'GENERAL.CREATE', iconName: 'svg:plus', onClick: props.createCallback });

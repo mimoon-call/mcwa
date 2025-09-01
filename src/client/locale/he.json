@@ -46,7 +46,9 @@
     "TEXT_MESSAGE": "הודעה",
     "SENT_AT": "נשלח בתאריך",
     "SENT_MESSAGE_SUCCESSFULLY": "שליחת הודעה ל-{{phoneNumber}} הסתיימה בהצלחה",
-    "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה"
+    "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה",
+    "START_SENDING": "התחל שליחה",
+    "STOP_SENDING": "עצור שליחה"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

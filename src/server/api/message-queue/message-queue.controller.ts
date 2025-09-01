@@ -1,5 +1,11 @@
 import type { Request, Response } from 'express';
-import { ADD_MESSAGE_QUEUE, REMOVE_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE, SEND_ACTIVE } from '@server/api/message-queue/message-queue.map';
+import {
+  ADD_MESSAGE_QUEUE,
+  REMOVE_MESSAGE_QUEUE,
+  SEARCH_MESSAGE_QUEUE,
+  START_QUEUE_SEND,
+  STOP_QUEUE_SEND,
+} from '@server/api/message-queue/message-queue.map';
 import { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE } from '@server/constants';
@@ -35,8 +41,14 @@ export const messageQueueController = {
     res.send(await messageQueueService[REMOVE_MESSAGE_QUEUE](queueId));
   },
 
-  [SEND_ACTIVE]: async (_req: Request, res: Response<BaseResponse>) => {
-    await messageQueueService[SEND_ACTIVE]();
+  [START_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
+    await messageQueueService[START_QUEUE_SEND]();
+
+    res.send({ returnCode: 0 });
+  },
+
+  [STOP_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
+    await messageQueueService[STOP_QUEUE_SEND]();
 
     res.send({ returnCode: 0 });
   },

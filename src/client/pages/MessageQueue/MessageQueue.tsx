@@ -1,16 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import Table from '@components/Table/Table';
-import type { TableHeaders } from '@components/Table/Table.type';
+import type { TableHeaders, TableProps } from '@components/Table/Table.type';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
 import {
-  DELETE_MESSAGE_QUEUE,
   MESSAGE_QUEUE_DATA,
   MESSAGE_QUEUE_LOADING,
   MESSAGE_QUEUE_PAGINATION,
+  MESSAGE_SENDING_IN_PROGRESS,
   REMOVE_MESSAGE_QUEUE,
   SEARCH_MESSAGE_QUEUE,
+  START_QUEUE_SEND,
+  STOP_QUEUE_SEND,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
 import type { Pagination } from '@models';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
@@ -22,6 +24,7 @@ import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
 import { MessageQueueEventEnum } from '@client/pages/MessageQueue/constants/message-queue-event.enum';
+import replaceStringVariable from '@helpers/replace-string-variable';
 
 const MessageQueue = () => {
   const { t } = useTranslation();
@@ -33,14 +36,24 @@ const MessageQueue = () => {
     [MESSAGE_QUEUE_DATA]: queueList,
     [MESSAGE_QUEUE_PAGINATION]: queuePagination,
     [MESSAGE_QUEUE_LOADING]: queueLoading,
+    [MESSAGE_SENDING_IN_PROGRESS]: isSendingInProgress,
   } = useSelector((state: RootState) => state[StoreEnum.queue]);
 
-  const { [SEARCH_MESSAGE_QUEUE]: searchMessageQueue, [REMOVE_MESSAGE_QUEUE]: removeQueue, [DELETE_MESSAGE_QUEUE]: deleteQueue } = messageQueueSlice;
+  const {
+    [SEARCH_MESSAGE_QUEUE]: searchMessageQueue,
+    [REMOVE_MESSAGE_QUEUE]: removeQueue,
+    [START_QUEUE_SEND]: startSend,
+    [STOP_QUEUE_SEND]: stopSend,
+  } = messageQueueSlice;
 
   const headers: TableHeaders<MessageQueueItem> = [
     { title: 'QUEUE.PHONE_NUMBER', value: 'phoneNumber' },
     { title: 'QUEUE.FULL_NAME', value: 'fullName' },
-    { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage' },
+    {
+      title: 'QUEUE.TEXT_MESSAGE',
+      value: 'textMessage',
+      component: ({ item }) => <p className="whitespace-pre-line">{replaceStringVariable(item.textMessage, item)}</p>,
+    },
   ];
 
   const onPageChange = (pageIndex: number) => {
@@ -67,16 +80,16 @@ const MessageQueue = () => {
   useEffect(() => {
     const socket = getClientSocket();
 
-    const successToast = ({ phoneNumber, _id }: MessageQueueItem) => {
+    const successToast = ({ phoneNumber }: MessageQueueItem) => {
       const text = t('QUEUE.SENT_MESSAGE_SUCCESSFULLY', { phoneNumber }).toString();
       toast.success(text);
-      dispatch(deleteQueue(_id));
+      dispatch(searchMessageQueue({}));
     };
 
-    const failedToast = ({ phoneNumber, _id }: MessageQueueItem) => {
+    const failedToast = ({ phoneNumber }: MessageQueueItem) => {
       const text = t('QUEUE.SENT_MESSAGE_FAILED', { phoneNumber }).toString();
       toast.error(text);
-      dispatch(deleteQueue(_id));
+      dispatch(searchMessageQueue({}));
     };
 
     socket?.on(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, successToast);
@@ -86,7 +99,13 @@ const MessageQueue = () => {
       socket?.off(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, successToast);
       socket?.off(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, failedToast);
     };
-  }, [dispatch, deleteQueue, toast, t]);
+  }, [dispatch, searchMessageQueue, toast, t]);
+
+  const tableActions: TableProps<MessageQueueItem>['tableActions'] = [
+    isSendingInProgress
+      ? { label: 'QUEUE.STOP_SENDING', iconName: 'svg:stop', onClick: stopSend }
+      : { label: 'QUEUE.START_SENDING', iconName: 'svg:missile', onClick: startSend },
+  ];
 
   return (
     <>
@@ -97,6 +116,7 @@ const MessageQueue = () => {
         pageIndex={queuePagination.pageIndex}
         pageSize={queuePagination.pageSize}
         createCallback={() => modelRef.current?.open()}
+        tableActions={tableActions}
         deleteCallback={onDelete}
         onPageChange={onPageChange}
         onSort={onSort}

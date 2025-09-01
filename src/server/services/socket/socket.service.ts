@@ -4,6 +4,7 @@ import SocketServer, { SocketManage } from '@server/services/socket/socket-serve
 
 export class SocketService<Token extends object> extends SocketServer<Token> {
   private readonly idKey: keyof Token;
+  private readonly onConnectedCallbacks: Array<[string, any[] | (() => any[])]> = [];
 
   constructor(idKey: keyof Token, server: ConstructorParameters<typeof SocketServer>[0], options: ConstructorParameters<typeof SocketServer>[1]) {
     super(server, options);
@@ -12,6 +13,7 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
 
     this.io.on('connection', (socket: SocketManage<Token>) => {
       this.registerUserHandlers(socket);
+      this.onConnectedCallbacks.forEach(([event, arg]) => socket.send(event, ...(arg instanceof Function ? arg() : arg)));
     });
 
     this.io.on('refresh', (socket: SocketManage<Token>) => {
@@ -141,5 +143,13 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     const room = this.io.sockets.adapter.rooms.get(this.userRoom(userId));
 
     return !!room && room.size > 0;
+  }
+
+  onConnected(event: string, callback: any[] | (() => any[])): void {
+    if (this.onConnectedCallbacks.find(([e]) => e === event)) {
+      return;
+    }
+
+    this.onConnectedCallbacks.push([event, callback]);
   }
 }

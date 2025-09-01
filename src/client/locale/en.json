@@ -46,7 +46,9 @@
     "TEXT_MESSAGE": "Message",
     "SENT_AT": "Sent at",
     "SENT_MESSAGE_SUCCESSFULLY": "Message successfully sent to {{phoneNumber}}",
-    "SENT_MESSAGE_FAILED": "Failed to send message to {{phoneNumber}}"
+    "SENT_MESSAGE_FAILED": "Failed to send message to {{phoneNumber}}",
+    "START_SENDING": "Start sending",
+    "STOP_SENDING": "Stop sending"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

@@ -9,8 +9,11 @@ import {
   MESSAGE_QUEUE_ERROR,
   MESSAGE_QUEUE_LOADING,
   MESSAGE_QUEUE_PAGINATION,
+  MESSAGE_SENDING_IN_PROGRESS,
   REMOVE_MESSAGE_QUEUE,
   SEARCH_MESSAGE_QUEUE,
+  START_QUEUE_SEND,
+  STOP_QUEUE_SEND,
   UPDATE_MESSAGE_COUNT,
   UPDATE_MESSAGE_QUEUE,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
@@ -24,6 +27,7 @@ export interface MessageQueueState {
   [MESSAGE_QUEUE_PAGINATION]: Partial<Omit<SearchMessageQueueRes, 'data'>>;
   [MESSAGE_QUEUE_LOADING]: boolean;
   [MESSAGE_QUEUE_ERROR]: ErrorResponse | null;
+  [MESSAGE_SENDING_IN_PROGRESS]: boolean;
 }
 
 const initialState: MessageQueueState = {
@@ -32,6 +36,7 @@ const initialState: MessageQueueState = {
   [MESSAGE_QUEUE_PAGINATION]: { pageSize: 30 },
   [MESSAGE_QUEUE_LOADING]: false,
   [MESSAGE_QUEUE_ERROR]: null,
+  [MESSAGE_SENDING_IN_PROGRESS]: false,
 };
 
 const searchMessageQueue = createAsyncThunk(
@@ -56,6 +61,14 @@ const addMessageQueue = async (data: AddMessageQueueReq) => {
 const removeMessageQueue = async (queueId: string) => {
   await Http.delete<void>(`${StoreEnum.queue}/${REMOVE_MESSAGE_QUEUE}/${queueId}`);
   messageQueueSlice.actions.deleteMessageQueue(queueId);
+};
+
+const startQueueSend = async () => {
+  await Http.post<void>(`/${StoreEnum.queue}/${START_QUEUE_SEND}`);
+};
+
+const stopQueueSend = async () => {
+  await Http.post<void>(`/${StoreEnum.queue}/${STOP_QUEUE_SEND}`);
 };
 
 const messageQueueSlice = createSlice({
@@ -91,10 +104,12 @@ const messageQueueSlice = createSlice({
           pageSort: action.payload.pageSort,
         };
         state[MESSAGE_QUEUE_LOADING] = false;
+        state[MESSAGE_SENDING_IN_PROGRESS] = action.payload.isSending;
       })
       .addCase(searchMessageQueue.rejected, (state, action) => {
         state[MESSAGE_QUEUE_LOADING] = false;
         state[MESSAGE_QUEUE_ERROR] = action.payload as ErrorResponse;
+        state[MESSAGE_SENDING_IN_PROGRESS] = false;
       });
   },
 });
@@ -107,4 +122,6 @@ export default {
   [ADD_MESSAGE_QUEUE]: addMessageQueue,
   [REMOVE_MESSAGE_QUEUE]: removeMessageQueue,
   [SEARCH_MESSAGE_QUEUE]: searchMessageQueue,
+  [START_QUEUE_SEND]: startQueueSend,
+  [STOP_QUEUE_SEND]: stopQueueSend,
 };

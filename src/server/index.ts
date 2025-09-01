@@ -53,8 +53,13 @@ export const wa = new WhatsappWarmService({
     // External message
     const { fromNumber, toNumber } = msg;
     const previousMessage = await WhatsAppMessage.findOne(
-      { toNumber: fromNumber, fromNumber: toNumber },
-      { projection: { _id: 1 }, sort: { createdAt: -1 } }
+      {
+        $or: [
+          { toNumber: fromNumber, fromNumber: toNumber },
+          { fromNumber, toNumber },
+        ],
+      },
+      { sort: { createdAt: -1 } }
     );
 
     if (previousMessage?.text) {

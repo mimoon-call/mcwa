@@ -9,7 +9,7 @@ export type MessageQueueItem = {
   instanceNumber?: string;
 };
 
-export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
+export type SearchMessageQueueRes = EntityList<MessageQueueItem, { isSending: boolean }>;
 export type SearchMessageQueueReq = Partial<{ page: Pagination; hasBeenSent?: boolean }>;
 
 export type AddMessageQueueReq = { data: Array<Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>>; textMessage: string };
