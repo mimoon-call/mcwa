@@ -12,15 +12,17 @@ import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.sl
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@client/store';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
+import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';
 
-type AddInstanceModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data']) => void };
+type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data']) => void };
+type PayloadData = (Pick<MessageQueueItem, 'phoneNumber' | 'fullName'> & { checkFlag?: boolean })[];
 
-const AddBulkQueueModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
+const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const [payload, setPayload] = useState<{
     textMessage: AddMessageQueueReq['textMessage'];
-    data: (Pick<MessageQueueItem, 'fullName' | 'phoneNumber'> & { checkFlag?: boolean })[];
+    data: PayloadData;
   }>({ textMessage: '', data: [] });
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
@@ -41,12 +43,23 @@ const AddBulkQueueModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
     { title: 'QUEUE.FULL_NAME', value: 'fullName' },
   ];
 
-  const List = <Table headers={headers} items={payload.data} />;
+  const List = (
+    <InputWrapper
+      className="h-full d-flex flex-col gap-2"
+      name="list"
+      value={payload.data}
+      rules={{ custom: [(value: PayloadData) => [value.some((item) => item.checkFlag), 'QUEUE.VALIDATE_NO_CONTACT_SELECTED']] }}
+    >
+      <div className="flex-grow overflow-y-visible error:outline-red-700 error:ring-red-600 ring-opacity-100 error:bg-red-50 error:text-red-700">
+        <Table headers={headers} items={payload.data} />
+      </div>
+    </InputWrapper>
+  );
 
   const Message = (
     <TextAreaField
       name="textMessage"
-      rules={{ required: [true] }}
+      rules={{ required: [true], minLength: [4] }}
       value={payload.textMessage}
       onChange={(value) => setPayload({ ...payload, textMessage: value })}
       rows={16}
@@ -66,6 +79,10 @@ const AddBulkQueueModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
   };
 
   const onSubmit = async () => {
+    if (!modalRef.current?.validate()) {
+      return;
+    }
+
     const data = {
       textMessage: payload.textMessage,
       data: payload.data.filter((item) => item.checkFlag).map((item) => ({ phoneNumber: item.phoneNumber, fullName: item.fullName })),
@@ -90,7 +107,7 @@ const AddBulkQueueModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
       hideContentDivider
       submitText="GENERAL.CLOSE"
       steps={steps}
-      size={OverlayEnum.LG}
+      size={OverlayEnum.MD}
       closeCallback={async () => dispatch(searchQueue({}))}
       submitCallback={onSubmit}
     />

@@ -7,16 +7,26 @@ const Form = forwardRef<FormRef, PropsWithChildren<FormProps>>((props, ref) => {
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const validate = () => {
+    // Force validation on all InputWrapper components by triggering a custom validation event
+    const inputWrappers = formRef.current?.querySelectorAll('[data-input-wrapper]');
+    
+    inputWrappers?.forEach((wrapper) => {
+      // Trigger a custom validation event on the InputWrapper itself
+      const validationEvent = new CustomEvent('forceValidation', { bubbles: true });
+      wrapper.dispatchEvent(validationEvent);
+    });
+
+    // Check for errors immediately after triggering validation
     const error = formRef.current?.querySelector('[data-has-error="true"]');
 
     if (error) {
       formRef.current?.setAttribute('data-has-error', 'true');
       error?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
     } else {
       formRef.current?.removeAttribute('data-has-error');
+      return true;
     }
-
-    return !error;
   };
 
   const submitHandler = (event: FormEvent<HTMLFormElement>) => {
