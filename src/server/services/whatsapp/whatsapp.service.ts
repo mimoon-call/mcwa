@@ -9,6 +9,8 @@ import type {
   WAMessageOutgoingRaw,
   WAOutgoingContent,
   WebMessageInfo,
+  WAMessageDelivery,
+  WASendOptions,
 } from './whatsapp-instance.type';
 import type { WAServiceConfig } from './whatsapp.type';
 import { WhatsappInstance } from './whatsapp-instance.service';
@@ -107,8 +109,13 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     this.debugMode = config.debugMode;
 
-    this.outgoingMessageCallback = (data: WAMessageOutgoing, raw: WAMessageOutgoingRaw, info?: WebMessageInfo) => {
-      return config.onOutgoingMessage?.(data, raw, info);
+    this.outgoingMessageCallback = (
+      data: WAMessageOutgoing,
+      raw: WAMessageOutgoingRaw,
+      info?: WebMessageInfo,
+      deliveryStatus?: WAMessageDelivery
+    ) => {
+      return config.onOutgoingMessage?.(data, raw, info, deliveryStatus);
     };
 
     this.incomingMessageCallback = async (data: WAMessageIncoming, raw: WAMessageIncomingRaw) => {
@@ -324,7 +331,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
     return bulk;
   }
 
-  async sendMessage(fromNumber: string | null, toNumber: string, content: WAOutgoingContent) {
+  async sendMessage(fromNumber: string | null, toNumber: string, content: WAOutgoingContent, options?: WASendOptions) {
     const instance = (() => {
       if (fromNumber) {
         const selectedInstance = this.instances.get(fromNumber);
@@ -362,11 +369,16 @@ export class WhatsappService<T extends object = Record<never, never>> {
       return selectedInstance;
     })();
 
-    // Use the enhanced send method with built-in retry logic and callbacks
-    await instance.send(toNumber, content, { maxRetries: this.MAX_DECRYPTION_RETRIES, retryDelay: this.DECRYPTION_RETRY_DELAY });
     this.lastUsedNumbers.push(instance.phoneNumber);
 
-    return { instanceNumber: instance.phoneNumber, toNumber, content };
+    return await instance.send(toNumber, content, {
+      maxRetries: this.MAX_DECRYPTION_RETRIES,
+      retryDelay: this.DECRYPTION_RETRY_DELAY,
+      trackDelivery: true,
+      waitForDelivery: true,
+      waitTimeout: 30000,
+      ...(options || {}),
+    });
   }
 
   onMessage(callback: WAMessageIncomingCallback) {

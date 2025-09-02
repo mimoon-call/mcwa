@@ -13,6 +13,8 @@ import {
   WASendOptions,
   AuthenticationCreds,
   WebMessageInfo,
+  WAMessageDelivery,
+  WAMessageStatus,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -53,6 +55,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private keepAliveInterval: NodeJS.Timeout | undefined = undefined;
   private healthCheckInterval: NodeJS.Timeout | undefined = undefined;
 
+  // Message delivery tracking
+  private messageDeliveries: Map<string, WAMessageDelivery> = new Map();
+  private deliveryTimeouts: Map<string, NodeJS.Timeout> = new Map();
+
   // Callbacks
   private readonly getAppAuth: () => Promise<WAAppAuth<T> | null>;
   private readonly updateAppAuth: (data: Partial<WAAppAuth<T>>) => Promise<WAAppAuth<T>>;
@@ -64,7 +70,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private readonly onOutgoingMessage: (
     data: Omit<WAMessageOutgoing, 'fromNumber'>,
     raw: WAMessageOutgoingRaw,
-    info?: WebMessageInfo
+    info?: WebMessageInfo,
+    deliveryStatus?: WAMessageDelivery
   ) => Promise<unknown> | unknown;
   private readonly onMessageBlocked: WAMessageBlockCallback;
   private readonly onReady: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
@@ -115,7 +122,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onRemove = () => config.onRemove?.(phoneNumber);
     this.onDisconnect = (reason: string) => config.onDisconnect?.(phoneNumber, reason);
     this.onIncomingMessage = (data, raw) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, raw);
-    this.onOutgoingMessage = (data, raw, info) => config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw, info);
+    this.onOutgoingMessage = (data, raw, info, deliveryStatus) =>
+      config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw, info, deliveryStatus);
     this.onMessageBlocked = async (fromNumber: string, toNumber: string, blockReason: string) => {
       await this.update({ blockedCount: (this.appState?.blockedCount || 0) + 1 } as WAAppAuth<T>);
 
@@ -840,28 +848,62 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       for (const update of updates) {
         const { key, update: updateData } = update;
 
-        // Check for blocked/error statuses
-        if (updateData.status && String(updateData.status) === 'ERROR') {
-          const errorCode = (updateData as any).statusCode;
-          const toNumber = this.jidToNumber(key.remoteJid!);
+        // Update delivery tracking if message ID exists
+        if (key.id && updateData.status) {
+          const status = String(updateData.status);
+          const timestamp = new Date();
 
-          // Detect specific block scenarios
-          if (errorCode === 403) {
-            this.log('error', `🚫 Message blocked - User ${toNumber} has blocked this number`);
-            await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
-          } else if (errorCode === 401) {
-            this.log('error', `🚫 Message blocked - Authentication failed`);
-            await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
-          } else if (errorCode === 429) {
-            this.log('error', `🚫 Message blocked - Rate limited`);
-            await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-          } else {
-            this.log('error', `🚫 Message blocked - Error code: ${errorCode}`);
-            await this.handleMessageBlocked(toNumber, `ERROR_${errorCode}`);
+          switch (status) {
+            case 'SENT': {
+              this.updateMessageStatus(key.id, 'SENT', timestamp);
+              break;
+            }
+            case 'DELIVERED': {
+              this.updateMessageStatus(key.id, 'DELIVERED', timestamp);
+              // Trigger delivery callback if exists
+              const delivery = this.messageDeliveries.get(key.id);
+              if (delivery) {
+                // Find the original send options to trigger callback
+                // This is a simplified approach - in production you might want to store options with deliveries
+                this.log('info', `✅ Message delivered to ${delivery.toNumber}`);
+              }
+              break;
+            }
+            case 'READ': {
+              this.updateMessageStatus(key.id, 'READ', timestamp);
+              // Trigger read callback if exists
+              const readDelivery = this.messageDeliveries.get(key.id);
+              if (readDelivery) {
+                this.log('info', `👁️ Message read by ${readDelivery.toNumber}`);
+              }
+              break;
+            }
+            case 'ERROR': {
+              const errorCode = (updateData as any).statusCode;
+              const errorMessage = (updateData as any).message || 'Unknown error';
+              this.updateMessageStatus(key.id, 'ERROR', timestamp, errorCode, errorMessage);
+
+              // Handle specific error scenarios
+              const toNumber = this.jidToNumber(key.remoteJid!);
+              if (errorCode === 403) {
+                this.log('error', `🚫 Message blocked - User ${toNumber} has blocked this number`);
+                await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
+              } else if (errorCode === 401) {
+                this.log('error', `🚫 Message blocked - Authentication failed`);
+                await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
+              } else if (errorCode === 429) {
+                this.log('error', `🚫 Message blocked - Rate limited`);
+                await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
+              } else {
+                this.log('error', `🚫 Message blocked - Error code: ${errorCode}`);
+                await this.handleMessageBlocked(toNumber, `ERROR_${errorCode}`);
+              }
+              break;
+            }
           }
         }
 
-        // Track successful deliveries
+        // Legacy logging for backward compatibility
         if (updateData.status && ['SENT', 'DELIVERED', 'READ'].includes(String(updateData.status))) {
           const toNumber = this.jidToNumber(key.remoteJid!);
           const status = String(updateData.status);
@@ -927,6 +969,178 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private stopKeepAlive() {
     clearInterval(this.keepAliveInterval);
     this.keepAliveInterval = undefined;
+  }
+
+  // Message delivery tracking methods
+  private trackMessageDelivery(messageId: string, fromNumber: string, toNumber: string, options?: WASendOptions): void {
+    if (!options?.trackDelivery) return;
+
+    const delivery: WAMessageDelivery = {
+      messageId,
+      fromNumber,
+      toNumber,
+      status: 'PENDING',
+      sentAt: new Date(),
+    };
+
+    this.messageDeliveries.set(messageId, delivery);
+
+    // Set delivery tracking timeout
+    const trackingTimeout = options.deliveryTrackingTimeout || 30000;
+    const timeoutId = setTimeout(() => {
+      this.handleDeliveryTimeout(messageId);
+    }, trackingTimeout);
+
+    this.deliveryTimeouts.set(messageId, timeoutId);
+  }
+
+  private updateMessageStatus(messageId: string, status: WAMessageStatus, timestamp?: Date, errorCode?: number, errorMessage?: string): void {
+    const delivery = this.messageDeliveries.get(messageId);
+    if (!delivery) return;
+
+    delivery.status = status;
+
+    switch (status) {
+      case 'DELIVERED':
+        delivery.deliveredAt = timestamp || new Date();
+        break;
+      case 'READ':
+        delivery.readAt = timestamp || new Date();
+        break;
+      case 'ERROR':
+        delivery.errorCode = errorCode;
+        delivery.errorMessage = errorMessage;
+        break;
+    }
+
+    // Clear timeout if message is delivered or read
+    if (['DELIVERED', 'READ'].includes(status)) {
+      this.clearDeliveryTimeout(messageId);
+    }
+  }
+
+  private handleDeliveryTimeout(messageId: string): void {
+    this.updateMessageStatus(messageId, 'ERROR', undefined, 408, 'Delivery timeout');
+    this.clearDeliveryTimeout(messageId);
+  }
+
+  private clearDeliveryTimeout(messageId: string): void {
+    const timeoutId = this.deliveryTimeouts.get(messageId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.deliveryTimeouts.delete(messageId);
+    }
+  }
+
+  // Public method to check message delivery status
+  public getMessageDeliveryStatus(messageId: string): WAMessageDelivery | null {
+    return this.messageDeliveries.get(messageId) || null;
+  }
+
+  // Public method to get all pending deliveries
+  public getPendingDeliveries(): WAMessageDelivery[] {
+    return Array.from(this.messageDeliveries.values()).filter((d) => d.status === 'PENDING');
+  }
+
+  // Public method to get delivery statistics
+  public getDeliveryStats(): { total: number; pending: number; delivered: number; read: number; error: number } {
+    const deliveries = Array.from(this.messageDeliveries.values());
+    return {
+      total: deliveries.length,
+      pending: deliveries.filter((d) => d.status === 'PENDING').length,
+      delivered: deliveries.filter((d) => d.status === 'DELIVERED').length,
+      read: deliveries.filter((d) => d.status === 'READ').length,
+      error: deliveries.filter((d) => d.status === 'ERROR').length,
+    };
+  }
+
+  // Wait for message to reach specific status
+  private async waitForMessageStatus(messageId: string, options: WASendOptions): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timeout = options.waitTimeout || 30000;
+      const targetStatus = options.waitForRead ? 'READ' : 'DELIVERED';
+
+      // Set timeout for waiting
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout waiting for ${targetStatus} status after ${timeout}ms`));
+      }, timeout);
+
+      // Check if already at target status
+      const currentDelivery = this.messageDeliveries.get(messageId);
+      if (currentDelivery) {
+        if (currentDelivery.status === targetStatus) {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+
+        // Check if we've already passed the target status
+        if (targetStatus === 'DELIVERED' && currentDelivery.status === 'READ') {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+      }
+
+      // Create a one-time status checker
+      const checkStatus = () => {
+        const delivery = this.messageDeliveries.get(messageId);
+        if (!delivery) return;
+
+        if (delivery.status === targetStatus) {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+
+        // Check if we've already passed the target status
+        if (targetStatus === 'DELIVERED' && delivery.status === 'READ') {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+
+        // Check if there was an error
+        if (delivery.status === 'ERROR') {
+          clearTimeout(timeoutId);
+          const errorMessage = `Message delivery failed: ${delivery.errorMessage}`;
+          
+          if (options.throwOnDeliveryError) {
+            reject(new Error(errorMessage));
+          } else {
+            // Log error but don't throw
+            this.log('warn', `Delivery failed for message ${messageId}: ${errorMessage}`);
+            resolve();
+          }
+          return;
+        }
+      };
+
+      // Set up interval to check status
+      const checkInterval = setInterval(() => {
+        checkStatus();
+      }, 1000); // Check every second
+
+      // Clean up interval when promise resolves/rejects
+      const cleanup = () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeoutId);
+      };
+
+      // Override resolve/reject to clean up
+      const originalResolve = resolve;
+      const originalReject = reject;
+
+      resolve = ((value: void) => {
+        cleanup();
+        originalResolve(value);
+      }) as any;
+
+      reject = ((reason: any) => {
+        cleanup();
+        originalReject(reason);
+      }) as any;
+    });
   }
 
   private startHealthCheck() {
@@ -1187,7 +1401,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   /**
    * Send a message with human-like behavior (typing indicators, delays, presence)
    */
-  async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<any> {
+  async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<WebMessageInfo & Partial<WAMessageDelivery>> {
     if (!this.connected || !this.socket) {
       throw new Error(`Instance is not connected`);
     }
@@ -1232,6 +1446,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           // Send the actual message
           const messageResult = await this.socket.sendMessage(jid, content);
 
+          // Track message delivery if enabled
+          if (options?.trackDelivery && messageResult?.key?.id) {
+            this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options);
+          }
+
           // Add random idle time after sending
           const idleTime = this.randomIdle();
           await new Promise((resolve) => setTimeout(resolve, idleTime));
@@ -1241,6 +1460,32 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         this.log('info', `Message sent successfully to ${jid}`);
 
+                // Wait for delivery confirmation if requested
+        let deliveryStatus: WAMessageDelivery | null = null;
+        if (options?.waitForDelivery || options?.waitForRead) {
+          const messageId = result?.key?.id;
+          if (messageId) {
+            this.log('info', `Waiting for delivery confirmation for message ${messageId}...`);
+            
+            try {
+              await this.waitForMessageStatus(messageId, options);
+              this.log('info', `Message ${messageId} delivery confirmed`);
+              
+              // Get the final delivery status
+              deliveryStatus = this.getMessageDeliveryStatus(messageId);
+            } catch (error) {
+              this.log('warn', `Delivery confirmation timeout for message ${messageId}:`, error);
+              // Get current status even if timeout occurred
+              deliveryStatus = this.getMessageDeliveryStatus(messageId);
+              
+              // Check if we should throw on delivery error
+              if (options?.throwOnDeliveryError && deliveryStatus?.status === 'ERROR') {
+                throw new Error(`Message delivery failed: ${deliveryStatus.errorMessage || 'Unknown error'}`);
+              }
+            }
+          }
+        }
+
         this.update({
           lastSentMessage: this.getTodayDate(),
           dailyMessageCount: this.appState?.lastSentMessage !== this.getTodayDate() ? 1 : (this.appState?.dailyMessageCount || 0) + 1,
@@ -1249,13 +1494,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Trigger outgoing message callback
         try {
-          await this.onOutgoingMessage?.(record, content, result);
+          await this.onOutgoingMessage?.(record, content, result, deliveryStatus || undefined);
         } catch (error) {
           this.log('error', 'Error in outgoing message callback:', error);
         }
 
         onSuccess?.(result);
-        return result;
+
+        return { ...result, ...(deliveryStatus || {}) } as unknown as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (err: unknown) {
         lastError = err;
 
@@ -1316,7 +1562,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     this.log(
       'warn',
-      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC/decryption'} error, attempting session refresh...`
+      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error, attempting session refresh...`
     );
 
     try {
@@ -1654,6 +1900,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.log('info', 'Cleaning up instance...');
     this.stopKeepAlive();
     this.stopHealthCheck();
+
+    // Clear all delivery timeouts
+    for (const timeoutId of this.deliveryTimeouts.values()) {
+      clearTimeout(timeoutId);
+    }
+    this.deliveryTimeouts.clear();
+    this.messageDeliveries.clear();
+
     this.connected = false;
     this.socket = null;
     this.saveCreds = null;

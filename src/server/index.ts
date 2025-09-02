@@ -46,6 +46,12 @@ export const app = new ServerExpress({
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
+  // Note: To enable delivery tracking and status waiting, update your send calls:
+  // await instance.send(toNumber, message, {
+  //   trackDelivery: true,
+  //   waitForDelivery: true,
+  //   waitTimeout: 30000
+  // });
   onIncomingMessage: async (msg, raw) => {
     // Internal message
     if (msg.internalFlag) {
@@ -57,8 +63,24 @@ export const wa = new WhatsappWarmService({
     const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
     await messageReplyHandler(_id);
   },
-  onOutgoingMessage: async (msg, raw, info) => {
-    await WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });
+  onOutgoingMessage: async (msg, raw, info, deliveryStatus) => {
+    // Store message with delivery status if available
+    const messageData = { ...msg, raw, info, deliveryStatus, createdAt: getLocalTime() };
+    await WhatsAppMessage.insertOne(messageData);
+
+    // Log delivery status if available
+    if (deliveryStatus) {
+      console.log(`📱 Outgoing message ${deliveryStatus.messageId} to ${msg.toNumber}: ${deliveryStatus.status}`);
+      if (deliveryStatus.deliveredAt) {
+        console.log(`✅ Delivered at: ${deliveryStatus.deliveredAt}`);
+      }
+      if (deliveryStatus.readAt) {
+        console.log(`👁️ Read at: ${deliveryStatus.readAt}`);
+      }
+      if (deliveryStatus.status === 'ERROR') {
+        console.log(`❌ Delivery failed: ${deliveryStatus.errorMessage} (Code: ${deliveryStatus.errorCode})`);
+      }
+    }
   },
 });
 

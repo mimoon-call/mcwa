@@ -41,6 +41,19 @@ export type WASendOptions = {
   retryDelay?: number;
   onSuccess?: (...arg: any[]) => void;
   onFailure?: (error: any, attempts: number) => void;
+  // Delivery tracking options
+  trackDelivery?: boolean;
+  onDelivered?: (messageId: string, toNumber: string, timestamp: Date) => void;
+  onRead?: (messageId: string, toNumber: string, timestamp: Date) => void;
+  // Timeout for delivery tracking (when messages are marked as ERROR)
+  deliveryTrackingTimeout?: number; // milliseconds, default 30000
+  // Wait for delivery confirmation
+  waitForDelivery?: boolean; // Wait for DELIVERED status before resolving
+  waitForRead?: boolean; // Wait for READ status before resolving (implies waitForDelivery)
+  // Timeout for waiting for delivery confirmation
+  waitTimeout?: number; // milliseconds, default 30000
+  // Error handling
+  throwOnDeliveryError?: boolean; // Throw error if delivery fails (default: false)
 };
 
 export type WAMessage = {
@@ -61,7 +74,12 @@ export type WAMessageIncomingRaw = IWebMessageInfo;
 export type WAMessageOutgoingRaw = AnyMessageContent;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
-export type WAMessageOutgoingCallback = (message: WAMessageOutgoing, raw: WAMessageOutgoingRaw, info?: WebMessageInfo) => Promise<unknown> | unknown;
+export type WAMessageOutgoingCallback = (
+  message: WAMessageOutgoing, 
+  raw: WAMessageOutgoingRaw, 
+  info?: WebMessageInfo,
+  deliveryStatus?: WAMessageDelivery
+) => Promise<unknown> | unknown;
 export type WAMessageBlockCallback = (fromNumber: string, toNumber: string, reason: string) => Promise<unknown> | unknown;
 
 export type WAOutgoingContent =
@@ -94,5 +112,19 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   onRemove: (phoneNumber: string) => Promise<unknown> | unknown;
   onUpdate: (state: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
 }>;
+
+export type WAMessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'ERROR';
+
+export type WAMessageDelivery = {
+  messageId: string;
+  fromNumber: string;
+  toNumber: string;
+  status: WAMessageStatus;
+  sentAt: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  errorCode?: number;
+  errorMessage?: string;
+};
 
 export { IMessage, IWebMessageInfo, AuthenticationCreds, WebMessageInfo };

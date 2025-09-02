@@ -39,13 +39,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     // outgoing message callback wrapper
-    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw, info) => {
+    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw, info, deliveryStatus) => {
       const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
       const internalFlag = instances.includes(message.toNumber);
       const warmingFlag =
         internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.toNumber));
 
-      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw, info);
+      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw, info, deliveryStatus);
     };
 
     super({ ...config, onIncomingMessage, onOutgoingMessage });
@@ -525,7 +525,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           // Send message using the now-humanized send method
           const instance = this.getInstance(currentMessage.fromNumber);
           if (instance) {
-            await instance.send(currentMessage.toNumber, messageContent);
+            await instance.send(currentMessage.toNumber, messageContent, { trackDelivery: true, waitForDelivery: true, waitTimeout: 30000 });
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
