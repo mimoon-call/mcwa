@@ -71,13 +71,15 @@ const InstanceTable = () => {
         return (
           <div className="flex items-center gap-2">
             <Avatar
-              tooltip
-              size="24px"
+              size="36px"
               src={item?.profilePictureUrl}
               alt={item?.name || 'GENERAL.PROFILE_PICTURE'}
               iconName={item?.gender === 'female' ? 'svg:avatar-female' : 'svg:avatar-male'}
             />
-            <span>{item?.phoneNumber}</span>
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-600">{item?.name}</span>
+              <span>{item?.phoneNumber}</span>
+            </div>
             <div className="flex justify-center items-center ps-2 h-full">
               <Icon className={iconColorClass} name="svg:warm" />
             </div>
