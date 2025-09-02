@@ -20,7 +20,7 @@ export enum LeadActionEnum {
 }
 
 export enum LeadDepartmentEnum {
-  CAR_DEPARTMENT = 'CAR_DEPARTMENT',
-  MORTGAGE_DEPARTMENT = 'MORTGAGE_DEPARTMENT',
-  LOAN_DEPARTMENT = 'LOAN_DEPARTMENT',
+  CAR = 'CAR',
+  MORTGAGE = 'MORTGAGE',
+  GENERAL = 'GENERAL',
 }

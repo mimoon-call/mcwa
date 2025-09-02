@@ -11,13 +11,12 @@ export type InterestResult = {
   suggestedReply: string;
   action?: keyof typeof LeadActionEnum;
   followUpAt?: string; // ISO date-time with numeric offset
-  department: LeadDepartmentEnum; // 🆕
+  department: LeadDepartmentEnum;
 };
 
 export type Role = 'LEAD' | 'YOU';
 export type LeadReplyItem = { from: Role; text: string; at?: string };
 
-// === UPDATED SYSTEM PROMPT ===
 const SYSTEM_PROMPT = `
 You are a strict classifier for sales outreach replies.
 Return ONLY the function result (JSON). No extra text. No markdown.
@@ -40,11 +39,11 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
 - Inspect ONLY messages where from == "YOU" (ignore LEAD for this decision).
 - If ANY of those messages refer to **car/automotive** context (any language/emoji/synonyms, e.g., "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set:
-  department = "CAR_DEPARTMENT".
+  department = "CAR".
 - ELSE if ANY of those messages refer to **mortgage/home-loan** context (any language/emoji/synonyms, including misspelling "mortage": "mortgage", "mortage", "משכנתא", "ипотека", "hipoteca", "hypothèque", "משכן", "رهن عقاري", "房屋贷款", "🏠💸"), set:
-  department = "MORTAGE_DEPARTMENT".
+  department = "MORTGAGE".
 - ELSE:
-  department = "LOAN_DEPARTMENT".
+  department = "GENERAL".
 - If both contexts appear in "YOU" messages, choose the context from the **most recent "YOU" message**.
 
 YOUR TASK:

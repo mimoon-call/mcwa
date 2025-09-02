@@ -26,8 +26,6 @@ export const INTEREST_SCHEMA = {
       description: 'If action is SCHEDULE_FOLLOW_UP, an ISO-8601 datetime with numeric timezone offset (e.g., +03:00).',
       format: 'date-time',
     },
-
-    // 🆕 department classification
     department: {
       type: 'string',
       description: 'Department inferred solely from messages sent by YOU (the sender).',
