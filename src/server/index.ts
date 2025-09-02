@@ -17,7 +17,7 @@ import messageQueueRoute from '@server/api/message-queue/message-queue.route';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
 import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
-import { handleIncomingMessage } from '@server/api/message-queue/helpers/handle-incoming-message';
+import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -55,7 +55,7 @@ export const wa = new WhatsappWarmService({
     }
 
     const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
-    await handleIncomingMessage(_id);
+    await messageReplyHandler(_id);
   },
   onOutgoingMessage: async (msg, raw, info) => {
     await WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });

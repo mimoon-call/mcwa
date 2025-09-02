@@ -13,7 +13,7 @@ type TranscriptItem = {
   at?: string; // ISO string (optional but useful)
 };
 
-export const handleIncomingMessage = async (messageId: ObjectId): Promise<void> => {
+export const messageReplyHandler = async (messageId: ObjectId): Promise<void> => {
   const message = await WhatsAppMessage.findOne({ _id: messageId });
   if (!message) return;
 
@@ -90,7 +90,7 @@ export const handleIncomingMessage = async (messageId: ObjectId): Promise<void> 
         replyTimeout.delete(timeoutKey);
       }
     },
-    2 * 60 * 1000 // 2 minutes debounce
+    60 * 1000 // 1 minute debounce
   );
 
   replyTimeout.set(timeoutKey, handle);
