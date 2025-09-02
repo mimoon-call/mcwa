@@ -15,7 +15,7 @@ import ServerError from '@server/middleware/errors/server-error';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
-    return await WhatsAppAuth.pagination<InstanceItem>(
+    const { data, ...rest } = await WhatsAppAuth.pagination<InstanceItem>(
       { page },
       [
         {
@@ -40,6 +40,8 @@ export const instanceService = {
       ],
       []
     );
+
+    return { ...rest, data: data.map((item) => ({ ...item, isWarmingUp: wa.isWarmingUp(item.phoneNumber) })) };
   },
 
   [GET_INSTANCE_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetInstanceConversationRes> => {

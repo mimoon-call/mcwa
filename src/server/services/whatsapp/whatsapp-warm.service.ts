@@ -53,6 +53,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.isEmulation = !!isEmulation;
   }
 
+  public isWarmingUp(phoneNumber: string): boolean {
+    return Object.keys(this.activeConversation).includes(phoneNumber);
+  }
+
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const now = dayjs(getLocalTime());
