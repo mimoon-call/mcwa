@@ -54,7 +54,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   public isWarmingUp(phoneNumber: string): boolean {
-    return Object.keys(this.activeConversation).includes(phoneNumber);
+    return Array.from(this.activeConversation.keys()).some((key) => {
+      const [from, to] = key.split(':');
+
+      return from === phoneNumber || to === phoneNumber;
+    });
   }
 
   private getTodayDate(): string {

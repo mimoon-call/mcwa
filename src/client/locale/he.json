@@ -71,7 +71,6 @@
     "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
     "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים",
     "WARMUP": {
-      "STARTED": "החימום התחיל",
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     }
   },

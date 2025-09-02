@@ -13,7 +13,7 @@ import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-eve
 export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => {
   const { t } = useTranslation();
   const { nextWarmAt } = useGlobalState();
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
       const diff = targetTime.diff(now);
 
       if (diff <= 0) {
-        setTimeLeft(t('INSTANCE.WARMUP.STARTED', 'Warm up started'));
+        setTimeLeft(null);
         return;
       }
 
@@ -73,5 +73,5 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
     return null;
   }
 
-  return <div className={cn('px-2', className)}>{t('INSTANCE.WARMUP.NEXT_WARMUP', 'Next warm up start in {{timeLeft}}', { timeLeft })}</div>;
+  return <div className={cn('px-2', className)}>{t('INSTANCE.WARMUP.NEXT_WARMUP', { timeLeft })}</div>;
 };

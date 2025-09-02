@@ -71,7 +71,6 @@
     "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed",
     "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication.",
     "WARMUP": {
-      "STARTED": "Warm up started",
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     }
   },
