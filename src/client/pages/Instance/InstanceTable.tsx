@@ -61,11 +61,11 @@ const InstanceTable = () => {
       searchable: true,
       component: ({ item }) => {
         const iconColorClass = (() => {
-          if (item?.hasWarmedUp) {
-            return 'text-green-600';
+          if (item?.isWarmingUp) {
+            return 'text-red-600';
           }
 
-          return item.isWarmingUp ? 'text-red-600' : 'text-gray-400';
+          return item?.hasWarmedUp ? 'text-green-600' : 'text-gray-400';
         })();
 
         return (

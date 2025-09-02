@@ -355,16 +355,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const warmInstances: WAInstance<WAPersona>[] = [];
 
     for (const instance of instances) {
-      // Reset counters if day changed
-      if (instance.get('hasWarmedUp')) {
-        this.log('debug', `[${instance.phoneNumber}]`, `Instance has already warmed up, skipping`);
-        continue;
-      } else if ((instance.get('warmUpDay') || 0) > 14) {
-        this.log('debug', `[${instance.phoneNumber}]`, `Instance exceeded 14 days, marking as warmed up`);
-        await instance.update({ hasWarmedUp: true });
-        continue;
-      }
-
       if (instance.get('lastWarmedUpDay') !== this.getTodayDate()) {
         await instance.update({
           lastWarmedUpDay: this.getTodayDate(),
