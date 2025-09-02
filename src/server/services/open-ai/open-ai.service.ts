@@ -1,3 +1,4 @@
+// open-ai.service.ts
 import axios, { type AxiosResponse } from 'axios';
 import type { OpenAiRequest, OpenAiMessage, JsonSchema, OpenAiFunction, OpenAiResponse } from './open-ai.types';
 

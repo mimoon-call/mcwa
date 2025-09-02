@@ -3,6 +3,8 @@ import type { WAPersona } from './whatsapp.type';
 import { mongo, Schema } from 'mongoose';
 import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
+import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
+import { LeadActionEnum, LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 
 // Pre-save middleware to set timezone-aware timestamps
 const setModifiedAndCreationDate = function (doc: any) {
@@ -69,7 +71,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
 );
 
 export const WhatsAppMessage = new MongoService<
-  WAMessage & { raw: WAMessageIncomingRaw | WAMessageOutgoingRaw; createdAt: Date; previousId: mongo.ObjectId }
+  WAMessage & { raw: WAMessageIncomingRaw | WAMessageOutgoingRaw; createdAt: Date; previousId: mongo.ObjectId } & Partial<InterestResult>
 >(
   'WhatsAppMessage',
   {
@@ -82,6 +84,14 @@ export const WhatsAppMessage = new MongoService<
     info: { type: Schema.Types.Mixed },
     previousId: { type: Schema.Types.ObjectId },
     createdAt: { type: Date },
+    interested: { type: Boolean },
+    intent: { type: String, enum: Object.values(LeadIntentEnum) },
+    reason: { type: String },
+    confidence: { type: Number }, // 0..1
+    suggestedReply: { type: String },
+    action: { type: String, enum: Object.values(LeadActionEnum) },
+    department: { type: String, enum: Object.values(LeadDepartmentEnum) },
+    followUpAt: { type: String },
   },
   { timestamps: false },
   {

@@ -17,6 +17,7 @@ import messageQueueRoute from '@server/api/message-queue/message-queue.route';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
 import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
+import { handleIncomingMessage } from '@server/api/message-queue/helpers/handle-incoming-message';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -53,23 +54,8 @@ export const wa = new WhatsappWarmService({
       return;
     }
 
-    // External message
-    const { fromNumber, toNumber } = msg;
-    const previousMessage = await WhatsAppMessage.findOne(
-      {
-        $or: [
-          { toNumber: fromNumber, fromNumber: toNumber },
-          { fromNumber, toNumber },
-        ],
-      },
-      { sort: { createdAt: -1 } }
-    );
-
-    if (previousMessage?.text) {
-      console.log('previousMessage.text', previousMessage._id, previousMessage.text);
-    }
-
-    await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime(), previousId: previousMessage?._id });
+    const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, createdAt: getLocalTime() });
+    await handleIncomingMessage(_id);
   },
   onOutgoingMessage: async (msg, raw, info) => {
     await WhatsAppMessage.insertOne({ ...msg, raw, info, createdAt: getLocalTime() });
@@ -86,6 +72,12 @@ export const wa = new WhatsappWarmService({
   wa.onRegister((phoneNumber) => app.socket.broadcast<{ phoneNumber: string }>(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
   wa.onUpdate((state) => app.socket.broadcast<Partial<WAAppAuth<WAPersona>>>(InstanceEventEnum.INSTANCE_UPDATE, state));
   app.socket.onConnected<{ nextWarmAt: Date | null }>(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
+
+  app.socket.onConnected<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, () => {
+    const totalCount = wa.listInstanceNumbers({ activeFlag: false }).length;
+    const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
+    return { readyCount, totalCount };
+  });
 
   wa.onReady(() => {
     wa.startWarmingUp();
