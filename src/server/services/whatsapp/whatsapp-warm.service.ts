@@ -335,7 +335,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
   }
 
-  private getFallbackInstance(instances: Array<WAInstance<WAPersona>>) {
+  private getFallbackInstance(instances: WAInstance<WAPersona>[]) {
     return (phoneNumber: string) => {
       const availableInstance = instances.filter((instance) => instance.phoneNumber !== phoneNumber && instance.connected);
       const warmedAvailable = availableInstance.filter((instance) => instance.get('hasWarmedUp') && instance.connected);
@@ -357,7 +357,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
   }
 
-  private async getWarmInstances(instances: Array<WAInstance<WAPersona>>) {
+  private async getWarmInstances(instances: WAInstance<WAPersona>[]) {
     const warmInstances: WAInstance<WAPersona>[] = [];
 
     for (const instance of instances) {

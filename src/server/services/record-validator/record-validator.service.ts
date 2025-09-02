@@ -14,11 +14,11 @@ import { RecordValidatorMessage } from '@server/services/record-validator/record
 
 export type ValidatorCallback<Target> = {
   successCallback?: (payload?: Target) => Promise<void> | void;
-  failedCallback?: (payload?: Array<ErrorResponseMessage>) => Promise<void> | void;
+  failedCallback?: (payload?: ErrorResponseMessage[]) => Promise<void> | void;
 };
 export default class RecordValidator<Source = Record<string, any>, Target = Source> {
   public results: Target = {} as Target;
-  public errors: Array<ErrorResponseMessage> | null = null;
+  public errors: ErrorResponseMessage[] | null = null;
 
   constructor(
     private readonly source: Partial<Source>,
@@ -39,13 +39,8 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
     return await this.check([fieldName, fieldValue], validators, message);
   }
 
-  private async checkNestedField(
-    source: any,
-    pathParts: string[],
-    validators: RecordValidators,
-    message?: string
-  ): Promise<Array<ErrorResponseMessage>> {
-    const errors: Array<ErrorResponseMessage> = [];
+  private async checkNestedField(source: any, pathParts: string[], validators: RecordValidators, message?: string): Promise<ErrorResponseMessage[]> {
+    const errors: ErrorResponseMessage[] = [];
     const currentSource = source;
 
     const diveInto = async (source: any, path: string[], index: number) => {
@@ -97,7 +92,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
 
   public async validate(options?: ValidatorCallback<Target>): Promise<Target> {
     const { successCallback, failedCallback } = options || {};
-    const errors: Array<ErrorResponseMessage> = [];
+    const errors: ErrorResponseMessage[] = [];
 
     for (const item of this.validation) {
       const [fields, validators, message] = item;
@@ -169,16 +164,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
     return message ? { message, value, property: fieldName as string } : undefined;
   }
 
-  private async execute(
-    value: any,
-    validators: Array<CustomValidator>
-  ): Promise<
-    | {
-        message: string;
-        value?: string | number;
-      }
-    | undefined
-  > {
+  private async execute(value: any, validators: CustomValidator[]): Promise<{ message: string; value?: string | number } | undefined> {
     for (const validator of validators) {
       try {
         const [isValid, errorMessage, validatorValue] = validator instanceof Function ? await validator(value) : validator;
@@ -248,7 +234,7 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
     },
     regex: (inputValue: any, [regExPatterns, errorMessage = RecordValidatorMessage.MISMATCH, options]): ValidationErrorResult => {
       const { checkMode, valueReturn } = options || {};
-      const errors: Array<ValidationErrorResult> = [];
+      const errors: ValidationErrorResult[] = [];
       const isEvery = checkMode === 'every';
 
       if (inputValue === undefined || inputValue === null || inputValue === '') {
@@ -283,10 +269,14 @@ export default class RecordValidator<Source = Record<string, any>, Target = Sour
       if (!inputValue) {
         return [true];
       } else if (Array.isArray(inputValue)) {
-        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values as string[] : undefined];
+        return [
+          inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)),
+          errorMessage,
+          valueReturn ? (values as string[]) : undefined,
+        ];
       }
 
-      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values as string[] : undefined];
+      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? (values as string[]) : undefined];
     },
     max: (inputValue: any, [maxValue, errorMessage = RecordValidatorMessage.MAX]): ReturnType<ValidatorFunction> => {
       return [inputValue === null || inputValue === undefined || (!isNaN(+inputValue) && +inputValue <= maxValue), errorMessage, maxValue];

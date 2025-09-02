@@ -8,7 +8,7 @@
  * @param skipFirstLine   Whether to skip the first line (e.g. headers from Excel)
  */
 
-function loadCsvFromBuffer<T extends readonly string[]>(buffer: Buffer | Blob, columns: T, skipFirstLine = false): Array<Record<T[number], string>> {
+function loadCsvFromBuffer<T extends readonly string[]>(buffer: Buffer | Blob, columns: T, skipFirstLine = false): Record<T[number], string>[] {
   const content = buffer.toString('utf8');
   const lines = content.trim().split(/\r?\n/);
 

@@ -18,7 +18,7 @@ class NotFoundError extends CustomError {
     Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 
-  serializeErrors(): { errorCode: number; errorType: string; errorData: undefined; errorMessage: Array<ErrorResponseMessage> } {
+  serializeErrors(): { errorCode: number; errorType: string; errorData: undefined; errorMessage: ErrorResponseMessage[] } {
     return {
       errorCode: this.errorCode,
       errorType: this.errorType,

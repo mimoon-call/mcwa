@@ -9,5 +9,5 @@ export interface ErrorResponseMessage {
 export interface ErrorResponse {
   errorCode: number;
   errorData?: Record<string, any>;
-  errorMessage: Array<ErrorResponseMessage>;
+  errorMessage: ErrorResponseMessage[];
 }

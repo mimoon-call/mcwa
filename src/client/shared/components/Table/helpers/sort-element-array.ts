@@ -8,7 +8,7 @@ const isNumericString = (value: unknown): boolean => {
   return typeof value === 'string' && !isNaN(Number(value));
 };
 
-export const sortElementArray = <T extends object>(items?: Array<T>, sort?: Pagination['pageSort']): Array<T> => {
+export const sortElementArray = <T extends object>(items?: T[], sort?: Pagination['pageSort']): T[] => {
   if (!sort || Object.keys(sort).length === 0) {
     return items || [];
   }

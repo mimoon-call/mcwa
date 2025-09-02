@@ -4,7 +4,7 @@ import SocketServer, { SocketManage } from '@server/services/socket/socket-serve
 
 export class SocketService<Token extends object> extends SocketServer<Token> {
   private readonly idKey: keyof Token;
-  private readonly onConnectedCallbacks: Array<[string, Record<any, any> | (() => Record<any, any>)]> = [];
+  private readonly onConnectedCallbacks: [string, Record<any, any> | (() => Record<any, any>)][] = [];
 
   constructor(idKey: keyof Token, server: ConstructorParameters<typeof SocketServer>[0], options: ConstructorParameters<typeof SocketServer>[1]) {
     super(server, options);

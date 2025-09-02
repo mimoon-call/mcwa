@@ -35,6 +35,6 @@ export declare global {
       id: string;
       [key: string]: any;
     };
-    __ESCAPE_STACK__: Array<{ eventId: string; eventCallback: () => void }>;
+    __ESCAPE_STACK__: { eventId: string; eventCallback: () => void }[];
   }
 }

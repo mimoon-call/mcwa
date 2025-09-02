@@ -361,7 +361,7 @@ export class MongoService<TDoc extends object> {
     const agg = this.model.aggregate<{
       data: TRow[];
       total: number;
-      extra: Array<{ k: string; v: unknown }>;
+      extra: { k: string; v: unknown }[];
     }>(pipeline);
 
     if (options.collation) agg.collation(options.collation);

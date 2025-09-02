@@ -5,6 +5,6 @@ export type Option<T, E = Record<never, never>> = E & {
   value: T;
 };
 
-export type Options<T, E = Record<never, never>> = Array<Option<T, E>>;
+export type Options<T, E = Record<never, never>> = Option<T, E>[];
 
-export type OptionsResponse<T, E = Record<never, never>> = BaseResponse<{ options: Array<Option<T, E>> }>;
+export type OptionsResponse<T, E = Record<never, never>> = BaseResponse<{ options: Option<T, E>[] }>;

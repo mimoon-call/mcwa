@@ -10,7 +10,7 @@ export type TabItem = {
 };
 
 export type TabProps = {
-  items: Array<TabItem>;
+  items: TabItem[];
   value?: string | TabItem;
   className?: ClassValue;
   panelClassName?: ClassValue;

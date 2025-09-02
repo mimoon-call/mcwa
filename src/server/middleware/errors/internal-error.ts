@@ -15,7 +15,7 @@ class InternalError extends CustomError {
     Object.setPrototypeOf(this, InternalError.prototype);
   }
 
-  serializeErrors(): { errorCode: number; errorType: string; errorData: undefined; errorMessage: Array<ErrorResponseMessage> } {
+  serializeErrors(): { errorCode: number; errorType: string; errorData: undefined; errorMessage: ErrorResponseMessage[] } {
     return {
       errorCode: this.errorCode,
       errorType: this.errorType,

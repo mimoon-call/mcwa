@@ -38,7 +38,7 @@ export default class FieldValidator {
     },
     regex: (inputValue: any, [regExPatterns, errorMessage = FieldValidatorEnum.MISMATCH, options]): ReturnType<ValidatorFunction> => {
       const { checkMode, valueReturn } = options || {};
-      const errors: Array<ReturnType<ValidatorFunction>> = [];
+      const errors: ReturnType<ValidatorFunction>[] = [];
       const isEvery = checkMode === 'every';
 
       if (inputValue === undefined || inputValue === null || inputValue === '') {
@@ -74,10 +74,14 @@ export default class FieldValidator {
       if (inputValue === undefined) {
         return [true];
       } else if (Array.isArray(inputValue)) {
-        return [inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)), errorMessage, valueReturn ? values as string[] : undefined];
+        return [
+          inputValue.every((inValue) => values.some((eqValue) => inValue === eqValue)),
+          errorMessage,
+          valueReturn ? (values as string[]) : undefined,
+        ];
       }
 
-      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? values as string[] : undefined];
+      return [values.some((eqValue) => inputValue === eqValue), errorMessage, valueReturn ? (values as string[]) : undefined];
     },
     max: (inputValue: any, [maxValue, errorMessage = FieldValidatorEnum.MAX]): ReturnType<ValidatorFunction> => {
       return [
@@ -135,7 +139,7 @@ export default class FieldValidator {
 
     const { message, value } =
       this.execute(fieldValue, [
-        ...Object.entries(coreValidators).reduce((result: Array<CustomValidator>, [name, payload]: [string, any]) => {
+        ...Object.entries(coreValidators).reduce((result: CustomValidator[], [name, payload]: [string, any]) => {
           const [validatorValue, errorMessage = mainMessage, ...arg] = payload;
           const validate = this.coreValidators[name as keyof CoreValidators]?.(fieldValue, [validatorValue, errorMessage, ...arg]);
 
@@ -147,7 +151,7 @@ export default class FieldValidator {
     return message ? { message, value } : undefined;
   }
 
-  private execute(value: any, validators: Array<CustomValidator>): { message: string; value?: string | number } | undefined {
+  private execute(value: any, validators: CustomValidator[]): { message: string; value?: string | number } | undefined {
     for (const validator of validators) {
       const [isValid, errorMessage, validatorValue] = validator instanceof Function ? validator(value) : validator;
 

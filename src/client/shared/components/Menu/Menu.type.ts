@@ -11,7 +11,7 @@ export type MenuItem = {
 };
 
 export type MenuProps = {
-  items: Array<MenuItem>;
+  items: MenuItem[];
   className?: ClassValue;
   activator?: PopoverProps['activator'];
   showSingleAction?: boolean;

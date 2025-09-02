@@ -60,7 +60,7 @@ export interface OpenAiMessage {
   role: Role;
   content: string;
   name?: string;
-  tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
+  tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[];
   tool_call_id?: string;
 }
 
@@ -133,11 +133,11 @@ export type OpenAiRequest = {
 };
 
 export type OpenAiResponse = {
-  choices: Array<{
+  choices: {
     message: {
       content?: string;
-      tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
+      tool_calls?: { id: string; type: 'function'; function: { name: string; arguments: string } }[];
       function_call?: { name: string; arguments: string };
     };
-  }>;
+  }[];
 };

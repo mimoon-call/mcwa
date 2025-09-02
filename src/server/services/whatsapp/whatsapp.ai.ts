@@ -139,7 +139,7 @@ export class WhatsappAiService {
     return seeds[Math.floor(Math.random() * seeds.length)];
   }
 
-  private weightedChoice(weights: Array<[len: number, weight: number]>): number {
+  private weightedChoice(weights: [len: number, weight: number][]): number {
     const total = weights.reduce((s, [, w]) => s + w, 0);
     let r = Math.random() * total;
     for (const [len, w] of weights) {
@@ -151,7 +151,7 @@ export class WhatsappAiService {
 
   private buildRunPlan(total: number): number[] {
     // 1 → 70%, 2 → 20%, 3 → 10%
-    const weights: Array<[number, number]> = [
+    const weights: [number, number][] = [
       [1, 70],
       [2, 20],
       [3, 10],
@@ -168,7 +168,7 @@ export class WhatsappAiService {
     return plan;
   }
 
-  private buildSpeakerOrder(total: number, aNumber: string, bNumber: string): Array<{ from: string; to: string }> {
+  private buildSpeakerOrder(total: number, aNumber: string, bNumber: string): { from: string; to: string }[] {
     // Validate input phone numbers
     if (!aNumber || !bNumber) {
       console.error(`[AI Error] Invalid phone numbers: aNumber=${aNumber}, bNumber=${bNumber}`);
@@ -180,7 +180,7 @@ export class WhatsappAiService {
     let currentFrom = startWithA ? aNumber : bNumber;
     let currentTo = startWithA ? bNumber : aNumber;
 
-    const order: Array<{ from: string; to: string }> = [];
+    const order: { from: string; to: string }[] = [];
     for (const runLen of plan) {
       for (let i = 0; i < runLen; i++) {
         order.push({ from: currentFrom, to: currentTo });
@@ -201,9 +201,9 @@ export class WhatsappAiService {
   }
 
   private enforceSpeakerOrder(
-    items: Array<{ fromNumber: string; toNumber: string; text: string }>,
-    order: Array<{ from: string; to: string }>
-  ): Array<{ fromNumber: string; toNumber: string; text: string }> {
+    items: { fromNumber: string; toNumber: string; text: string }[],
+    order: { from: string; to: string }[]
+  ): { fromNumber: string; toNumber: string; text: string }[] {
     // Validate that we have enough items to match the order
     if (!items || items.length < order.length) {
       console.error(`[AI Error] Incomplete response: got ${items?.length || 0} messages, expected ${order.length}`);
@@ -211,7 +211,7 @@ export class WhatsappAiService {
     }
 
     // force sender/receiver by index, keep text; also clean punctuation
-    const out: Array<{ fromNumber: string; toNumber: string; text: string }> = [];
+    const out: { fromNumber: string; toNumber: string; text: string }[] = [];
 
     for (let i = 0; i < order.length; i++) {
       const src = items[i];
@@ -261,7 +261,7 @@ export class WhatsappAiService {
     b: WAPersona,
     messageCount: number,
     previousConversation: WAConversation[] | undefined,
-    speakerOrder: Array<{ from: string; to: string }>,
+    speakerOrder: { from: string; to: string }[],
     topicHint?: string,
     localizedLinks: Record<string, string[]> = {}
   ): string {

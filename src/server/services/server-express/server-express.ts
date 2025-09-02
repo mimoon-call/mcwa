@@ -16,7 +16,7 @@ import getLocalTime from '@server/helpers/get-local-time';
 const __public = process.env.NODE_ENV === 'production' ? '/app/public/' : path.join(dir, '/../public/');
 
 type Config = Partial<{
-  routes: Array<[`/${string}`, ReturnType<typeof express.Router>]>;
+  routes: [`/${string}`, ReturnType<typeof express.Router>][];
   routePrefix: `/${string}`;
 }>;
 

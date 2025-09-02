@@ -22,7 +22,7 @@ class ServerError extends CustomError {
     errorCode: number;
     errorType: string;
     errorData: Record<string, unknown> | undefined;
-    errorMessage: Array<ErrorResponseMessage>;
+    errorMessage: ErrorResponseMessage[];
   } {
     if (typeof this.data === 'string') {
       return {

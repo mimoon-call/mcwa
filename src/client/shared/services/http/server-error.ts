@@ -18,7 +18,7 @@ export default class ServerError extends Error {
     this.errorMessage = [{ message: e }];
   }
 
-  public errorMessage: Array<ErrorResponseMessage>;
+  public errorMessage: ErrorResponseMessage[];
   public errorCode: number;
   public errorData: ErrorResponse | undefined;
 }

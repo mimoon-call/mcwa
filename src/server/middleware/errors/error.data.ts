@@ -3,7 +3,7 @@ import type { ErrorResponseMessage } from '@server/models';
 
 export type ErrorData =
   | {
-      messages: Array<ErrorResponseMessage> | ErrorResponseMessage;
+      messages: ErrorResponseMessage[] | ErrorResponseMessage;
       code?: number;
       type?: string;
       data?: any;

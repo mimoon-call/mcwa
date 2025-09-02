@@ -48,11 +48,11 @@ export type TableHeader<T extends object = Record<never, never>> = {
   colSpan?: number;
 };
 
-export type TableHeaders<T extends object = DefaultTableItem, E = Record<never, never>> = Array<TableHeader<T> & E>;
+export type TableHeaders<T extends object = DefaultTableItem, E = Record<never, never>> = (TableHeader<T> & E)[];
 
 export type TableProps<T extends object = DefaultTableItem> = {
   headers: TableHeaders<T>;
-  items: Array<T> | undefined;
+  items: T[] | undefined;
   draggable?: boolean;
   customizable?: boolean;
   showGrid?: boolean;
@@ -73,6 +73,6 @@ export type TableProps<T extends object = DefaultTableItem> = {
   deleteCallback?: (item: T) => void | Promise<void>;
   createCallback?: () => void | Promise<void>;
   exportCallback?: () => void | Promise<void>;
-  customActions?: Array<TableItemAction<T>>;
-  tableActions?: Array<MenuItem>;
+  customActions?: TableItemAction<T>[];
+  tableActions?: MenuItem[];
 };

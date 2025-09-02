@@ -30,8 +30,8 @@ type AxiosGetRequestConfig = AxiosRequestConfig & ApiServiceConfig;
 type AxiosPostRequestConfig = AxiosRequestConfig & Omit<ApiServiceConfig, 'noCache'>;
 
 type Config = {
-  requestInterceptors?: Array<AxiosRequestInterceptor>;
-  responseInterceptors?: Array<AxiosResponseInterceptor>;
+  requestInterceptors?: AxiosRequestInterceptor[];
+  responseInterceptors?: AxiosResponseInterceptor[];
   baseURL?: CreateAxiosDefaults['baseURL'];
   timeout?: CreateAxiosDefaults['timeout'];
   headers?: Record<string, string>;
@@ -51,7 +51,7 @@ export class HttpService {
     this.registerResponseInterceptors(responseInterceptors);
   }
 
-  private registerRequestInterceptors(interceptors: Array<AxiosRequestInterceptor>): void {
+  private registerRequestInterceptors(interceptors: AxiosRequestInterceptor[]): void {
     for (const interceptor of interceptors) {
       this.api.interceptors.request.use(
         (value: InternalAxiosRequestConfig) => interceptor.onFulfilled(value),
@@ -60,7 +60,7 @@ export class HttpService {
     }
   }
 
-  private registerResponseInterceptors(interceptors: Array<AxiosResponseInterceptor>): void {
+  private registerResponseInterceptors(interceptors: AxiosResponseInterceptor[]): void {
     for (const interceptor of interceptors) {
       this.api.interceptors.response.use(
         (value: AxiosResponse) => interceptor.onFulfilled(value),

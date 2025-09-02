@@ -81,7 +81,7 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   getAppKeys: (phoneNumber: string) => Promise<any[]>;
 } & Partial<{
   tempDir: string;
-  debugMode: true | 'error' | 'warn' | 'info' | 'debug' | Array<'error' | 'warn' | 'info' | 'debug'>;
+  debugMode: true | 'error' | 'warn' | 'info' | 'debug' | ('error' | 'warn' | 'info' | 'debug')[];
   // Callbacks for message events
   onIncomingMessage: WAMessageIncomingCallback;
   onOutgoingMessage: WAMessageOutgoingCallback;

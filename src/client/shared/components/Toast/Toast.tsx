@@ -91,8 +91,8 @@ const Item: React.FC<ToastItemProps> = (props) => {
 };
 
 const Toast = forwardRef<ToastRef, Partial<ToastProps>>(({ duration = 3000, y = 'top' }, ref) => {
-  const [activeToast, setActiveToast] = useState<Array<ToastEntry>>([]);
-  const queueRef = useRef<Array<ToastEntry>>([]);
+  const [activeToast, setActiveToast] = useState<ToastEntry[]>([]);
+  const queueRef = useRef<ToastEntry[]>([]);
   const elHeights = useRef<Record<ToastEntry['id'], number>>({});
 
   const showNextToast = () => {

@@ -13,7 +13,7 @@ abstract class CustomError extends Error {
   abstract serializeErrors(): {
     errorCode: number;
     errorData: Record<string, any> | undefined;
-    errorMessage: Array<ErrorResponseMessage>;
+    errorMessage: ErrorResponseMessage[];
   };
 }
 

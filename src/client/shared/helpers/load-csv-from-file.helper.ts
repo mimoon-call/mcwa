@@ -8,7 +8,7 @@
  * @param skipFirstLine   Whether to skip the first line (usually header)
  */
 
-async function loadCsvFromFile<T extends object>(file: Blob, columns: (keyof T)[], skipFirstLine: boolean): Promise<Array<Record<keyof T, string>>> {
+async function loadCsvFromFile<T extends object>(file: Blob, columns: (keyof T)[], skipFirstLine: boolean): Promise<Record<keyof T, string>[]> {
   if (file.type !== 'text/csv') {
     throw new Error('Invalid file type');
   }

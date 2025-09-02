@@ -22,7 +22,7 @@ import { cn } from '@client/plugins';
 import { Menu } from '@components/Menu/Menu';
 
 const getHeadersWithActions = (props: Pick<TableProps, 'headers' | 'updateCallback' | 'deleteCallback' | 'previewCallback' | 'customActions'>) => {
-  const actions: Array<TableItemAction> = [...(props.customActions || [])];
+  const actions: TableItemAction[] = [...(props.customActions || [])];
 
   if (props.previewCallback) {
     actions.push({ label: 'GENERAL.VIEW', onClick: props.previewCallback, iconName: 'svg:eye' });
@@ -295,7 +295,7 @@ const Actions = ({ item, actions }: { item: TableBodyItemProps['item']; actions:
 };
 
 const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback' | 'tableActions'>) => {
-  const actions: Array<MenuItem> = [...(props.tableActions || [])];
+  const actions: MenuItem[] = [...(props.tableActions || [])];
 
   if (props.createCallback) {
     actions.unshift({ label: 'GENERAL.ADD', iconName: 'svg:plus', onClick: props.createCallback });
@@ -319,7 +319,10 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const { items, totalPages } = useTableItems(props);
   const emptyState = props.emptyState || <span className="text-xl font-medium">{t('GENERAL.EMPTY')}</span>;
-  const headers = useMemo(() => getHeadersWithActions(props), [props.headers, props.updateCallback, props.deleteCallback, props.previewCallback, props.customActions]);
+  const headers = useMemo(
+    () => getHeadersWithActions(props),
+    [props.headers, props.updateCallback, props.deleteCallback, props.previewCallback, props.customActions]
+  );
   const actions = useMemo(() => TableActions(props), [props.createCallback, props.exportCallback, props.tableActions]);
 
   return (
