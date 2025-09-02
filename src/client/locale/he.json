@@ -51,17 +51,17 @@
     "START_SENDING": "התחל שליחה",
     "STOP_SENDING": "עצור שליחה",
     "VALIDATE_NO_CONTACT_SELECTED": "אנא בחר לפחות איש קשר אחד",
-    "MESSAGE_QUEUE_PROGRESS": "שליחה {{current}} / {{total}}"
+    "MESSAGE_QUEUE_PROGRESS": "שליחה {{total}} / {{current}}"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",
     "PHONE_NUMBER": "מספר טלפון",
     "WARM_DAY": "יום חימום",
-    "DAILY_WARM_MESSAGES": "הודעות חימום יומי",
+    "DAILY_WARM_MESSAGES": "חימום יומי",
     "HAS_WARMED_UP": "חימום הסתיים",
     "STATUS_CODE": "סטטוס קוד",
     "ERROR_MESSAGE": "הודעת שגיאה",
-    "DAILY_MESSAGE_COUNT": "מונה יומי",
+    "DAILY_MESSAGE_COUNT": "יומי",
     "OUTGOING_COUNT": "יוצאות",
     "INCOMING_COUNT": "נכנסות",
     "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה.\nסה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}",

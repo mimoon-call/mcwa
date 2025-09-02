@@ -317,8 +317,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     // Only start new warming if we're still in warming mode and no active conversations
     if (!this.isWarming) {
-      clearTimeout(this.nextStartWarming);
-      this.nextCheckUpdate?.(null);
       this.stopWarmingUp();
     } else if (this.activeConversation.size === 0) {
       clearTimeout(this.nextStartWarming);
@@ -454,6 +452,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     clearTimeout(this.nextStartWarming);
+    this.nextCheckUpdate?.(null);
     this.timeoutConversation.clear();
     this.activeConversation.clear();
     this.creatingConversation.clear(); // Clear conversations being created

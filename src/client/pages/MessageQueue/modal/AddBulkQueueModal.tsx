@@ -95,6 +95,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   useImperativeHandle(ref, () => ({
     open: async (data): Promise<void> => {
       const payloadData = data
+        .map((val) => ({ ...val, phoneNumber: val.phoneNumber.replace(/\D/g, '') }))
         .uniqueBy(['phoneNumber'])
         .filter((value) => RegexPattern.MOBILE_PHONE_IL.test(value.phoneNumber))
         .map((value) => ({ ...value, checkFlag: true }));

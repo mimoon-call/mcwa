@@ -15,5 +15,5 @@ export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
 export type SearchMessageQueueReq = Partial<{ page: Pagination; hasBeenSent?: boolean }>;
 export type AddMessageQueueReq = { data: Array<Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>>; textMessage: string };
 
-export type MessageQueueActiveEvent = { messageCount: number; messagePass: number; isSending: boolean };
+export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string };

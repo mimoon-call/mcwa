@@ -51,17 +51,13 @@ export const messageQueueService = {
   },
 
   [START_QUEUE_SEND]: (): BaseResponse => {
-    if (messageCount) {
-      return { returnCode: 0 };
-    }
-
-    app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
-
     (async () => {
       isSending = true;
       messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
+      app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
       let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
+      console.log('Starting queue send...', doc);
 
       while (doc) {
         await sendQueueMessage(doc);

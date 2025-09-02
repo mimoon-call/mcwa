@@ -16,7 +16,7 @@ import { InstanceEventEnum } from '@server/api/instance/instance-event.enum';
 import messageQueueRoute from '@server/api/message-queue/message-queue.route';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
-import { WAPersona } from '@server/services/whatsapp/whatsapp.type';
+import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -89,6 +89,9 @@ export const wa = new WhatsappWarmService({
 
   wa.onReady(() => {
     wa.startWarmingUp();
+    const totalCount = wa.listInstanceNumbers({ activeFlag: false }).length;
+    const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
+    app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, { readyCount, totalCount });
   });
 
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));

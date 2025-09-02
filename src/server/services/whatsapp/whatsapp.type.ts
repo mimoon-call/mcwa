@@ -21,3 +21,5 @@ export type WAServiceConfig<T extends object> = Omit<WAInstanceConfig<T>, 'tempD
 };
 
 export type WAConversation = { fromNumber: string; toNumber: string; text: string; sentAt?: Date };
+
+export type WAReadyEvent = { readyCount: number; totalCount: number };

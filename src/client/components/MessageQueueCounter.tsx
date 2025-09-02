@@ -22,7 +22,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     const socket = getClientSocket();
 
     const update = (data: MessageQueueActiveEvent) => {
-      dispatch(updateMessageCount(data));
+      dispatch(updateMessageCount({ messageCount: total, messagePass: current, ...data }));
     };
 
     socket?.on(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);
