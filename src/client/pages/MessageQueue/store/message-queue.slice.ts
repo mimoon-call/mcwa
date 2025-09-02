@@ -1,5 +1,10 @@
 import type { ErrorResponse } from '@services/http/types';
-import type { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@client/pages/MessageQueue/store/message-queue.types';
+import type {
+  AddMessageQueueReq,
+  EditMessageQueueReq,
+  SearchMessageQueueReq,
+  SearchMessageQueueRes,
+} from '@client/pages/MessageQueue/store/message-queue.types';
 import type { RootState } from '@client/store';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { StoreEnum } from '@client/store/store.enum';
@@ -18,6 +23,8 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
   UPDATE_MESSAGE_COUNT,
+  CLEAR_MESSAGE_QUEUE,
+  EDIT_MESSAGE_QUEUE,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
 import { Http } from '@services/http';
 
@@ -60,6 +67,10 @@ const addMessageQueue = async (data: AddMessageQueueReq) => {
   await Http.post<void, AddMessageQueueReq>(`${StoreEnum.queue}/${ADD_MESSAGE_QUEUE}`, data);
 };
 
+const updateMessageQueue = async (data: EditMessageQueueReq) => {
+  await Http.post<void, EditMessageQueueReq>(`${StoreEnum.queue}/${EDIT_MESSAGE_QUEUE}`, data);
+};
+
 const removeMessageQueue = async (queueId: string) => {
   await Http.delete<void>(`${StoreEnum.queue}/${REMOVE_MESSAGE_QUEUE}/${queueId}`);
   messageQueueSlice.actions.deleteMessageQueue(queueId);
@@ -71,6 +82,10 @@ const startQueueSend = async () => {
 
 const stopQueueSend = async () => {
   await Http.post<void>(`/${StoreEnum.queue}/${STOP_QUEUE_SEND}`);
+};
+
+const clearQueue = async () => {
+  await Http.delete<void>(`/${StoreEnum.queue}/${CLEAR_MESSAGE_QUEUE}`);
 };
 
 const messageQueueSlice = createSlice({
@@ -120,8 +135,10 @@ export default {
   [UPDATE_MESSAGE_COUNT]: messageQueueSlice.actions.updateMessageCount,
   [DELETE_MESSAGE_QUEUE]: messageQueueSlice.actions.deleteMessageQueue,
   [ADD_MESSAGE_QUEUE]: addMessageQueue,
+  [EDIT_MESSAGE_QUEUE]: updateMessageQueue,
   [REMOVE_MESSAGE_QUEUE]: removeMessageQueue,
   [SEARCH_MESSAGE_QUEUE]: searchMessageQueue,
   [START_QUEUE_SEND]: startQueueSend,
   [STOP_QUEUE_SEND]: stopQueueSend,
+  [CLEAR_MESSAGE_QUEUE]: clearQueue,
 };

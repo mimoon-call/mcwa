@@ -6,6 +6,7 @@ export type MessageQueueItem = {
   phoneNumber: string;
   fullName: string;
   textMessage: string;
+  createdAt: Date;
   sentAt?: Date;
   lastError?: string;
   instanceNumber?: string;
@@ -14,6 +15,7 @@ export type MessageQueueItem = {
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
 export type SearchMessageQueueReq = Partial<{ page: Pagination; hasBeenSent?: boolean }>;
 export type AddMessageQueueReq = { data: Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>[]; textMessage: string };
+export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' | 'fullName' | 'textMessage'>;
 
 export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string };

@@ -7,6 +7,7 @@ export const MessageQueueDb = new MongoService<MessageQueueItem>(
     fullName: { type: String, required: true },
     phoneNumber: { type: String, required: true },
     textMessage: { type: String, required: true },
+    createdAt: { type: Date, required: true },
     sentAt: { type: Date },
     lastError: { type: String },
     instanceNumber: { type: String },

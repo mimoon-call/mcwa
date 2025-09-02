@@ -1,12 +1,14 @@
 import type { Request, Response } from 'express';
 import {
   ADD_MESSAGE_QUEUE,
+  CLEAR_MESSAGE_QUEUE,
+  EDIT_MESSAGE_QUEUE,
   REMOVE_MESSAGE_QUEUE,
   SEARCH_MESSAGE_QUEUE,
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
 } from '@server/api/message-queue/message-queue.map';
-import { AddMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
+import { AddMessageQueueReq, EditMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 import { messageQueueService } from '@server/api/message-queue/message-queue.service';
@@ -34,6 +36,17 @@ export const messageQueueController = {
     res.send(await messageQueueService[ADD_MESSAGE_QUEUE](textMessage, data));
   },
 
+  [EDIT_MESSAGE_QUEUE]: async (req: Request<never, never, EditMessageQueueReq>, res: Response<BaseResponse>) => {
+    const data = await new RecordValidator(req.body, [
+      ['_id', { required: [true] }],
+      ['phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
+      ['fullName', { required: [true] }],
+      ['textMessage', { required: [true] }],
+    ]).validate();
+
+    res.send(await messageQueueService[EDIT_MESSAGE_QUEUE](data));
+  },
+
   [REMOVE_MESSAGE_QUEUE]: async (req: Request<{ queueId: string }>, res: Response<BaseResponse>) => {
     const { queueId } = await new RecordValidator(req.params, [['queueId', { required: [true] }]]).validate();
 
@@ -46,5 +59,9 @@ export const messageQueueController = {
 
   [STOP_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
     res.send(messageQueueService[STOP_QUEUE_SEND]());
+  },
+
+  [CLEAR_MESSAGE_QUEUE]: async (_req: Request, res: Response<BaseResponse>) => {
+    res.send(await messageQueueService[CLEAR_MESSAGE_QUEUE]());
   },
 };

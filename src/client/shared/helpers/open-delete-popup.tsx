@@ -7,7 +7,7 @@ import { useToast } from '@hooks';
 
 type Options = {
   title?: string;
-  description: string | [string, Record<string, any>];
+  description: string | [string, Record<string, any>?];
   callback?: () => Promise<unknown> | unknown;
   confirmText?: string;
   cancelText?: string;

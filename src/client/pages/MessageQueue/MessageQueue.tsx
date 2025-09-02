@@ -8,6 +8,7 @@ import Table from '@components/Table/Table';
 import { useDispatch, useSelector } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
 import {
+  CLEAR_MESSAGE_QUEUE,
   MESSAGE_QUEUE_DATA,
   MESSAGE_QUEUE_LOADING,
   MESSAGE_QUEUE_PAGINATION,
@@ -18,7 +19,7 @@ import {
   STOP_QUEUE_SEND,
 } from '@client/pages/MessageQueue/store/message-queue.constants';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
-import AddQueueModal from '@client/pages/MessageQueue/modal/AddQueueModal';
+import AddEditQueueModal, { type AddQueueModalRef } from '@client/pages/MessageQueue/modal/AddEditQueueModal';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
@@ -32,8 +33,8 @@ const MessageQueue = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast({ y: 'bottom' });
-  const modelRef = useRef<ModalRef>(null);
-  const bulkModalRef = useRef<ModalRef>(null);
+  const addEditQueueModalRef = useRef<AddQueueModalRef>(null);
+  const addBulkQueueModalRef = useRef<ModalRef>(null);
 
   const {
     [MESSAGE_QUEUE_DATA]: queueList,
@@ -47,6 +48,7 @@ const MessageQueue = () => {
     [REMOVE_MESSAGE_QUEUE]: removeQueue,
     [START_QUEUE_SEND]: startSend,
     [STOP_QUEUE_SEND]: stopSend,
+    [CLEAR_MESSAGE_QUEUE]: clearQueue,
   } = messageQueueSlice;
 
   const headers: TableHeaders<MessageQueueItem> = [
@@ -73,6 +75,21 @@ const MessageQueue = () => {
     });
   };
 
+  const onUpdate = (item: MessageQueueItem) => {
+    addEditQueueModalRef.current?.open(item);
+  };
+
+  const onClear = async () => {
+    await openDeletePopup({
+      callback: async () => {
+        await clearQueue();
+        dispatch(searchMessageQueue({ page: { pageIndex: 0 } }));
+      },
+      description: ['QUEUE.ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE'],
+      successMessage: 'QUEUE.MESSAGE_QUEUE_HAS_BEEN_CLEARED',
+    });
+  };
+
   const importFile = async () => {
     const file = await FileService.uploadFile();
     const data = await (async () => {
@@ -84,7 +101,7 @@ const MessageQueue = () => {
       }
     })();
 
-    bulkModalRef.current?.open(data);
+    addBulkQueueModalRef.current?.open(data);
   };
 
   useEffect(() => {
@@ -119,6 +136,11 @@ const MessageQueue = () => {
 
   const tableActions: TableProps<MessageQueueItem>['tableActions'] = [
     {
+      label: 'GENERAL.ADD',
+      iconName: 'svg:plus',
+      onClick: () => addEditQueueModalRef.current?.open(),
+    },
+    {
       label: 'GENERAL.IMPORT_FILE',
       iconName: 'svg:attachment',
       onClick: importFile,
@@ -131,6 +153,12 @@ const MessageQueue = () => {
           onClick: startSend,
           disabled: () => !!(queuePagination.totalItems === 0 || queueLoading),
         },
+    {
+      label: 'QUEUE.DELETE_ALL',
+      iconName: 'svg:trash',
+      onClick: onClear,
+      disabled: () => !!(queuePagination.totalItems === 0 || queueLoading || isSendingInProgress),
+    },
   ];
 
   return (
@@ -141,15 +169,15 @@ const MessageQueue = () => {
         items={queueList || []}
         pageIndex={queuePagination.pageIndex}
         pageSize={queuePagination.pageSize}
-        createCallback={() => modelRef.current?.open()}
         tableActions={tableActions}
         deleteCallback={onDelete}
+        updateCallback={onUpdate}
         onPageChange={onPageChange}
         onSort={onSort}
       />
 
-      <AddQueueModal ref={modelRef} />
-      <AddBulkQueueModal ref={bulkModalRef} />
+      <AddEditQueueModal ref={addEditQueueModalRef} />
+      <AddBulkQueueModal ref={addBulkQueueModalRef} />
     </>
   );
 };

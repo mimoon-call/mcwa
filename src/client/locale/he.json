@@ -51,7 +51,10 @@
     "START_SENDING": "התחל שליחה",
     "STOP_SENDING": "עצור שליחה",
     "VALIDATE_NO_CONTACT_SELECTED": "אנא בחר לפחות איש קשר אחד",
-    "MESSAGE_QUEUE_PROGRESS": "שליחה {{total}} / {{current}}"
+    "MESSAGE_QUEUE_PROGRESS": "שליחה {{total}} / {{current}}",
+    "DELETE_ALL": "מחק הכל",
+    "MESSAGE_QUEUE_HAS_BEEN_CLEARED": "תור ההודעות נוקה בהצלחה",
+    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "האם אתה בטוח שברצונך לנקות את כל ההודעות שבתור?"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

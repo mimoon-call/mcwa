@@ -13,6 +13,7 @@ export type MessageQueueItem = {
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
 export type SearchMessageQueueReq = Partial<{ page: Pagination }>;
 export type AddMessageQueueReq = { data: Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>[]; textMessage: string };
+export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' | 'fullName' | 'textMessage'>;
 
 export type MessageQueueActiveEvent = { messageCount: number; messagePass: number; isSending: boolean };
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string };

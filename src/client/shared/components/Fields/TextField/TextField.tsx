@@ -14,7 +14,7 @@ type TextFieldProps = InputWrapperProps & {
 
 type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'>;
 
-const Input: FC<InputProps> = ({ onChange, className, pattern, value, ...rest }) => {
+const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, ...rest }) => {
   const localValue = useRef<string>(value?.toString() || '');
 
   useEffect(() => {
@@ -25,8 +25,9 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, ...rest })
 
   return (
     <input
-      className={cn(global['field'], styles['text-field'], className)}
+      className={cn(global['field'], styles['text-field'], className, disabled && '!bg-gray-200 !text-gray-600')}
       value={value}
+      disabled={disabled}
       onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern) : undefined}
       {...rest}
     />

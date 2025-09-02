@@ -51,7 +51,10 @@
     "START_SENDING": "Start sending",
     "STOP_SENDING": "Stop sending",
     "VALIDATE_NO_CONTACT_SELECTED": "Please select at least one contact",
-    "MESSAGE_QUEUE_PROGRESS": "Send {{current}} / {{total}}"
+    "MESSAGE_QUEUE_PROGRESS": "Send {{current}} / {{total}}",
+    "DELETE_ALL": "Delete all",
+    "MESSAGE_QUEUE_HAS_BEEN_CLEARED": "Message queue has been cleared",
+    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "Are you sure you want to clear all messages in the queue?"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

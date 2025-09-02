@@ -6,31 +6,39 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux';
 import Modal from '@components/Modal/Modal';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
-import { ADD_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
+import { ADD_MESSAGE_QUEUE, EDIT_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
 
-type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage'>;
+type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage'> & Partial<{ _id: string }>;
+export type AddQueueModalRef = Omit<ModalRef, 'open'> & { open: (payload?: Partial<Payload>) => Promise<void> };
 
-const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
+const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const [payload, setPayload] = useState<Payload>({ phoneNumber: '', fullName: '', textMessage: '' });
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
+  const { [ADD_MESSAGE_QUEUE]: addQueue, [EDIT_MESSAGE_QUEUE]: updateQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 
   const submit = async () => {
     const { phoneNumber, fullName, textMessage } = payload;
 
-    const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage };
-    await addQueue(data);
+    if (payload._id) {
+      await updateQueue({ _id: payload._id, phoneNumber, fullName, textMessage });
+    } else {
+      const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage };
+      await addQueue(data);
+    }
+
     modalRef.current?.close();
   };
 
   useImperativeHandle(ref, () => ({
-    open: async (): Promise<void> => {
-      setPayload({ phoneNumber: '', fullName: '', textMessage: '' });
+    open: async (payload?: Partial<Payload>): Promise<void> => {
+      setIsEditMode(!!payload);
+      setPayload({ phoneNumber: '', fullName: '', textMessage: '', ...(payload || {}) });
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),
@@ -40,7 +48,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
   return (
     <Modal
       ref={modalRef}
-      submitText="GENERAL.ADD"
+      submitText={isEditMode ? 'GENERAL.UPDATE' : 'GENERAL.ADD'}
       size={OverlayEnum.MD}
       closeCallback={async () => dispatch(searchQueue({}))}
       submitCallback={submit}
@@ -52,6 +60,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
             name="phoneNumber"
             autoComplete="off"
             label="QUEUE.PHONE_NUMBER"
+            disabled={isEditMode && !!payload.phoneNumber}
             value={payload.phoneNumber}
             rules={{ required: [true], regex: [RegexPattern.MOBILE_PHONE_IL, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
             pattern={RegexPattern.PHONE_INPUT}
@@ -63,6 +72,7 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
             name="fullName"
             autoComplete="off"
             label="QUEUE.FULL_NAME"
+            disabled={isEditMode && !!payload.fullName}
             value={payload.fullName}
             rules={{ required: [true] }}
             onChange={(value) => setPayload({ ...payload, fullName: value })}
@@ -82,6 +92,6 @@ const AddQueueModal = forwardRef<ModalRef>((_props, ref) => {
   );
 });
 
-AddQueueModal.displayName = 'AddQueueModal';
+AddEditQueueModal.displayName = 'AddEditQueueModal';
 
-export default AddQueueModal;
+export default AddEditQueueModal;
