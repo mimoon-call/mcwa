@@ -76,9 +76,7 @@ export const instanceService = {
         $addFields: {
           otherNumber: { $cond: [{ $eq: ['$fromNumber', phoneNumber] }, '$toNumber', '$fromNumber'] },
           // Get pushName from incoming messages (when phoneNumber is toNumber)
-          pushName: {
-            $cond: [{ $eq: ['$toNumber', phoneNumber] }, { $ifNull: ['$raw.pushName', null] }, null],
-          },
+          pushName: { $cond: [{ $eq: ['$toNumber', phoneNumber] }, { $ifNull: ['$raw.pushName', null] }, null] },
         },
       },
 
@@ -95,14 +93,17 @@ export const instanceService = {
       {
         $group: {
           _id: '$otherNumber',
-          name: { $first: { $ifNull: ['$pushName', null] } },
+          name: { $push: { $cond: [{ $ne: ['$fromNumber', phoneNumber] }, '$pushName', null] } },
           lastMessage: { $first: '$text' },
           lastMessageAt: { $first: '$createdAt' },
         },
       },
 
-      // sort by phone number
-      { $sort: { _id: 1 } },
+      // pick the first non-null name from the array
+      { $set: { name: { $first: { $filter: { input: '$name', as: 'n', cond: { $ne: ['$$n', null] } } } } } },
+
+      // sort by most recent message first
+      { $sort: { lastMessageAt: -1 } },
 
       // project to final format
       { $project: { _id: 0, phoneNumber: '$_id', name: 1, lastMessage: 1, lastMessageAt: 1 } },
