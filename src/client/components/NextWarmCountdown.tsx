@@ -73,5 +73,5 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
     return null;
   }
 
-  return <div className={cn('px-2', className)}>{t('INSTANCE.COUNTDOWN.NEXT_WARMUP', 'Next warm up start in {{timeLeft}}', { timeLeft })}</div>;
+  return <div className={cn('px-2', className)}>{t('INSTANCE.WARMUP.NEXT_WARMUP', 'Next warm up start in {{timeLeft}}', { timeLeft })}</div>;
 };

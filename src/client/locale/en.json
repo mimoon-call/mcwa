@@ -51,7 +51,7 @@
     "START_SENDING": "Start sending",
     "STOP_SENDING": "Stop sending",
     "VALIDATE_NO_CONTACT_SELECTED": "Please select at least one contact",
-    "MESSAGE_QUEUE_PROGRESS": "Message queue {{current}} / {{total}}"
+    "MESSAGE_QUEUE_PROGRESS": "Send {{current}} / {{total}}"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",
@@ -71,13 +71,8 @@
     "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed",
     "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication.",
     "WARMUP": {
-      "STARTED": "Warm up started"
-    },
-    "COUNTDOWN": {
-      "NEXT_WARMUP": "Next warm up start in {{timeLeft}}",
-      "HOURS": "{{hours}}h {{minutes}}m {{seconds}}s",
-      "MINUTES": "{{minutes}}m {{seconds}}s",
-      "SECONDS": "{{seconds}}s"
+      "STARTED": "Warm up started",
+      "NEXT_WARMUP": "Warm {{timeLeft}}"
     }
   },
   "VALIDATE": {
