@@ -16,7 +16,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
-  private readonly maxRetryAttempt = 1;
+  private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
   private isWarming: boolean = false;
   private nextStartWarming: NodeJS.Timeout | undefined;
@@ -484,7 +484,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     const send = (attempt: number = 0) => {
-      const seconds = this.getRealisticDelay(5, 30);
+      const seconds = this.getRealisticDelay(5, 30) * (attempt + 1);
       const delay = seconds * 1000;
 
       this.log('debug', `[${conversationKey}]`, `schedule message in ${seconds} seconds`, attempt ? `(${attempt}/${this.maxRetryAttempt})` : '');
