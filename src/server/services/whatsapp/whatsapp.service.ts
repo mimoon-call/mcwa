@@ -25,6 +25,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
   // Callbacks for message events
   private readonly outgoingMessageCallback: WAServiceConfig<T>['onOutgoingMessage'] | undefined;
   private readonly incomingMessageCallback: WAServiceConfig<T>['onIncomingMessage'] | undefined;
+  private readonly messageUpdateCallback: WAServiceConfig<T>['onMessageUpdate'] | undefined;
 
   // Callbacks for auth key management
   protected readonly getAppAuth: WAServiceConfig<T>['getAppAuth'];
@@ -111,6 +112,10 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     this.incomingMessageCallback = async (...arg) => {
       return Promise.allSettled([config.onIncomingMessage?.(...arg), ...this.messageCallback.map((cb) => cb?.(...arg))]);
+    };
+
+    this.messageUpdateCallback = (...arg) => {
+      return config.onMessageUpdate?.(...arg);
     };
 
     if (config.onUpdate) {
@@ -260,6 +265,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
       updateAppKey: this.updateAppKey,
       onIncomingMessage: this.incomingMessageCallback,
       onOutgoingMessage: this.outgoingMessageCallback,
+      onMessageUpdate: this.messageUpdateCallback,
       onReady: this.readyCallback,
       onRegistered: this.registeredCallback,
       onUpdate: (state: Partial<WAAppAuth<T>>) => Promise.allSettled(this.updateCallback.map((cb) => cb?.(state))),

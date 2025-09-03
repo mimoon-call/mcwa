@@ -977,6 +977,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (['DELIVERED', 'READ'].includes(status)) {
       this.clearDeliveryTimeout(messageId);
     }
+
+    // Trigger message update callbacks
+    try {
+      this.onMessageUpdate?.(messageId, delivery);
+    } catch (error) {
+      this.log('error', 'Error in message update callback:', error);
+    }
   }
 
   private handleDeliveryTimeout(messageId: string): void {
