@@ -140,23 +140,13 @@ export class WhatsappAiService {
   }
 
   private weightedChoice(weights: [len: number, weight: number][]): number {
-    if (!weights || weights.length === 0) {
-      return 1; // fallback to 1 if no weights provided
-    }
-    
     const total = weights.reduce((s, [, w]) => s + w, 0);
-    if (total <= 0) {
-      return 1; // fallback to 1 if total weight is 0 or negative
-    }
-    
     let r = Math.random() * total;
     for (const [len, w] of weights) {
       r -= w;
       if (r <= 0) return len;
     }
-    
-    // This should never happen, but if it does, return the first weight's length
-    return weights[0][0];
+    return 1;
   }
 
   private buildRunPlan(total: number): number[] {
@@ -214,24 +204,10 @@ export class WhatsappAiService {
     items: { fromNumber: string; toNumber: string; text: string }[],
     order: { from: string; to: string }[]
   ): { fromNumber: string; toNumber: string; text: string }[] {
-    // Validate that we have items
-    if (!items || items.length === 0) {
-      console.error(`[AI Error] No messages received from AI`);
+    // Validate that we have enough items to match the order
+    if (!items || items.length < order.length) {
+      console.error(`[AI Error] Incomplete response: got ${items?.length || 0} messages, expected ${order.length}`);
       return [];
-    }
-
-    // If we have fewer items than expected, adjust the order to match what we have
-    const actualCount = items.length;
-    const expectedCount = order.length;
-    
-    if (actualCount < expectedCount) {
-      console.warn(`[AI Warning] Incomplete response: got ${actualCount} messages, expected ${expectedCount}. Using available messages.`);
-      // Truncate the order to match what we actually have
-      order = order.slice(0, actualCount);
-    } else if (actualCount > expectedCount) {
-      console.warn(`[AI Warning] Extra messages: got ${actualCount} messages, expected ${expectedCount}. Using first ${expectedCount} messages.`);
-      // Truncate the items to match what we expected
-      items = items.slice(0, expectedCount);
     }
 
     // force sender/receiver by index, keep text; also clean punctuation
@@ -430,132 +406,114 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
     }
 
     const totalMessages = this.getRandomInt(minMessages, maxMessages);
-    const maxRetries = 3;
-    let retryCount = 0;
 
-    while (retryCount < maxRetries) {
+    // Build the concrete sender order using the 70/20/10 run distribution
+    const aNum = String(profileA.phoneNumber || '');
+    const bNum = String(profileB.phoneNumber || '');
+
+    const speakerOrder = this.buildSpeakerOrder(totalMessages, aNum, bNum);
+
+    // If speaker order is empty, return null
+    if (speakerOrder.length === 0) {
+      return null;
+    }
+
+    const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
+
+    // Pre-generate localized links for potential topics
+    const potentialTopics = ['travel', 'books', 'music', 'restaurants', 'movies', 'shopping'];
+    const localizedLinks: Record<string, string[]> = {};
+
+    for (const topic of potentialTopics) {
       try {
-        // Build the concrete sender order using the 70/20/10 run distribution
-        const aNum = String(profileA.phoneNumber || '');
-        const bNum = String(profileB.phoneNumber || '');
-
-        const speakerOrder = this.buildSpeakerOrder(totalMessages, aNum, bNum);
-
-        // If speaker order is empty, return null
-        if (speakerOrder.length === 0) {
-          return null;
-        }
-
-            const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
-
-        // Pre-generate localized links for potential topics
-        const potentialTopics = ['travel', 'books', 'music', 'restaurants', 'movies', 'shopping'];
-        const localizedLinks: Record<string, string[]> = {};
-
-        for (const topic of potentialTopics) {
-          try {
-            const links = await this.getLocalizedLinksAI(topic, profileA.location || profileB.location);
-            localizedLinks[topic] = links;
-          } catch (error) {
-            console.warn(`Failed to generate links for ${topic}:`, error);
-            localizedLinks[topic] = this.getDefaultLinks(topic);
-          }
-        }
-
-        const prompt = this.buildConversationPrompt(profileA, profileB, totalMessages, lastConversation, speakerOrder, topicHint, localizedLinks);
-
-        // Schema: keep from/to flexible (we enforce after parsing),
-        // and forbid trailing "!" or "." on text
-        const convoSchema: JsonSchema = {
-          type: 'object',
-          name: 'ConversationResponse',
-          additionalProperties: false,
-          required: ['messages'],
-          properties: {
-            messages: {
-              type: 'array',
-              minItems: Math.max(1, totalMessages - 2), // Allow some flexibility in minimum count
-              maxItems: totalMessages + 2, // Allow some flexibility in maximum count
-              items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['fromNumber', 'toNumber', 'text'],
-                properties: {
-                  fromNumber: { type: 'string', minLength: 1 },
-                  toNumber: { type: 'string', minLength: 1 },
-                  text: {
-                    type: 'string',
-                    minLength: 1,
-                    maxLength: 200,
-                    // Allow emoji-only messages and links, but still prevent trailing ! or .
-                    pattern: '^.+[^!.]$',
-                  },
-                },
-              },
-            },
-          },
-        };
-
-        const parsed = await this.ai.requestWithJsonSchema<{ messages: WAConversation[] }>([this.ai.createUserMessage(prompt)], convoSchema, {
-          temperature: 0.4,
-        });
-
-        if (!parsed) {
-          console.error(`[AI Error] Failed to parse AI response (attempt ${retryCount + 1}/${maxRetries})`);
-          retryCount++;
-          continue;
-        }
-
-        // Validate that no messages have empty text
-        if (parsed.messages) {
-          let hasInvalidMessages = false;
-          for (let i = 0; i < parsed.messages.length; i++) {
-            const msg = parsed.messages[i];
-
-            if (!msg.text || msg.text.trim() === '') {
-              console.error(`[AI Error] Empty text in message ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg);
-              hasInvalidMessages = true;
-              break;
-            }
-
-            // Validate emoji-only messages are reasonable length
-            if (
-              /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(msg.text.trim())
-            ) {
-              if (msg.text.trim().length > 10) {
-                console.error(`[AI Error] Emoji-only message too long at index ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg.text);
-                hasInvalidMessages = true;
-                break;
-              }
-            }
-          }
-
-          if (hasInvalidMessages) {
-            retryCount++;
-            continue;
-          }
-        }
-
-        const enforcedMessages = this.enforceSpeakerOrder(parsed.messages, speakerOrder);
-
-        // If we have valid messages (even if fewer than expected), return them
-        if (enforcedMessages.length > 0) {
-          return enforcedMessages;
-        }
-
-        // If no valid messages were produced, retry
-        console.error(`[AI Error] No valid messages produced after enforcing speaker order (attempt ${retryCount + 1}/${maxRetries})`);
-        retryCount++;
-        
+        const links = await this.getLocalizedLinksAI(topic, profileA.location || profileB.location);
+        localizedLinks[topic] = links;
       } catch (error) {
-        console.error(`[AI Error] Failed to generate conversation (attempt ${retryCount + 1}/${maxRetries}):`, error);
-        retryCount++;
+        console.warn(`Failed to generate links for ${topic}:`, error);
+        localizedLinks[topic] = this.getDefaultLinks(topic);
       }
     }
 
-    // If all retries failed, return null
-    console.error(`[AI Error] Failed to generate conversation after ${maxRetries} attempts`);
-    return null;
+    const prompt = this.buildConversationPrompt(profileA, profileB, totalMessages, lastConversation, speakerOrder, topicHint, localizedLinks);
+
+    // Schema: keep from/to flexible (we enforce after parsing),
+    // and forbid trailing "!" or "." on text
+    const convoSchema: JsonSchema = {
+      type: 'object',
+      name: 'ConversationResponse',
+      additionalProperties: false,
+      required: ['messages'],
+      properties: {
+        messages: {
+          type: 'array',
+          minItems: totalMessages,
+          maxItems: totalMessages,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['fromNumber', 'toNumber', 'text'],
+            properties: {
+              fromNumber: { type: 'string', minLength: 1 },
+              toNumber: { type: 'string', minLength: 1 },
+              text: {
+                type: 'string',
+                minLength: 1,
+                maxLength: 200,
+                // Allow emoji-only messages and links, but still prevent trailing ! or .
+                pattern: '^.+[^!.]$',
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const parsed = await this.ai.requestWithJsonSchema<{ messages: WAConversation[] }>([this.ai.createUserMessage(prompt)], convoSchema, {
+      temperature: 0.4,
+    });
+
+    if (!parsed) {
+      console.error('[AI Error] Failed to parse AI response');
+      return null;
+    }
+
+    // Validate that no messages have empty text
+    if (parsed.messages) {
+      for (let i = 0; i < parsed.messages.length; i++) {
+        const msg = parsed.messages[i];
+
+        if (!msg.text || msg.text.trim() === '') {
+          console.error(`[AI Error] Empty text in message ${i}:`, msg);
+          return null;
+        }
+
+        // Validate emoji-only messages are reasonable length
+        if (
+          /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(msg.text.trim())
+        ) {
+          if (msg.text.trim().length > 10) {
+            console.error(`[AI Error] Emoji-only message too long at index ${i}:`, msg.text);
+            return null;
+          }
+        }
+      }
+    }
+
+    try {
+      const enforcedMessages = this.enforceSpeakerOrder(parsed.messages, speakerOrder);
+
+      // If no valid messages were produced, return null instead of empty array
+      if (enforcedMessages.length === 0) {
+        console.error('[AI Error] No valid messages produced after enforcing speaker order');
+        return null;
+      }
+
+      return enforcedMessages;
+    } catch (error) {
+      console.error('Failed to enforce speaker order:', error);
+
+      return null;
+    }
   }
 
   // Persona
