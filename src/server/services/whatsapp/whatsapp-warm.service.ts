@@ -18,7 +18,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
-  private readonly maxRetryAttempt = 3;
+  private readonly maxRetryAttempt = 1;
   private readonly dailyScheduleTimeHour = 9;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
@@ -585,7 +585,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             await instance.send(currentMessage.toNumber, messageContent, {
               trackDelivery: true, // Enable delivery tracking
               waitForDelivery: true, // Wait for delivery confirmation
-              waitTimeout: 60000 * 2, // 2 minute timeout
+              waitTimeout: 60000, // 1 minute timeout
               throwOnDeliveryError: true, // Throw to see the actual error
             });
           } else {
