@@ -642,6 +642,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.updatePrivacy();
           await this.updateProfile();
 
+          if (this.appState?.lastSentMessage !== this.getTodayDate()) {
+            await this.update({ dailyMessageCount: 0, outgoingMessageCount: 0 } as WAAppAuth<T>);
+          }
+
           // Trigger ready callback
           await this.onReady(this);
         } else {
