@@ -1,6 +1,6 @@
 import type { WAAppAuth, WAAppKey, WAMessage, WAMessageIncomingRaw, WAMessageOutgoingRaw, WAMessageDelivery } from './whatsapp-instance.type';
 import type { WAPersona } from './whatsapp.type';
-import { mongo, Schema } from 'mongoose';
+import { Schema } from 'mongoose';
 import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
 import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
@@ -75,7 +75,6 @@ export const WhatsAppMessage = new MongoService<
   WAMessage & {
     raw: WAMessageIncomingRaw | WAMessageOutgoingRaw;
     createdAt: Date;
-    previousId: mongo.ObjectId;
   } & Partial<InterestResult & WAMessageDelivery>
 >(
   'WhatsAppMessage',
@@ -86,8 +85,6 @@ export const WhatsAppMessage = new MongoService<
     internalFlag: { type: Boolean },
     warmingFlag: { type: Boolean },
     raw: { type: Schema.Types.Mixed },
-    info: { type: Schema.Types.Mixed },
-    previousId: { type: Schema.Types.ObjectId },
     createdAt: { type: Date },
     // Delivery status tracking
     status: { type: String, enum: Object.values(MessageStatusEnum) },
@@ -96,6 +93,7 @@ export const WhatsAppMessage = new MongoService<
     readAt: { type: Date },
     errorCode: { type: Number },
     errorMessage: { type: String },
+    messageId: { type: String }, // ID from WhatsApp system
     // Interest classification
     interested: { type: Boolean },
     intent: { type: String, enum: Object.values(LeadIntentEnum) },
@@ -119,6 +117,7 @@ export const WhatsAppMessage = new MongoService<
       { fields: { status: 1 }, options: { name: 'deliveryStatus_status_index' } },
       { fields: { deliveredAt: 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
       { fields: { readAt: 1 }, options: { name: 'deliveryStatus_readAt_index' } },
+      { fields: { messageId: 1 }, options: { unique: true, name: 'messageId_unique' } },
       // Compound indexes for common query patterns
       { fields: { status: 1, deliveredAt: 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },
       { fields: { status: 1, readAt: 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },

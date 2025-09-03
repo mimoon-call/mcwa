@@ -1,5 +1,5 @@
 import { WhatsappInstance } from './whatsapp-instance.service';
-import { AnyMessageContent, proto } from '@whiskeysockets/baileys';
+import { proto } from '@whiskeysockets/baileys';
 
 import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
@@ -67,20 +67,18 @@ export type WAMessage = {
   toJid?: string;
   internalFlag?: boolean;
   warmingFlag?: boolean;
-  info?: WebMessageInfo;
 };
 
 export type WAMessageIncoming = WAMessage;
 export type WAMessageOutgoing = WAMessage;
 
 export type WAMessageIncomingRaw = IWebMessageInfo;
-export type WAMessageOutgoingRaw = AnyMessageContent;
+export type WAMessageOutgoingRaw = WebMessageInfo;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => Promise<unknown> | unknown;
 export type WAMessageOutgoingCallback = (
   message: WAMessageOutgoing,
-  raw: WAMessageOutgoingRaw,
-  info?: WebMessageInfo,
+  raw?: WAMessageOutgoingRaw,
   deliveryStatus?: WAMessageDelivery
 ) => Promise<unknown> | unknown;
 export type WAMessageBlockCallback = (fromNumber: string, toNumber: string, reason: string) => Promise<unknown> | unknown;

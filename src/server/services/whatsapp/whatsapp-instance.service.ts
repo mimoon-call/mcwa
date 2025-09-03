@@ -113,10 +113,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     // Event callbacks
     this.onRemove = () => config.onRemove?.(phoneNumber);
     this.onDisconnect = (reason: string) => config.onDisconnect?.(phoneNumber, reason);
-    this.onIncomingMessage = (data, raw, messageId) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, raw, messageId);
-    this.onOutgoingMessage = (data, raw, info, deliveryStatus) =>
-      config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw, info, deliveryStatus);
-    this.onMessageUpdate = (messageId, deliveryStatus) => config.onMessageUpdate?.(messageId, deliveryStatus);
+    this.onIncomingMessage = (data, ...arg) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, ...arg);
+    this.onOutgoingMessage = (data, ...arg) => config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, ...arg);
+    this.onMessageUpdate = (...arg) => config.onMessageUpdate?.(...arg);
     this.hasGlobalMessageUpdateCallback = !!config.onMessageUpdate;
     this.onMessageBlocked = async (fromNumber: string, toNumber: string, blockReason: string) => {
       await this.update({ blockedCount: (this.appState?.blockedCount || 0) + 1 } as WAAppAuth<T>);
@@ -1409,7 +1408,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
 
-        const result: WebMessageInfo | undefined = await (async () => {
+        const raw: WebMessageInfo | undefined = await (async () => {
           if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
           await this.socket.presenceSubscribe(jid); // Subscribe to presence updates
@@ -1431,9 +1430,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         this.log('info', `Message sent successfully to ${jid}`);
 
         // Track message delivery and set up callbacks if requested
-        const messageId = result?.key?.id;
+        const messageId = raw?.key?.id;
         if (messageId) {
-          if (options?.onUpdate || this.hasGlobalMessageUpdateCallback || options?.trackDelivery) {
+          // Only set up callbacks if not already tracking (to avoid overwriting delivery status)
+          if ((options?.onUpdate || this.hasGlobalMessageUpdateCallback) && !options?.trackDelivery) {
             this.trackMessageDelivery(messageId, this.phoneNumber, toNumber, options);
           }
 
@@ -1470,14 +1470,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Trigger outgoing message callback
         try {
-          await this.onOutgoingMessage?.(record, content, result, deliveryStatus || undefined);
+          console.log('whatsappInstance:Outgoing message record:', record, raw, deliveryStatus);
+          await this.onOutgoingMessage?.(record, raw, deliveryStatus || undefined);
         } catch (error) {
           this.log('error', 'Error in outgoing message callback:', error);
         }
 
-        onSuccess?.(result);
+        onSuccess?.(raw);
 
-        return { ...result, ...(deliveryStatus || {}) } as unknown as WebMessageInfo & Partial<WAMessageDelivery>;
+        return { ...raw, ...(deliveryStatus || {}) } as unknown as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 

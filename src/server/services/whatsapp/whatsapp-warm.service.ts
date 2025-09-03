@@ -38,13 +38,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     // outgoing message callback wrapper
-    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw, info, deliveryStatus) => {
+    const onOutgoingMessage: WAMessageOutgoingCallback = (message, raw, deliveryStatus) => {
       const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
       const internalFlag = instances.includes(message.toNumber);
       const warmingFlag =
         internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.toNumber));
 
-      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw, info, deliveryStatus);
+      return config.onOutgoingMessage?.({ ...message, internalFlag, warmingFlag }, raw, deliveryStatus);
     };
 
     super({ ...config, onIncomingMessage, onOutgoingMessage });
