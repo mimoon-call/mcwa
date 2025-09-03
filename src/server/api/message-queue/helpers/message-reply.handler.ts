@@ -6,33 +6,33 @@ import { wa } from '@server/index';
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
 
-// Helper types for clarity
-type TranscriptItem = {
-  from: 'LEAD' | 'YOU';
-  text: string;
-  at?: string; // ISO string (optional but useful)
-};
+type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 
-export const messageReplyHandler = async (messageId: ObjectId): Promise<void> => {
-  const message = await WhatsAppMessage.findOne({ _id: messageId });
-  if (!message) return;
+export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
+  const { fromNumber, toNumber, startId, text } = await (async () => {
+    const message = await WhatsAppMessage.findOne({ _id: id });
+    if (!message) return {};
 
-  // last outbound you sent to this lead
-  const previousMessage = await WhatsAppMessage.findOne({ toNumber: message.fromNumber, fromNumber: message.toNumber }, null, {
-    sort: { createdAt: -1 },
-  });
+    const startMessage = await WhatsAppMessage.findOne({ toNumber: message.fromNumber, fromNumber: message.toNumber }, null, {
+      sort: { createdAt: -1 },
+    });
 
-  if (!previousMessage) return;
+    if (!startMessage) return {};
 
-  const timeoutKey = previousMessage._id.toString();
+    return { startId: startMessage._id, text: startMessage.text, fromNumber: message.fromNumber, toNumber: message.toNumber };
+  })();
+
+  if (!startId) return;
+
+  const timeoutKey = startId.toString();
 
   // clear any pending debounce for this outreach
   clearTimeout(replyTimeout.get(timeoutKey));
 
   const handle = setTimeout(
     async () => {
-      const leadNumber = message.fromNumber; // LEAD
-      const yourNumber = message.toNumber; // YOU
+      const leadNumber = fromNumber; // LEAD
+      const yourNumber = toNumber; // YOU
 
       // === NEW: collect a full 12h window, both directions, between the same pair ===
       const WINDOW_HOURS = 12;
@@ -63,19 +63,19 @@ export const messageReplyHandler = async (messageId: ObjectId): Promise<void> =>
 
       try {
         const ai = await classifyInterest(svc, {
-          outreachText: previousMessage.text ?? '',
+          outreachText: text ?? '',
           leadReplies,
           localeHint: 'he-IL',
           timezone: 'Asia/Jerusalem',
           referenceTimeIso: new Date().toISOString(),
         });
 
-        console.log('INCOMING', `[${message.fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
+        console.log('INCOMING', `[${fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
 
         if (!ai) return;
 
         // persist classification on the outreach message
-        await WhatsAppMessage.updateOne({ _id: previousMessage._id }, { $set: ai });
+        await WhatsAppMessage.updateOne({ _id: startId }, { $set: ai });
 
         if (ai.suggestedReply) {
           try {

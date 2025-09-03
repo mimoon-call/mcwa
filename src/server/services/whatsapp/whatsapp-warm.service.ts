@@ -28,13 +28,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
-    const onIncomingMessage: WAMessageIncomingCallback = (message, raw) => {
+    const onIncomingMessage: WAMessageIncomingCallback = (message, raw, messageId) => {
       const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
       const internalFlag = instances.includes(message.fromNumber);
       const warmingFlag =
         internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.fromNumber));
 
-      return config.onIncomingMessage?.({ ...message, internalFlag, warmingFlag }, raw);
+      return config.onIncomingMessage?.({ ...message, internalFlag, warmingFlag }, raw, messageId);
     };
 
     // outgoing message callback wrapper
@@ -586,8 +586,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             await instance.send(currentMessage.toNumber, messageContent, {
               trackDelivery: true, // Enable delivery tracking
               waitForDelivery: true, // Wait for delivery confirmation
-              waitForRead: true, // Wait for read confirmation
-              waitTimeout: 60000, // 1 minute timeout
+              waitTimeout: 60000 * 2, // 2 minute timeout
               throwOnDeliveryError: true, // Throw to see the actual error
             });
           } else {
@@ -649,7 +648,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   onMessage(callback?: WAMessageIncomingCallback) {
-    super.onMessage(async (message: WAMessageIncoming, raw: WAMessageIncomingRaw) => {
+    super.onMessage(async (message: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => {
       const { fromNumber, toNumber, text } = message;
       const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
       const isInternal = instances.includes(fromNumber);
@@ -671,7 +670,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         return;
       }
 
-      await callback?.(message, raw);
+      await callback?.(message, raw, messageId);
     });
   }
 }

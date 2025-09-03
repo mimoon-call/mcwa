@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import type {
+import {
   IMessage,
   IWebMessageInfo,
   WAAppAuth,
@@ -8,12 +8,15 @@ import type {
   WAMessageIncoming,
   WAMessageIncomingRaw,
   WAMessageOutgoing,
-  WAMessageOutgoingRaw,
   WAOutgoingContent,
   WASendOptions,
   AuthenticationCreds,
   WebMessageInfo,
   WAMessageDelivery,
+  WAMessageOutgoingCallback,
+  WAMessageIncomingCallback,
+  WAMessageUpdateCallback,
+  WAOnReadyCallback,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -69,15 +72,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private readonly updateAppKey: (keyType: string, keyId: string, data: Partial<any>) => Promise<void>;
   private readonly getAppKeys: () => Promise<any[]>;
   private readonly onRemove: () => Promise<unknown> | unknown;
-  private readonly onIncomingMessage: (data: Omit<WAMessageIncoming, 'toNumber'>, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
-  private readonly onOutgoingMessage: (
-    data: Omit<WAMessageOutgoing, 'fromNumber'>,
-    raw: WAMessageOutgoingRaw,
-    info?: WebMessageInfo,
-    deliveryStatus?: WAMessageDelivery
-  ) => Promise<unknown> | unknown;
+  private readonly onIncomingMessage: WAMessageIncomingCallback;
+  private readonly onOutgoingMessage: WAMessageOutgoingCallback;
+  private readonly onMessageUpdate: WAMessageUpdateCallback;
+  private readonly hasGlobalMessageUpdateCallback: boolean;
   private readonly onMessageBlocked: WAMessageBlockCallback;
-  private readonly onReady: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
+  private readonly onReady: WAOnReadyCallback<T>;
   private readonly onDisconnect: (reason: string) => Promise<unknown> | unknown;
   private readonly onError: (error: any) => Promise<unknown> | unknown;
   private readonly onUpdate: (data: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
@@ -113,9 +113,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     // Event callbacks
     this.onRemove = () => config.onRemove?.(phoneNumber);
     this.onDisconnect = (reason: string) => config.onDisconnect?.(phoneNumber, reason);
-    this.onIncomingMessage = (data, raw) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, raw);
+    this.onIncomingMessage = (data, raw, messageId) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, raw, messageId);
     this.onOutgoingMessage = (data, raw, info, deliveryStatus) =>
       config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, raw, info, deliveryStatus);
+    this.onMessageUpdate = (messageId, deliveryStatus) => config.onMessageUpdate?.(messageId, deliveryStatus);
+    this.hasGlobalMessageUpdateCallback = !!config.onMessageUpdate;
     this.onMessageBlocked = async (fromNumber: string, toNumber: string, blockReason: string) => {
       await this.update({ blockedCount: (this.appState?.blockedCount || 0) + 1 } as WAAppAuth<T>);
 
@@ -759,7 +761,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         // Normalize & dispatch
         try {
           const [data, raw] = this.normalizeIncomingMessage(message, sock);
-          this.onIncomingMessage(data, raw);
+          this.onIncomingMessage(data, raw, message.key.id);
         } catch (error: any) {
           this.log('error', 'onIncomingMessage failed:', error);
 
@@ -1028,6 +1030,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const delivery = this.messageDeliveries.get(messageId);
         if (!delivery) return;
 
+        // Trigger message update callbacks if provided
+        try {
+          // Call message-specific callback
+          options.onUpdate?.(messageId, delivery);
+          // Call global callback
+          this.onMessageUpdate?.(messageId, delivery);
+        } catch (error) {
+          this.log('error', 'Error in message update callback:', error);
+        }
+
         if (delivery.status === targetStatus) {
           clearTimeout(timeoutId);
           resolve();
@@ -1080,6 +1092,54 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         originalReject(reason);
       }) as any;
     });
+  }
+
+  // Set up message update callbacks for messages that don't use waitForDelivery/waitForRead
+  private setupMessageUpdateCallbacks(messageId: string, options: WASendOptions): void {
+    if (!options.onUpdate && !this.hasGlobalMessageUpdateCallback) return;
+
+    const timeout = options.waitTimeout || 30000;
+    let hasResolved = false;
+
+    // Set up timeout for cleanup
+    const timeoutId = setTimeout(() => {
+      if (hasResolved) return;
+      hasResolved = true;
+      clearInterval(checkInterval);
+    }, timeout);
+
+    // Set up status checker
+    const checkStatus = () => {
+      if (hasResolved) return;
+
+      const delivery = this.messageDeliveries.get(messageId);
+      if (!delivery) return;
+
+      // Trigger message update callbacks
+      try {
+        // Call message-specific callback
+        options.onUpdate?.(messageId, delivery);
+        // Call global callback
+        this.onMessageUpdate?.(messageId, delivery);
+      } catch (error) {
+        this.log('error', 'Error in message update callback:', error);
+      }
+
+      // Check if we should stop tracking (message reached final state)
+      if (delivery.status === 'READ' || delivery.status === 'ERROR') {
+        hasResolved = true;
+        clearTimeout(timeoutId);
+        clearInterval(checkInterval);
+      }
+    };
+
+    // Set up interval to check status
+    const checkInterval = setInterval(checkStatus, 1000); // Check every second
+
+    // Clean up after timeout
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, timeout + 1000); // Give a bit of extra time for cleanup
   }
 
   private startHealthCheck() {
@@ -1366,10 +1426,19 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         this.log('info', `Message sent successfully to ${jid}`);
 
+        // Track message delivery and set up callbacks if requested
+        const messageId = result?.key?.id;
+        if (messageId) {
+          if (options?.onUpdate || this.hasGlobalMessageUpdateCallback || options?.trackDelivery) {
+            this.trackMessageDelivery(messageId, this.phoneNumber, toNumber, options);
+          }
+
+          this.setupMessageUpdateCallbacks?.(messageId, options || {});
+        }
+
         // Wait for delivery confirmation if requested
         let deliveryStatus: WAMessageDelivery | null = null;
         if (options?.waitForDelivery || options?.waitForRead) {
-          const messageId = result?.key?.id;
           if (messageId) {
             this.log('info', `Waiting for delivery confirmation for message ${messageId}...`);
 
@@ -1377,8 +1446,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               await this.waitForMessageStatus(messageId, options);
               this.log('info', `Message ${messageId} delivery confirmed`);
               deliveryStatus = this.getMessageDeliveryStatus(messageId);
-            } catch (error) {
-              this.log('warn', `Delivery confirmation timeout for message ${messageId}:`, error);
+            } catch (_error) {
+              this.log('warn', `Delivery confirmation timeout for message (${messageId})`, toNumber);
               deliveryStatus = this.getMessageDeliveryStatus(messageId);
 
               // Check if we should throw on delivery error
@@ -1405,12 +1474,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         onSuccess?.(result);
 
         return { ...result, ...(deliveryStatus || {}) } as unknown as WebMessageInfo & Partial<WAMessageDelivery>;
-      } catch (err: unknown) {
-        lastError = err;
+      } catch (error: any) {
+        lastError = error;
 
         // Enhanced error detection for blocks
-        const errorMessage = (err as any)?.message || '';
-        const errorCode = (err as any)?.output?.statusCode || (err as any)?.statusCode;
+        const errorMessage = error?.message || '';
+        const errorCode = error?.output?.statusCode || error?.statusCode;
 
         // Detect specific block scenarios
         if (errorCode === 403 || errorMessage.includes('Forbidden')) {
@@ -1431,7 +1500,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           throw new Error(`Message blocked: Rate limited`);
         }
 
-        this.log('error', `Send attempt ${attempt} failed:`, err);
+        this.log('error', `Send attempt ${attempt} failed:`, error.message);
 
         if (attempt < maxRetries) {
           const delay = Math.min(retryDelay * Math.pow(2, attempt - 1), 5000);

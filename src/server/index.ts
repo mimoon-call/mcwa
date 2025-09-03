@@ -18,6 +18,7 @@ import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-w
 import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
 import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
 import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
+import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -46,7 +47,7 @@ export const app = new ServerExpress({
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
-  onIncomingMessage: async (msg, raw) => {
+  onIncomingMessage: async (msg, raw, messageId) => {
     // Internal message
     if (msg.internalFlag) {
       console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}]`, msg.text);
@@ -54,12 +55,15 @@ export const wa = new WhatsappWarmService({
       return;
     }
 
-    const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, status: 'RECEIVED', createdAt: getLocalTime() });
+    const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, messageId, status: MessageStatusEnum.RECEIVED, createdAt: getLocalTime() });
     await messageReplyHandler(_id);
   },
   onOutgoingMessage: async (msg, raw, info, deliveryStatus) => {
     const messageData = { ...msg, raw, info, ...(deliveryStatus || {}), createdAt: getLocalTime() };
     await WhatsAppMessage.insertOne(messageData);
+  },
+  onMessageUpdate: async (messageId, deliveryStatus) => {
+    await WhatsAppMessage.updateOne({ messageId }, { $set: deliveryStatus });
   },
 });
 

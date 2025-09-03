@@ -5,11 +5,7 @@ import type {
   WAMessageIncoming,
   WAMessageIncomingCallback,
   WAMessageIncomingRaw,
-  WAMessageOutgoing,
-  WAMessageOutgoingRaw,
   WAOutgoingContent,
-  WebMessageInfo,
-  WAMessageDelivery,
   WASendOptions,
 } from './whatsapp-instance.type';
 import type { WAServiceConfig } from './whatsapp.type';
@@ -109,17 +105,12 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     this.debugMode = config.debugMode;
 
-    this.outgoingMessageCallback = (
-      data: WAMessageOutgoing,
-      raw: WAMessageOutgoingRaw,
-      info?: WebMessageInfo,
-      deliveryStatus?: WAMessageDelivery
-    ) => {
-      return config.onOutgoingMessage?.(data, raw, info, deliveryStatus);
+    this.outgoingMessageCallback = (...arg) => {
+      return config.onOutgoingMessage?.(...arg);
     };
 
-    this.incomingMessageCallback = async (data: WAMessageIncoming, raw: WAMessageIncomingRaw) => {
-      return Promise.allSettled([config.onIncomingMessage?.(data, raw), ...this.messageCallback.map((cb) => cb?.(data, raw))]);
+    this.incomingMessageCallback = async (...arg) => {
+      return Promise.allSettled([config.onIncomingMessage?.(...arg), ...this.messageCallback.map((cb) => cb?.(...arg))]);
     };
 
     if (config.onUpdate) {
@@ -364,7 +355,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     this.lastUsedNumbers.push(instance.phoneNumber);
 
-    return await instance.send(toNumber, content, {
+    const result = await instance.send(toNumber, content, {
       maxRetries: this.MAX_DECRYPTION_RETRIES,
       retryDelay: this.DECRYPTION_RETRY_DELAY,
       trackDelivery: true,
@@ -372,13 +363,15 @@ export class WhatsappService<T extends object = Record<never, never>> {
       waitTimeout: 30000,
       ...(options || {}),
     });
+
+    return { ...result, instanceNumber: instance.phoneNumber };
   }
 
   onMessage(callback: WAMessageIncomingCallback) {
-    this.messageCallback.push(({ fromNumber, toNumber, ...message }: WAMessageIncoming, raw: WAMessageIncomingRaw) => {
+    this.messageCallback.push(({ fromNumber, toNumber, ...message }: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => {
       this.log('info', `[${fromNumber}]`, `Received message from ${fromNumber} to ${toNumber}:`, message.text);
 
-      callback({ fromNumber, toNumber, ...message }, raw);
+      callback({ fromNumber, toNumber, ...message }, raw, messageId);
     });
   }
 

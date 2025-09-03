@@ -55,6 +55,8 @@ export type WASendOptions = {
   waitTimeout?: number; // milliseconds, default 30000
   // Error handling
   throwOnDeliveryError?: boolean; // Throw error if delivery fails (default: false)
+  // Message update callbacks (run regardless of waitForDelivery/waitForRead)
+  onUpdate?: (messageId: string, deliveryStatus: WAMessageDelivery) => void;
 };
 
 export type WAMessage = {
@@ -74,7 +76,7 @@ export type WAMessageOutgoing = WAMessage;
 export type WAMessageIncomingRaw = IWebMessageInfo;
 export type WAMessageOutgoingRaw = AnyMessageContent;
 
-export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
+export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => Promise<unknown> | unknown;
 export type WAMessageOutgoingCallback = (
   message: WAMessageOutgoing,
   raw: WAMessageOutgoingRaw,
@@ -82,6 +84,8 @@ export type WAMessageOutgoingCallback = (
   deliveryStatus?: WAMessageDelivery
 ) => Promise<unknown> | unknown;
 export type WAMessageBlockCallback = (fromNumber: string, toNumber: string, reason: string) => Promise<unknown> | unknown;
+export type WAMessageUpdateCallback = (messageId: string, deliveryStatus: WAMessageDelivery) => Promise<unknown> | unknown;
+export type WAOnReadyCallback<T extends object> = (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
 
 export type WAOutgoingContent =
   | string
@@ -105,9 +109,10 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   onIncomingMessage: WAMessageIncomingCallback;
   onOutgoingMessage: WAMessageOutgoingCallback;
   onMessageBlocked: WAMessageBlockCallback;
+  onMessageUpdate: WAMessageUpdateCallback;
   // Callbacks for instance events
   onRegistered: (phoneNumber: string) => Promise<unknown> | unknown;
-  onReady: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
+  onReady: WAOnReadyCallback<T>;
   onDisconnect: (phoneNumber: string, reason: string) => Promise<unknown> | unknown;
   onError: (phoneNumber: string, error: any) => Promise<unknown> | unknown;
   onRemove: (phoneNumber: string) => Promise<unknown> | unknown;
