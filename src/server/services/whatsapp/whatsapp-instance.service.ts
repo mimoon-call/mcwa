@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import {
+import type {
   IMessage,
   IWebMessageInfo,
   WAAppAuth,
@@ -41,7 +41,6 @@ type HandleOutgoingMessage = { jid: string; content: AnyMessageContent; record: 
 type CreateSocketOptions = Partial<{ connectTimeoutMs: number; keepAliveIntervalMs: number; retryRequestDelayMs: number }>;
 
 const silentLogger = pino({ level: 'silent', enabled: false });
-
 const readFile = promisify(fs.readFile);
 const writeFile = promisify(fs.writeFile);
 const unlink = promisify(fs.unlink);
@@ -123,17 +122,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       return config.onMessageBlocked?.(fromNumber, toNumber, blockReason);
     };
     this.onUpdate = (data: Partial<WAAppAuth<T>>) => {
-      if (!data || !this.appState || !config.onUpdate) {
-        return;
-      }
+      if (!data || !this.appState || !config.onUpdate) return;
 
       const updateKeys = Object.keys(data);
       const updateState = Object.entries(this.appState).reduce((acc: Partial<WAAppAuth<T>>, [key, value]) => {
-        if (updateKeys.includes(key) || key === 'phoneNumber') {
-          return { ...acc, [key]: value };
-        }
-
-        return acc;
+        return updateKeys.includes(key) || key === 'phoneNumber' ? { ...acc, [key]: value } : acc;
       }, {});
 
       return config.onUpdate(updateState);
@@ -166,11 +159,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       return config.onError?.(phoneNumber, error);
     };
+
     this.onReady = () => {
       this.log('info', '✅ Instance is ready');
 
       return config.onReady?.(this);
     };
+
     this.onRegister = () => config.onRegistered?.(this.phoneNumber);
   }
 
@@ -233,7 +228,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   private handleOutgoingMessage(fromNumber: string, toNumber: string, payload: WAOutgoingContent): HandleOutgoingMessage {
     const jid = this.numberToJid(toNumber);
-
     let content: AnyMessageContent;
     let textForRecord = '';
 
@@ -249,14 +243,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         textForRecord = payload.text;
         content = { text: payload.text };
         break;
-
       case 'image':
       case 'video':
       case 'audio':
         textForRecord = payload.caption ?? '';
         content = { image: payload.data, caption: payload.caption, mimetype: payload.mimetype } as AnyMessageContent;
         break;
-
       case 'document':
         textForRecord = payload.caption ?? payload.fileName;
         content = { document: payload.data, fileName: payload.fileName, mimetype: payload.mimetype, caption: payload.caption } as AnyMessageContent;
@@ -272,18 +264,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     try {
       const files = await readdir(this.TEMP_DIR);
 
-      for (const file of files) {
-        await unlink(path.join(this.TEMP_DIR, file));
-      }
-
+      for (const file of files) await unlink(path.join(this.TEMP_DIR, file));
       await fs.promises.rmdir(this.TEMP_DIR);
     } catch {
       // Ignore cleanup errors
     }
 
-    if (!includeRecreateDirFlag) {
-      return;
-    }
+    if (!includeRecreateDirFlag) return;
 
     try {
       await mkdir(this.TEMP_DIR, { recursive: true });
@@ -307,9 +294,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         const result: any = {};
-        for (const [key, value] of Object.entries(obj)) {
-          result[key] = convertBinaryToBuffer(value);
-        }
+        for (const [key, value] of Object.entries(obj)) result[key] = convertBinaryToBuffer(value);
 
         return result;
       }
@@ -326,9 +311,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         const result: any = {};
-        for (const [key, value] of Object.entries(obj)) {
-          result[key] = convertBufferToPlain(value);
-        }
+        for (const [key, value] of Object.entries(obj)) result[key] = convertBufferToPlain(value);
 
         return result;
       }
@@ -439,9 +422,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           const fileData = await readFile(filePath, 'utf8');
           const json = recoverCorruptedJson<T>(fileData);
 
-          if (!json) {
-            throw new Error(`${fileName} file is broken`);
-          }
+          if (!json) throw new Error(`${fileName} file is broken`);
 
           return json;
         } catch (_parseError) {
@@ -657,9 +638,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Create a more descriptive reason that includes the error code
         const disconnectReason = code ? `${code}: ${reason}` : reason;
-
         this.update({ statusCode: code, errorMessage: reason } as WAAppAuth<T>);
-
         this.log('info', `Disconnected (${disconnectReason})`);
 
         // Log specific error types for better debugging
@@ -696,9 +675,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             // Attempt to recover from these errors
             try {
               const recovered = await this.handleDecryptionError({ message: reason });
-              if (recovered) {
-                this.log('info', '✅ Error recovery successful after disconnect');
-              }
+              if (recovered) this.log('info', '✅ Error recovery successful after disconnect');
             } catch (recoveryError) {
               this.log('error', '❌ Error recovery failed after disconnect:', recoveryError);
             }
@@ -713,20 +690,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       if (!this.recovering) this.recovering = false;
 
       for (const message of msg.messages) {
-        // Fast exits
         if (!message?.key || message.key.fromMe) continue;
-
-        // Detect missing payload (common decryption symptom)
         const hasPayload = !!message.message;
 
         if (!hasPayload) {
           this.log('warn', '🔐 Detected null/undefined message, attempting recovery...');
-
-          // Prevent recovery stampede
-          if (this.recovering) {
-            this.log('warn', '⏳ Recovery already in progress; skipping duplicate recovery for this batch');
-            continue;
-          }
+          if (this.recovering) continue; // Prevent recovery stampede
 
           this.recovering = true;
           try {
@@ -748,11 +717,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             this.recovering = false;
           }
 
-          // Skip further processing for this specific message (can’t parse it anyway)
-          continue;
+          continue; // Skip further processing for this specific message (can’t parse it anyway)
         }
 
-        // Update inbound counters only
         try {
           this.update({ incomingMessageCount: (this.appState?.incomingMessageCount || 0) + 1 } as WAAppAuth<T>);
         } catch (error) {
@@ -798,14 +765,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         // Update delivery tracking if message ID exists
         if (key.id && updateData.status !== undefined) {
           const statusMap: { [key: number]: keyof typeof MessageStatusEnum } = {
-            1: 'PENDING',
-            2: 'SENT',
-            3: 'DELIVERED',
-            4: 'READ',
-            5: 'ERROR',
+            1: MessageStatusEnum.PENDING,
+            2: MessageStatusEnum.SENT,
+            3: MessageStatusEnum.DELIVERED,
+            4: MessageStatusEnum.READ,
+            5: MessageStatusEnum.ERROR,
           }; // Map numeric status codes to string statuses
+
           const numericStatus = Number(updateData.status);
-          const status = statusMap[numericStatus] || 'ERROR';
+          const status = statusMap[numericStatus] || MessageStatusEnum.ERROR;
           const timestamp = new Date();
 
           this.log('info', `📱 Updating message status: ${key.id} -> ${status} (numeric: ${numericStatus})`);
@@ -882,6 +850,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
+
       return;
     }
 
@@ -910,8 +879,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         if (this.socket?.user && this.socket.user.id) {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-
-          // Check if socket is healthy and update status code if needed
           if (this.connected) await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
         }
       } catch (error) {
@@ -961,20 +928,20 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     delivery.status = status;
 
     switch (status) {
-      case 'DELIVERED':
+      case MessageStatusEnum.DELIVERED:
         delivery.deliveredAt = timestamp || new Date();
         break;
-      case 'READ':
+      case MessageStatusEnum.READ:
         delivery.readAt = timestamp || new Date();
         break;
-      case 'ERROR':
+      case MessageStatusEnum.ERROR:
         delivery.errorCode = errorCode;
         delivery.errorMessage = errorMessage;
         break;
     }
 
     // Clear timeout if message is delivered or read
-    if (['DELIVERED', 'READ'].includes(status)) {
+    if ([MessageStatusEnum.DELIVERED, MessageStatusEnum.READ].includes(status as MessageStatusEnum)) {
       this.clearDeliveryTimeout(messageId);
     }
 
@@ -987,7 +954,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private handleDeliveryTimeout(messageId: string): void {
-    this.updateMessageDeliveryStatus(messageId, 'ERROR', undefined, 408, 'Delivery timeout');
+    this.updateMessageDeliveryStatus(messageId, MessageStatusEnum.ERROR, undefined, 408, 'Delivery timeout');
     this.clearDeliveryTimeout(messageId);
   }
 
@@ -1009,7 +976,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private async waitForMessageStatus(messageId: string, options: WASendOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeout = options.waitTimeout || 30000;
-      const targetStatus = options.waitForRead ? 'READ' : 'DELIVERED';
+      const targetStatus = options.waitForRead ? MessageStatusEnum.READ : MessageStatusEnum.DELIVERED;
 
       // Set timeout for waiting
       const timeoutId = setTimeout(() => {
@@ -1026,7 +993,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         // Check if we've already passed the target status
-        if (targetStatus === 'DELIVERED' && currentDelivery.status === 'READ') {
+        if (targetStatus === MessageStatusEnum.DELIVERED && currentDelivery.status === MessageStatusEnum.READ) {
           clearTimeout(timeoutId);
           resolve();
           return;
@@ -1055,14 +1022,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         // Check if we've already passed the target status
-        if (targetStatus === 'DELIVERED' && delivery.status === 'READ') {
+        if (targetStatus === MessageStatusEnum.DELIVERED && delivery.status === MessageStatusEnum.READ) {
           clearTimeout(timeoutId);
           resolve();
           return;
         }
 
         // Check if there was an error
-        if (delivery.status === 'ERROR') {
+        if (delivery.status === MessageStatusEnum.ERROR) {
           clearTimeout(timeoutId);
           const errorMessage = `Message delivery failed: ${delivery.errorMessage}`;
 
@@ -1134,7 +1101,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       }
 
       // Check if we should stop tracking (message reached final state)
-      if (delivery.status === 'READ' || delivery.status === 'ERROR') {
+      if (delivery.status === MessageStatusEnum.READ || delivery.status === MessageStatusEnum.ERROR) {
         hasResolved = true;
         clearTimeout(timeoutId);
         clearInterval(checkInterval);
@@ -1460,7 +1427,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               deliveryStatus = this.getMessageDeliveryStatus(messageId);
 
               // Check if we should throw on delivery error
-              if (options?.throwOnDeliveryError && deliveryStatus?.status === 'ERROR') {
+              if (options?.throwOnDeliveryError && deliveryStatus?.status === MessageStatusEnum.ERROR) {
                 throw new Error(`Message delivery failed: ${deliveryStatus.errorMessage || 'Unknown error'}`);
               }
             }
@@ -1532,11 +1499,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const isMacError = errorMessage.includes('Bad MAC') || errorMessage.includes('decrypt') || errorMessage.includes('MAC');
     const isUnsupportedStateError = errorMessage.includes('Unsupported state') || errorMessage.includes('unable to authenticate data');
     const isDecryptError = errorMessage.includes('Failed to decrypt message') || errorMessage.includes('decrypt message');
-
-    if (!isMacError && !isUnsupportedStateError && !isDecryptError) {
-      this.log('debug', 'Not a MAC, unsupported state, or decrypt error, skipping recovery:', errorMessage);
-      return false;
-    }
+    if (!isMacError && !isUnsupportedStateError && !isDecryptError) return false;
 
     this.log(
       'warn',
@@ -1544,11 +1507,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     );
 
     try {
-      // For unsupported state errors, try a more aggressive approach first
       if (isUnsupportedStateError) {
         this.log('info', '🔄 Unsupported state error detected, attempting aggressive session reset...');
 
-        // Clear all temporary files and start fresh
         try {
           await this.cleanupAndRemoveTempDir(true);
           this.log('info', '🧹 Temporary files cleared for unsupported state recovery');
@@ -1557,7 +1518,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       }
 
-      // First try a simple refresh
       this.log('info', '🔄 Attempting simple session refresh...');
       const refreshSuccess = await this.refresh();
 
@@ -1601,8 +1561,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         try {
           this.socket = null;
           this.connected = false;
-
-          // Wait a bit longer before second attempt
           await new Promise((resolve) => setTimeout(resolve, 3000));
 
           await this.connect();
@@ -1685,6 +1643,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           return true;
         }
       }
+
       return false;
     } catch (error) {
       this.log('error', 'Failed to refresh session:', error);
@@ -1692,55 +1651,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  /**
-   * Public method to manually trigger MAC error recovery
-   * This can be called externally to attempt recovery from MAC errors
-   */
-  async recoverFromMacError(): Promise<boolean> {
-    this.log('info', '🔄 Manual MAC error recovery triggered');
-
-    try {
-      const recovered = await this.handleDecryptionError({ message: 'Manual recovery triggered' });
-
-      if (recovered) {
-        this.log('info', '✅ Manual MAC error recovery successful');
-      } else {
-        this.log('error', '❌ Manual MAC error recovery failed');
-      }
-
-      return recovered;
-    } catch (error) {
-      this.log('error', '❌ Error during manual MAC error recovery:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Public method to manually trigger decrypt message error recovery
-   * This can be called externally to attempt recovery from decrypt errors
-   */
-  async recoverFromDecryptError(): Promise<boolean> {
-    this.log('info', '🔄 Manual decrypt error recovery triggered');
-
-    try {
-      const recovered = await this.handleDecryptionError({ message: 'Failed to decrypt message - Manual recovery triggered' });
-
-      if (recovered) {
-        this.log('info', '✅ Manual decrypt error recovery successful');
-      } else {
-        this.log('error', '❌ Manual decrypt error recovery failed');
-      }
-
-      return recovered;
-    } catch (error) {
-      this.log('error', '❌ Error during manual decrypt error recovery:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Remove the instance
-   */
   async remove(clearData: boolean = false, delay: number = 5000): Promise<void> {
     try {
       // Check if this was an incomplete registration that should be cleaned up
@@ -1824,16 +1734,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         this.log('info', ' ℹ️Skipping logout as requested');
       }
 
-      // Update connection state
       this.connected = false;
-
-      // Clear socket reference if requested
-      if (clearSocket) {
-        this.socket = null;
-        this.log('info', 'Socket reference cleared');
-      }
-
-      // Trigger disconnect callback
+      if (clearSocket) this.socket = null;
       await this.onDisconnect(reason);
 
       this.log('info', '✅ Disconnect completed successfully');
@@ -1877,10 +1779,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.stopKeepAlive();
     this.stopHealthCheck();
 
-    // Clear all delivery timeouts
-    for (const timeoutId of this.deliveryTimeouts.values()) {
-      clearTimeout(timeoutId);
-    }
+    Array.from(this.deliveryTimeouts.values()).forEach(clearTimeout);
     this.deliveryTimeouts.clear();
     this.messageDeliveries.clear();
 

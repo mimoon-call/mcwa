@@ -143,14 +143,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   private getRealisticDelay(min: number, max: number): number {
-    const random = Math.random();
+    if (Math.random() < 0.8) return this.randomDelayBetween(min, max);
 
-    if (random < 0.8) {
-      return this.randomDelayBetween(min, max);
-    } else {
-      // 3 times slower
-      return this.randomDelayBetween(min * 3, max * 3);
-    }
+    return this.randomDelayBetween(min * 3, max * 3);
   }
 
   private async getLastMessages(fromNumber: string, toNumber: string, limit: number = 10): Promise<WAConversation[]> {
@@ -187,16 +182,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const personaB = instanceB.get() as WAPersona;
 
     // Ensure phone numbers are available
-    if (!personaA.phoneNumber) {
-      personaA.phoneNumber = instanceA.phoneNumber;
-    }
-    if (!personaB.phoneNumber) {
-      personaB.phoneNumber = instanceB.phoneNumber;
-    }
+    if (!personaA.phoneNumber) personaA.phoneNumber = instanceA.phoneNumber;
+    if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
-    const script = await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, prevConversation);
-
-    return script || null;
+    return await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, prevConversation);
   }
 
   private getDailyLimits(instance: WAInstance<WAPersona>) {
@@ -245,17 +234,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       return;
     }
 
-    // Check if conversation is already active or being created
-    if (activeConversations.some((val) => val.includes(key1) || val.includes(key2)) || this.creatingConversation.has(conversationKey)) {
-      this.log('debug', `[${conversationKey}] Skipping - conversation already active or being created`);
-      return;
-    }
-
-    // Additional check: ensure neither phone number is involved in other conversations
-    if (this.hasConflictingConversations(key1) || this.hasConflictingConversations(key2)) {
-      this.log('debug', `[${conversationKey}] Skipping - one or both phone numbers already in other conversations`);
-      return;
-    }
+    // Check if conversation is already active or being created and ensure neither phone number is involved in other conversations
+    if (activeConversations.some((val) => val.includes(key1) || val.includes(key2)) || this.creatingConversation.has(conversationKey)) return;
+    if (this.hasConflictingConversations(key1) || this.hasConflictingConversations(key2)) return;
 
     // Mark this conversation as being created to prevent race conditions
     this.creatingConversation.add(conversationKey);
@@ -290,8 +271,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         this.log('error', `[${conversationKey}]`, 'creating script failed', script);
       }
     } finally {
-      // Always remove from creating set, whether successful or not
-      this.creatingConversation.delete(conversationKey);
+      this.creatingConversation.delete(conversationKey); // Always remove from creating set, whether successful or not
       this.log('debug', `[${conversationKey}] Conversation creation process completed`);
     }
   }
@@ -300,10 +280,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const conversation = this.activeConversation.get(conversationKey) || [];
     const totalMessages = conversation.length;
 
-    if (totalMessages === 0) {
-      return;
-    }
-
+    if (totalMessages === 0) return;
     const sentMessages = conversation.filter(({ sentAt }) => sentAt).length;
     const unsentMessages = conversation.filter(({ sentAt }) => !sentAt).length;
     const isUpdateNeeded = sentMessages > 0;
@@ -409,26 +386,20 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       this.log('debug', `Warm-up today: ${warmUpTodayInstances.length}`);
 
-      // const stillNeededWarm = this.listInstanceNumbers({ hasWarmedUp: false });
-      const stillNeededWarm = this.listInstanceNumbers();
-
       if (warmUpTodayInstances.length === 0) {
         this.log('debug', 'No instances need warming up, stopping warm-up process');
         clearTimeout(this.nextStartWarming);
         this.nextCheckUpdate?.(null);
 
-        if (stillNeededWarm.length > 0) {
-          const nextWarmingTime = this.getNextWarmingTime();
-          const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
+        const nextWarmingTime = this.getNextWarmingTime();
+        const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
-          this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-          this.nextWarmUp = getLocalTime(nextWarmingTime);
-          this.nextCheckUpdate?.(this.nextWarmUp);
+        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
+        this.nextWarmUp = getLocalTime(nextWarmingTime);
+        this.nextCheckUpdate?.(this.nextWarmUp);
 
-          const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
-
-          this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
-        }
+        const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
+        this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
 
         return;
       }
@@ -450,24 +421,19 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
         await this.createConversation(pair);
 
-        // Wait for conversation to be fully set up before proceeding
         const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
         await new Promise((resolve) => setTimeout(resolve, setupDelay));
       }
     } catch (error) {
       this.log('error', 'Error occurred', error);
-      // Schedule retry in 5 minutes if there's an error
-      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), 5 * 60 * 1000);
+      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), 5 * 60 * 1000); // Retry in 5 minutes
     }
   }
 
   public stopWarmingUp() {
     this.isWarming = false;
 
-    // Clear all timeouts properly
-    for (const timerId of this.timeoutConversation.values()) clearTimeout(timerId);
-
-    clearTimeout(this.nextStartWarming);
+    Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
     this.nextCheckUpdate?.(null);
     this.timeoutConversation.clear();
     this.activeConversation.clear();
@@ -513,8 +479,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             if (Math.random() > 0.8) throw new Error('Emulate error');
 
             currentMessage.sentAt = getLocalTime();
-
             const remainingMessages = currentState.filter((msg) => !msg.sentAt);
+
             if (remainingMessages.length === 0) {
               this.log('debug', `[${conversationKey}]`, 'Conversation completed, cleaning up...');
               await this.cleanupConversation(conversationKey);
@@ -539,12 +505,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             if (!isActive) throw new Error(`Instance ${currentMessage.fromNumber} is not active`);
             if (!isConnected) throw new Error(`Instance ${currentMessage.fromNumber} is not connected`);
 
-            // Check if target number is valid
             const targetInstance = this.getInstance(currentMessage.toNumber);
             const targetConnected = targetInstance?.connected;
             const targetActive = targetInstance?.get('isActive');
-
-            this.log('debug', `[${conversationKey}] Target instance status - Connected: ${targetConnected}, Active: ${targetActive}`);
 
             if (!targetInstance) throw new Error(`Target instance ${currentMessage.toNumber} not found`);
             if (!targetConnected) throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
@@ -561,6 +524,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
+
           currentMessage.sentAt = getLocalTime();
 
           try {
