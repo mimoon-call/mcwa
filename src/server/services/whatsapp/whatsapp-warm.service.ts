@@ -492,9 +492,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     const send = (attempt: number = 0) => {
-      const delaySeconds = this.getRealisticDelay(1, 15);
-      const delay = delaySeconds * 1000;
-      const seconds = Math.round(delaySeconds * 100) / 100;
+      const seconds = this.getRealisticDelay(1, 3);
+      const delay = seconds * 1000;
 
       this.log('debug', `[${conversationKey}]`, `schedule message in ${seconds} seconds`, attempt ? `(${attempt}/${this.maxRetryAttempt})` : '');
 

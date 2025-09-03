@@ -607,11 +607,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     // Set privacy settings immediately after connection
     try {
-      // Set last seen to "nobody" (invisible)
       await this.socket.updateLastSeenPrivacy('none');
       this.log('info', 'Privacy: Last seen set to invisible');
 
-      // Set online status to invisible
       await this.socket.updateOnlinePrivacy('match_last_seen');
       this.log('info', 'Privacy: Online status set to invisible');
 
