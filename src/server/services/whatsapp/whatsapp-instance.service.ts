@@ -1470,7 +1470,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Trigger outgoing message callback
         try {
-          console.log('whatsappInstance:Outgoing message record:', record, raw, deliveryStatus);
           await this.onOutgoingMessage?.(record, raw, deliveryStatus || undefined);
         } catch (error) {
           this.log('error', 'Error in outgoing message callback:', error);
