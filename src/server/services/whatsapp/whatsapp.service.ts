@@ -348,23 +348,16 @@ export class WhatsappService<T extends object = Record<never, never>> {
         (num) => !this.lastUsedNumbers.includes(num)
       );
 
-      if (!availableNumbers.length) {
-        this.lastUsedNumbers = [];
-      }
+      if (!availableNumbers.length) this.lastUsedNumbers = [];
 
       availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true }).filter(
         (num) => !this.lastUsedNumbers.includes(num)
       );
 
-      if (!availableNumbers[0]) {
-        throw new Error(`Instance not available to send message to ${toNumber}`);
-      }
+      if (!availableNumbers[0]) throw new Error(`Instance not available to send message to ${toNumber}`);
 
       const selectedInstance = this.instances.get(availableNumbers[0]);
-
-      if (!selectedInstance?.connected) {
-        throw new Error(`Number [${availableNumbers[0]}] is not connected.`);
-      }
+      if (!selectedInstance?.connected) throw new Error(`Number [${availableNumbers[0]}] is not connected.`);
 
       return selectedInstance;
     })();

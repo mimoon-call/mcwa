@@ -71,12 +71,11 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
 );
 
 export const WhatsAppMessage = new MongoService<
-  WAMessage & { 
-    raw: WAMessageIncomingRaw | WAMessageOutgoingRaw; 
-    createdAt: Date; 
+  WAMessage & {
+    raw: WAMessageIncomingRaw | WAMessageOutgoingRaw;
+    createdAt: Date;
     previousId: mongo.ObjectId;
-    deliveryStatus?: WAMessageDelivery;
-  } & Partial<InterestResult>
+  } & Partial<InterestResult & WAMessageDelivery>
 >(
   'WhatsAppMessage',
   {
@@ -90,14 +89,13 @@ export const WhatsAppMessage = new MongoService<
     previousId: { type: Schema.Types.ObjectId },
     createdAt: { type: Date },
     // Delivery status tracking
-    deliveryStatus: {
-      status: { type: String, enum: ['PENDING', 'SENT', 'DELIVERED', 'READ', 'ERROR'] },
-      sentAt: { type: Date },
-      deliveredAt: { type: Date },
-      readAt: { type: Date },
-      errorCode: { type: Number },
-      errorMessage: { type: String },
-    },
+    status: { type: String, enum: ['PENDING', 'SENT', 'DELIVERED', 'READ', 'ERROR'] },
+    sentAt: { type: Date },
+    deliveredAt: { type: Date },
+    readAt: { type: Date },
+    errorCode: { type: Number },
+    errorMessage: { type: String },
+    // Interest classification
     interested: { type: Boolean },
     intent: { type: String, enum: Object.values(LeadIntentEnum) },
     reason: { type: String },
@@ -117,12 +115,12 @@ export const WhatsAppMessage = new MongoService<
       { fields: { internalFlag: 1 }, options: { name: 'internalFlag_index' } },
       { fields: { warmingFlag: 1 }, options: { name: 'warmingFlag_index' } },
       // Delivery status indexes
-      { fields: { 'deliveryStatus.status': 1 }, options: { name: 'deliveryStatus_status_index' } },
-      { fields: { 'deliveryStatus.deliveredAt': 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
-      { fields: { 'deliveryStatus.readAt': 1 }, options: { name: 'deliveryStatus_readAt_index' } },
+      { fields: { status: 1 }, options: { name: 'deliveryStatus_status_index' } },
+      { fields: { deliveredAt: 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
+      { fields: { readAt: 1 }, options: { name: 'deliveryStatus_readAt_index' } },
       // Compound indexes for common query patterns
-      { fields: { 'deliveryStatus.status': 1, 'deliveryStatus.deliveredAt': 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },
-      { fields: { 'deliveryStatus.status': 1, 'deliveryStatus.readAt': 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },
+      { fields: { status: 1, deliveredAt: 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },
+      { fields: { status: 1, readAt: 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },
     ],
     preSave: setModifiedAndCreationDate,
   }

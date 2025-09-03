@@ -271,10 +271,9 @@ export class WhatsappAiService {
 
     let previousContext = '';
     if (previousConversation?.length) {
-      const recentMessages = previousConversation.slice(-6);
       previousContext = `
-📱 PREVIOUS 24H CONTEXT (newest last):
-${recentMessages.map((msg) => `${msg.fromNumber === a.phoneNumber ? a.name : b.name}: "${msg.text}"`).join('\n')}
+📱 PREVIOUS CONTEXT (newest first):
+${previousConversation.map((msg) => `${msg.fromNumber === a.phoneNumber ? a.name : b.name}: "${msg.text}"`).join('\n')}
 
 🎯 CONTINUATION RULE:
 Infer relationship, tone, and slang level from this context. Continue naturally if relevant; otherwise pivot to a light everyday topic without being abrupt.

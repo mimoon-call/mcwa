@@ -1,8 +1,8 @@
 import type { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
 import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type';
 import { WhatsappAiService } from './whatsapp.ai';
-import { LRUCache } from 'lru-cache';
 import { WAInstance, WhatsappService } from './whatsapp.service';
+import { WhatsAppMessage } from './whatsapp.db';
 import { clearTimeout } from 'node:timers';
 import dayjs from 'dayjs';
 import getLocalTime from '@server/helpers/get-local-time';
@@ -18,7 +18,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
-  private readonly lastConversation = new LRUCache<string, WAConversation[]>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
   private readonly maxRetryAttempt = 3;
   private readonly dailyScheduleTimeHour = 9;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
@@ -152,6 +151,29 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
   }
 
+  private async getLastMessages(fromNumber: string, toNumber: string, limit: number = 10): Promise<WAConversation[]> {
+    try {
+      return await WhatsAppMessage.aggregate<WAConversation>([
+        {
+          $match: {
+            $or: [
+              { fromNumber, toNumber },
+              { fromNumber: toNumber, toNumber: fromNumber },
+            ],
+            text: { $exists: true, $nin: ['', null] },
+          },
+        },
+        { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, sentAt: '$createdAt' } },
+        { $sort: { createdAt: -1 } },
+        { $limit: limit },
+      ]);
+    } catch (error) {
+      this.log('error', 'Failed to get last messages from database:', error);
+
+      return [];
+    }
+  }
+
   private async getRandomScript(
     instanceA: WAInstance<WAPersona>,
     instanceB: WAInstance<WAPersona>,
@@ -238,7 +260,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.log('debug', `[${conversationKey}] Starting conversation creation...`);
 
     try {
-      const previousConversation = this.lastConversation.get(conversationKey);
+      const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
+      const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
       const script = await this.getRandomScript(pair[0], pair[1], previousConversation);
 
       if (script?.length) {
@@ -287,9 +310,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.conversationEndCallback?.({ phoneNumber1, phoneNumber2, totalMessages, sentMessages, unsentMessages });
 
     this.log('debug', `[${conversationKey}]`, `total messages: ${totalMessages}, sent: ${sentMessages}, unsent: ${unsentMessages}`);
-
-    const prevConversation = this.lastConversation.get(conversationKey) || [];
-    this.lastConversation.set(conversationKey, [...prevConversation, ...conversation].slice(-10));
 
     // Update counters when conversation is complete (all messages sent) or has sent messages
     if (isUpdateNeeded) {
@@ -525,7 +545,47 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           // Send message using the now-humanized send method
           const instance = this.getInstance(currentMessage.fromNumber);
           if (instance) {
-            await instance.send(currentMessage.toNumber, messageContent, { trackDelivery: true, waitForDelivery: true, waitTimeout: 30000 });
+            // Check instance status before sending
+            const isConnected = instance.connected;
+            const isActive = instance.get('isActive');
+            this.log('debug', `[${conversationKey}] Instance status - Connected: ${isConnected}, Active: ${isActive}`);
+
+            if (!isConnected) {
+              throw new Error(`Instance ${currentMessage.fromNumber} is not connected`);
+            }
+
+            if (!isActive) {
+              throw new Error(`Instance ${currentMessage.fromNumber} is not active`);
+            }
+
+            // Check if target number is valid
+            const targetInstance = this.getInstance(currentMessage.toNumber);
+            const targetConnected = targetInstance?.connected;
+            const targetActive = targetInstance?.get('isActive');
+
+            this.log('debug', `[${conversationKey}] Target instance status - Connected: ${targetConnected}, Active: ${targetActive}`);
+
+            if (!targetInstance) {
+              throw new Error(`Target instance ${currentMessage.toNumber} not found`);
+            }
+
+            if (!targetConnected) {
+              throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
+            }
+
+            if (!targetActive) {
+              throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
+            }
+
+            this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
+
+            await instance.send(currentMessage.toNumber, messageContent, {
+              trackDelivery: true, // Enable delivery tracking
+              waitForDelivery: true, // Wait for delivery confirmation
+              waitForRead: true, // Wait for read confirmation
+              waitTimeout: 60000, // 1 minute timeout
+              throwOnDeliveryError: true, // Throw to see the actual error
+            });
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
