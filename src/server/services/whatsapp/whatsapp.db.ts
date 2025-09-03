@@ -117,7 +117,7 @@ export const WhatsAppMessage = new MongoService<
       { fields: { status: 1 }, options: { name: 'deliveryStatus_status_index' } },
       { fields: { deliveredAt: 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
       { fields: { readAt: 1 }, options: { name: 'deliveryStatus_readAt_index' } },
-      { fields: { messageId: 1 }, options: { unique: true, name: 'messageId_unique' } },
+      { fields: { messageId: 1 }, options: { unique: true, sparse: true, name: 'messageId_unique' } },
       // Compound indexes for common query patterns
       { fields: { status: 1, deliveredAt: 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },
       { fields: { status: 1, readAt: 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },

@@ -59,7 +59,8 @@ export const wa = new WhatsappWarmService({
     await messageReplyHandler(_id);
   },
   onOutgoingMessage: async (msg, raw, deliveryStatus) => {
-    const messageData = { ...msg, raw, ...(deliveryStatus || {}), createdAt: getLocalTime() };
+    const messageId = deliveryStatus?.messageId || raw?.key?.id;
+    const messageData = { ...msg, raw, messageId, ...(deliveryStatus || {}), createdAt: getLocalTime() };
     await WhatsAppMessage.insertOne(messageData);
   },
   onMessageUpdate: async (messageId, { status, sentAt, deliveredAt, errorMessage, errorCode }) => {
