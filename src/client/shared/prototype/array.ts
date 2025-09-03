@@ -3,6 +3,7 @@ import { isEqual, pick } from 'lodash';
 declare global {
   interface Array<T extends object> {
     uniqueBy<K extends keyof T>(keys: K[]): T[];
+    shuffle(): T[];
   }
 }
 
@@ -19,6 +20,22 @@ if (!Array.prototype.uniqueBy) {
         if (!exists) {
           result.push(item);
         }
+      }
+
+      return result;
+    },
+    enumerable: false,
+  });
+}
+
+if (!Array.prototype.shuffle) {
+  Object.defineProperty(Array.prototype, 'shuffle', {
+    value: function <T>(this: T[]): T[] {
+      const result = [...this];
+
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
       }
 
       return result;

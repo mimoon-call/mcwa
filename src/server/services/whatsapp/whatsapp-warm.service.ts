@@ -11,8 +11,6 @@ import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-w
 type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean };
 
 export class WhatsappWarmService extends WhatsappService<WAPersona> {
-  private isWarming: boolean = false;
-  private nextStartWarming: NodeJS.Timeout | undefined;
   private readonly ai = new WhatsappAiService();
   private readonly isEmulation: boolean = false;
   private readonly activeConversation = new Map<string, WAConversation[]>();
@@ -20,6 +18,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 1;
   private readonly dailyScheduleTimeHour = 9;
+  private isWarming: boolean = false;
+  private nextStartWarming: NodeJS.Timeout | undefined;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
@@ -29,12 +29,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   constructor({ isEmulation, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
     const onIncomingMessage: WAMessageIncomingCallback = (message, raw, messageId) => {
-      const instances = this.listInstanceNumbers({ onlyConnectedFlag: false });
-      const internalFlag = instances.includes(message.fromNumber);
       const warmingFlag =
-        internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.fromNumber));
+        message.internalFlag && Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(message.fromNumber));
 
-      return config.onIncomingMessage?.({ ...message, internalFlag, warmingFlag }, raw, messageId);
+      return config.onIncomingMessage?.({ ...message, warmingFlag }, raw, messageId);
     };
 
     // outgoing message callback wrapper
@@ -394,9 +392,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         });
       }
 
-      if (this.needWarmUp(instance)) {
-        warmInstances.push(instance);
-      }
+      if (this.needWarmUp(instance)) warmInstances.push(instance);
     }
 
     if (warmInstances.length) {
@@ -443,9 +439,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       // Process conversations sequentially with delays to prevent simultaneous creation
       for (const pair of instancesPairs) {
-        if (pair.length < 2) {
-          return;
-        }
+        if (pair.length < 2) return;
 
         // Add a delay between conversation creations to prevent simultaneous processing
         if (this.activeConversation.size > 0) {
@@ -471,9 +465,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.isWarming = false;
 
     // Clear all timeouts properly
-    for (const timerId of this.timeoutConversation.values()) {
-      clearTimeout(timerId);
-    }
+    for (const timerId of this.timeoutConversation.values()) clearTimeout(timerId);
 
     clearTimeout(this.nextStartWarming);
     this.nextCheckUpdate?.(null);
@@ -503,9 +495,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           const instance1 = this.getInstance(key1);
           const instance2 = this.getInstance(key2);
 
-          if (!instance1?.get('isActive') || !instance2?.get('isActive')) {
-            throw new Error('One or more of the instances deactivated');
-          }
+          if (!instance1?.get('isActive') || !instance2?.get('isActive')) throw new Error('One or more of the instances deactivated');
 
           const currentState = this.activeConversation.get(conversationKey);
           const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
@@ -520,9 +510,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           if (this.isEmulation) {
             this.log('info', `[${conversationKey.split(':').join(' -> ')}] Emulator mode (${seconds}s)`, currentMessage.text);
 
-            if (Math.random() > 0.8) {
-              throw new Error('Emulate error');
-            }
+            if (Math.random() > 0.8) throw new Error('Emulate error');
 
             currentMessage.sentAt = getLocalTime();
 
@@ -540,26 +528,16 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             return;
           }
 
-          // Format message properly for WhatsApp
-          const messageContent = {
-            type: 'text' as const,
-            text: currentMessage.text,
-          };
-          // Send message using the now-humanized send method
+          const messageContent = { type: 'text' as const, text: currentMessage.text };
           const instance = this.getInstance(currentMessage.fromNumber);
+
           if (instance) {
-            // Check instance status before sending
             const isConnected = instance.connected;
             const isActive = instance.get('isActive');
             this.log('debug', `[${conversationKey}] Instance status - Connected: ${isConnected}, Active: ${isActive}`);
 
-            if (!isConnected) {
-              throw new Error(`Instance ${currentMessage.fromNumber} is not connected`);
-            }
-
-            if (!isActive) {
-              throw new Error(`Instance ${currentMessage.fromNumber} is not active`);
-            }
+            if (!isActive) throw new Error(`Instance ${currentMessage.fromNumber} is not active`);
+            if (!isConnected) throw new Error(`Instance ${currentMessage.fromNumber} is not connected`);
 
             // Check if target number is valid
             const targetInstance = this.getInstance(currentMessage.toNumber);
@@ -568,17 +546,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
             this.log('debug', `[${conversationKey}] Target instance status - Connected: ${targetConnected}, Active: ${targetActive}`);
 
-            if (!targetInstance) {
-              throw new Error(`Target instance ${currentMessage.toNumber} not found`);
-            }
-
-            if (!targetConnected) {
-              throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
-            }
-
-            if (!targetActive) {
-              throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
-            }
+            if (!targetInstance) throw new Error(`Target instance ${currentMessage.toNumber} not found`);
+            if (!targetConnected) throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
+            if (!targetActive) throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
 
             this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
 

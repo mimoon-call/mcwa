@@ -45,7 +45,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
   private readonly updateCallback: WAServiceConfig<T>['onUpdate'][] = [];
   private registeredCallback?: WAServiceConfig<T>['onRegistered'];
   private readyCallback?: () => Promise<void> | void;
-  private clientRemovalCallback?: (phoneNumber: string) => void;
 
   // Timeout
   private readyTimeout: NodeJS.Timeout | undefined = undefined;
@@ -71,10 +70,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
     const consoleLog = console.log;
     console.log = (...args: any[]) => {
       const message = args.join(' ');
-
-      if (noisePatterns.some((pattern: string) => message.includes(pattern))) {
-        return; // Suppress these messages
-      }
+      if (noisePatterns.some((pattern: string) => message.includes(pattern))) return; // Suppress these messages
 
       consoleLog.apply(console, args);
     };
@@ -83,10 +79,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
     const consoleError = console.error;
     console.error = (...args: any[]) => {
       const message = args.join(' ');
-
-      if (noisePatterns.some((pattern: string) => message.includes(pattern))) {
-        return; // Suppress these messages
-      }
+      if (noisePatterns.some((pattern: string) => message.includes(pattern))) return; // Suppress these messages
 
       consoleError.apply(console, args);
     };
@@ -97,30 +90,29 @@ export class WhatsappService<T extends object = Record<never, never>> {
     this.updateAppAuth = config.updateAppAuth;
     this.deleteAppAuth = config.deleteAppAuth;
     this.listAppAuth = config.listAppAuth;
-
     this.updateAppKey = config.updateAppKey;
 
     // Setup error handlers
     this.setupErrorHandlers();
     this.getAppKeys = config.getAppKeys;
-
     this.debugMode = config.debugMode;
 
     this.outgoingMessageCallback = (...arg) => {
       return config.onOutgoingMessage?.(...arg);
     };
 
-    this.incomingMessageCallback = async (...arg) => {
-      return Promise.allSettled([config.onIncomingMessage?.(...arg), ...this.messageCallback.map((cb) => cb?.(...arg))]);
+    this.incomingMessageCallback = async (message, ...arg) => {
+      const internalPhoneNumber = (await this.listAppAuth()).map(({ phoneNumber }) => phoneNumber);
+      const internalFlag = internalPhoneNumber.includes(message.fromNumber);
+
+      return Promise.allSettled([
+        config.onIncomingMessage?.({ ...message, internalFlag }, ...arg),
+        ...this.messageCallback.map((cb) => cb?.({ ...message, internalFlag }, ...arg)),
+      ]);
     };
 
-    this.messageUpdateCallback = (...arg) => {
-      return config.onMessageUpdate?.(...arg);
-    };
-
-    if (config.onUpdate) {
-      this.updateCallback.push(config.onUpdate);
-    }
+    this.messageUpdateCallback = (...arg) => config.onMessageUpdate?.(...arg);
+    if (config.onUpdate) this.updateCallback.push(config.onUpdate);
 
     // Initialize the service immediately
     this.suppressBaileysNoise();
@@ -152,10 +144,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
         setTimeout(async () => {
           try {
             const instance = await this.createInstance(phoneNumber);
-
-            if (!instance.connected) {
-              await instance.connect();
-            }
+            if (!instance.connected) await instance.connect();
 
             resolve();
           } catch (error: any) {
@@ -176,17 +165,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
         }
       });
     });
-  }
-
-  private shuffleArray<T>(array: T[]): T[] {
-    const result = [...array];
-
-    for (let i = result.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [result[i], result[j]] = [result[j], result[i]];
-    }
-
-    return result;
   }
 
   private setupGracefulShutdown() {
@@ -291,8 +269,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     // Create new instance
     const newInstance = await this.createInstance(phoneNumber);
-
-    // Register the instance (this will generate QR code)
     const qrCode = await newInstance.register();
 
     this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list');
@@ -306,24 +282,14 @@ export class WhatsappService<T extends object = Record<never, never>> {
     const bulk = Array.from(this.instances.keys()).filter((phoneNumber) => {
       const instance = this.instances.get(phoneNumber);
 
-      if (activeFlag && instance?.get('statusCode') !== 200) {
-        return false;
-      }
-
-      if (onlyConnectedFlag && !instance?.connected) {
-        return false;
-      }
-
-      if (hasWarmedUp && !instance?.get('hasWarmedUp')) {
-        return false;
-      }
+      if (activeFlag && instance?.get('statusCode') !== 200) return false;
+      if (onlyConnectedFlag && !instance?.connected) return false;
+      if (hasWarmedUp && !instance?.get('hasWarmedUp')) return false;
 
       return true;
     });
 
-    if (shuffleFlag) {
-      return this.shuffleArray(bulk);
-    }
+    if (shuffleFlag) return bulk.shuffle();
 
     return bulk;
   }
@@ -340,21 +306,21 @@ export class WhatsappService<T extends object = Record<never, never>> {
         return selectedInstance;
       }
 
+      const warmedNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true });
       let availableNumbers: string[];
-      availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true }).filter(
-        (num) => !this.lastUsedNumbers.includes(num)
-      );
+      availableNumbers = warmedNumbers.filter((num) => !this.lastUsedNumbers.includes(num));
 
-      if (!availableNumbers.length) this.lastUsedNumbers = [];
+      if (!availableNumbers.length) {
+        this.lastUsedNumbers = [];
 
-      availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true }).filter(
-        (num) => !this.lastUsedNumbers.includes(num)
-      );
+        availableNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true });
+      }
 
-      if (!availableNumbers[0]) throw new Error(`Instance not available to send message to ${toNumber}`);
+      const randomSelected = availableNumbers.shuffle()?.[0];
+      if (!randomSelected) throw new Error(`Instance not available to send message to ${toNumber}`);
 
-      const selectedInstance = this.instances.get(availableNumbers[0]);
-      if (!selectedInstance?.connected) throw new Error(`Number [${availableNumbers[0]}] is not connected.`);
+      const selectedInstance = this.instances.get(randomSelected);
+      if (!selectedInstance?.connected) throw new Error(`Number [${randomSelected}] is not connected.`);
 
       return selectedInstance;
     })();
@@ -403,10 +369,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
     this.registeredCallback = callback;
   }
 
-  onClientRemoval(callback: (number: string) => void) {
-    this.clientRemovalCallback = callback;
-  }
-
   // Get instance methods
   getInstance(phoneNumber: string): WAInstance<T> | undefined {
     return this.instances.get(phoneNumber);
@@ -417,23 +379,13 @@ export class WhatsappService<T extends object = Record<never, never>> {
     const list = this.listInstanceNumbers({ activeFlag, onlyConnectedFlag: false });
     let instances = Array.from(this.instances.values());
 
-    if (activeFlag) {
-      instances = instances.filter(({ phoneNumber }) => list.includes(phoneNumber));
-    }
-
-    if (shuffleFlag) {
-      instances = this.shuffleArray(instances);
-    }
+    if (activeFlag) instances = instances.filter(({ phoneNumber }) => list.includes(phoneNumber));
+    if (shuffleFlag) instances = instances.shuffle();
 
     return instances;
   }
 
   cleanup() {
-    this.log('info', 'Cleaning up WhatsApp service...');
-
-    // Clear all tracking
     this.instances.clear();
-
-    this.log('info', 'WhatsApp service cleanup completed');
   }
 }

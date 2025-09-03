@@ -1,2 +1,2 @@
-import './array-unique';
+import './array';
 import './string-crypto';
