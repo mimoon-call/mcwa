@@ -5,6 +5,7 @@ import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
 import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { LeadActionEnum, LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
+import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 // Pre-save middleware to set timezone-aware timestamps
 const setModifiedAndCreationDate = function (doc: any) {
@@ -89,7 +90,7 @@ export const WhatsAppMessage = new MongoService<
     previousId: { type: Schema.Types.ObjectId },
     createdAt: { type: Date },
     // Delivery status tracking
-    status: { type: String, enum: ['PENDING', 'SENT', 'DELIVERED', 'READ', 'ERROR'] },
+    status: { type: String, enum: Object.values(MessageStatusEnum) },
     sentAt: { type: Date },
     deliveredAt: { type: Date },
     readAt: { type: Date },

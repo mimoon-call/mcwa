@@ -14,7 +14,6 @@ import type {
   AuthenticationCreds,
   WebMessageInfo,
   WAMessageDelivery,
-  WAMessageStatus,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -33,6 +32,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
+import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 type HandleOutgoingMessage = { jid: string; content: AnyMessageContent; record: WAMessageOutgoing };
 type CreateSocketOptions = Partial<{ connectTimeoutMs: number; keepAliveIntervalMs: number; retryRequestDelayMs: number }>;
@@ -794,7 +794,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Update delivery tracking if message ID exists
         if (key.id && updateData.status !== undefined) {
-          const statusMap: { [key: number]: WAMessageStatus } = { 1: 'PENDING', 2: 'SENT', 3: 'DELIVERED', 4: 'READ', 5: 'ERROR' }; // Map numeric status codes to string statuses
+          const statusMap: { [key: number]: keyof typeof MessageStatusEnum } = {
+            1: 'PENDING',
+            2: 'SENT',
+            3: 'DELIVERED',
+            4: 'READ',
+            5: 'ERROR',
+          }; // Map numeric status codes to string statuses
           const numericStatus = Number(updateData.status);
           const status = statusMap[numericStatus] || 'ERROR';
           const timestamp = new Date();
@@ -802,26 +808,26 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('info', `📱 Updating message status: ${key.id} -> ${status} (numeric: ${numericStatus})`);
 
           switch (status) {
-            case 'SENT': {
-              this.updateMessageDeliveryStatus(key.id, 'SENT', timestamp);
+            case MessageStatusEnum.SENT: {
+              this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.SENT, timestamp);
               break;
             }
-            case 'DELIVERED': {
-              this.updateMessageDeliveryStatus(key.id, 'DELIVERED', timestamp);
+            case MessageStatusEnum.DELIVERED: {
+              this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.DELIVERED, timestamp);
               const delivery = this.messageDeliveries.get(key.id);
               if (delivery) this.log('info', `✅ Message delivered to ${delivery.toNumber}`);
               break;
             }
-            case 'READ': {
-              this.updateMessageDeliveryStatus(key.id, 'READ', timestamp);
+            case MessageStatusEnum.READ: {
+              this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.READ, timestamp);
               const readDelivery = this.messageDeliveries.get(key.id);
               if (readDelivery) this.log('info', `👁️ Message read by ${readDelivery.toNumber}`);
               break;
             }
-            case 'ERROR': {
+            case MessageStatusEnum.ERROR: {
               const errorCode = (updateData as any).statusCode;
               const errorMessage = (updateData as any).message || 'Unknown error';
-              this.updateMessageDeliveryStatus(key.id, 'ERROR', timestamp, errorCode, errorMessage);
+              this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.ERROR, timestamp, errorCode, errorMessage);
 
               // Handle specific error scenarios
               const toNumber = this.jidToNumber(key.remoteJid!);
@@ -844,7 +850,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         // Legacy logging for backward compatibility
-        if (updateData.status && ['SENT', 'DELIVERED', 'READ'].includes(String(updateData.status))) {
+        if (
+          updateData.status &&
+          [MessageStatusEnum.SENT, MessageStatusEnum.DELIVERED, MessageStatusEnum.READ].includes(updateData.status.toString())
+        ) {
           const toNumber = this.jidToNumber(key.remoteJid!);
           const status = String(updateData.status);
           this.log('info', `✅ Message ${status.toLowerCase()} to ${toNumber}`);
@@ -922,7 +931,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     this.log('info', `📱 Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
 
-    const delivery: WAMessageDelivery = { messageId, fromNumber, toNumber, status: 'PENDING', sentAt: new Date() };
+    const delivery: WAMessageDelivery = { messageId, fromNumber, toNumber, status: 'PENDING', sentAt: getLocalTime() };
     this.messageDeliveries.set(messageId, delivery);
     this.log('debug', `📱 Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
 
@@ -932,7 +941,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.deliveryTimeouts.set(messageId, timeoutId);
   }
 
-  private updateMessageDeliveryStatus(messageId: string, status: WAMessageStatus, timestamp?: Date, errorCode?: number, errorMessage?: string): void {
+  private updateMessageDeliveryStatus(
+    messageId: string,
+    status: keyof typeof MessageStatusEnum,
+    timestamp?: Date,
+    errorCode?: number,
+    errorMessage?: string
+  ): void {
     const delivery = this.messageDeliveries.get(messageId);
     if (!delivery) {
       this.log('warn', `📱 No delivery tracking found for message ${messageId} when updating status to ${status}`);
@@ -1043,9 +1058,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       };
 
       // Set up interval to check status
-      const checkInterval = setInterval(() => {
-        checkStatus();
-      }, 1000); // Check every second
+      const checkInterval = setInterval(checkStatus, 1000); // Check every second
 
       // Clean up interval when promise resolves/rejects
       const cleanup = () => {

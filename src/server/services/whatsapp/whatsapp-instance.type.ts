@@ -5,6 +5,7 @@ import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
 import WebMessageInfo = proto.WebMessageInfo;
 import { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
+import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 export type WAAppAuth<T extends object> = T & {
   phoneNumber: string;
@@ -75,8 +76,8 @@ export type WAMessageOutgoingRaw = AnyMessageContent;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw) => Promise<unknown> | unknown;
 export type WAMessageOutgoingCallback = (
-  message: WAMessageOutgoing, 
-  raw: WAMessageOutgoingRaw, 
+  message: WAMessageOutgoing,
+  raw: WAMessageOutgoingRaw,
   info?: WebMessageInfo,
   deliveryStatus?: WAMessageDelivery
 ) => Promise<unknown> | unknown;
@@ -113,13 +114,11 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   onUpdate: (state: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
 }>;
 
-export type WAMessageStatus = 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'ERROR';
-
 export type WAMessageDelivery = {
   messageId: string;
   fromNumber: string;
   toNumber: string;
-  status: WAMessageStatus;
+  status: keyof typeof MessageStatusEnum;
   sentAt: Date;
   deliveredAt?: Date;
   readAt?: Date;
