@@ -76,9 +76,7 @@ const listAppAuth = async <T extends object>(): Promise<WAAppAuth<T>[]> => {
     }
 
     console.log('listAppAuth', 'Database connected, querying auth states...');
-    // return await WhatsAppAuth.find({ statusCode: { $exists: false } });
-    const result = await WhatsAppAuth.find({}, { _id: 0 });
-    return result.map((doc) => doc.toObject()) as unknown as WAAppAuth<T>[];
+    return await WhatsAppAuth.find({}, { _id: 0 });
   } catch (error) {
     console.error('listAppAuth', 'Error listing auth states:', error);
     return [];

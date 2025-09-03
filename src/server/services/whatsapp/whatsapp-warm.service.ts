@@ -19,7 +19,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
-  private readonly dailyScheduleTimeHour = 9;
+  private readonly dailyScheduleTimeHour = 7;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
