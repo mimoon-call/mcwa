@@ -4,7 +4,7 @@ import { WhatsappAiService } from './whatsapp.ai';
 import { WAInstance, WhatsappService } from './whatsapp.service';
 import { WhatsAppMessage } from './whatsapp.db';
 import { clearTimeout } from 'node:timers';
-import dayjs from 'dayjs';
+
 import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
@@ -19,7 +19,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
-  private readonly dailyScheduleTimeHour = 7;
+  private readonly dailyScheduleTimeHour = 9;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
@@ -62,34 +62,38 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
-    const now = dayjs(getLocalTime());
+    const now = getLocalTime();
 
-    if (now.hour() < this.dailyScheduleTimeHour) {
-      return now.subtract(1, 'day').format('YYYY-MM-DD');
+    if (now.getHours() < this.dailyScheduleTimeHour) {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toISOString().split('T')[0];
     }
 
-    return now.format('YYYY-MM-DD');
+    return now.toISOString().split('T')[0];
   }
 
   private getNextWarmingTime(): Date {
-    const now = dayjs(getLocalTime());
-    let nextWarmingTime: dayjs.Dayjs;
+    const now = getLocalTime();
+    let nextWarmingTime: Date;
 
-    if (now.hour() < this.dailyScheduleTimeHour) {
+    if (now.getHours() < this.dailyScheduleTimeHour) {
       // Today
-      nextWarmingTime = now.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
+      nextWarmingTime = new Date(now);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
     } else {
       // Tomorrow
-      const tomorrow = now.add(1, 'day');
-      nextWarmingTime = tomorrow.hour(this.dailyScheduleTimeHour).minute(0).second(0).millisecond(0);
+      nextWarmingTime = new Date(now);
+      nextWarmingTime.setDate(nextWarmingTime.getDate() + 1);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
     }
 
     // Add phone-specific jitter for better distribution
     // Since this is a global warming time, we'll use a consistent but distributed offset
     const baseJitter = 5 + Math.floor(Math.random() * 55); // 5-60 minutes
-    nextWarmingTime = nextWarmingTime.add(baseJitter, 'minute');
+    nextWarmingTime.setMinutes(nextWarmingTime.getMinutes() + baseJitter);
 
-    return nextWarmingTime.toDate();
+    return nextWarmingTime;
   }
 
   private getHoursAndMinutes(milliseconds: number): { hours: number; minutes: number } {
@@ -346,7 +350,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
         const { hours, minutes } = this.getHoursAndMinutes(delay);
         const totalMinutes = hours * 60 + minutes;
-        this.nextWarmUp = new Date(getLocalTime().valueOf() + delay);
+        this.nextWarmUp = new Date(new Date().valueOf() + delay);
         this.nextCheckUpdate?.(this.nextWarmUp);
         this.log('debug', `[${conversationKey}]`, `Will check again in ${totalMinutes} minutes`);
 
