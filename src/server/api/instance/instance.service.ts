@@ -35,6 +35,7 @@ export const instanceService = {
             gender: 1,
             name: 1,
             createdAt: 1,
+            lastIpAddress: 1,
           },
         },
       ],

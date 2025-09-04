@@ -73,6 +73,7 @@
     "NEXT_WARM_IN": "החימום הבא יתחיל בעוד {{timeUntil}}",
     "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
     "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים",
+    "IP_ADDRESS": "כתובת IP",
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     }

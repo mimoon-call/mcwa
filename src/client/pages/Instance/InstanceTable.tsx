@@ -28,7 +28,7 @@ import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import { liveUpdateHandler } from '@helpers/live-update-handler';
-import { useToast } from '@hooks';
+import { useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
 
@@ -98,13 +98,23 @@ const InstanceTable = () => {
         </div>
       ),
     },
-    { title: 'INSTANCE.STATUS_CODE', value: 'statusCode', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.ERROR_MESSAGE', class: ['text-nowrap text-ellipsis'], value: 'errorMessage', sortable: true },
+    {
+      title: 'INSTANCE.STATUS_CODE',
+      value: 'statusCode',
+      class: ['text-center'],
+      sortable: true,
+      component: ({ item }) => {
+        const ref = useTooltip<HTMLDivElement>({ text: t(item.errorMessage) });
+
+        return <span ref={ref}>{item?.statusCode || '-'}</span>;
+      },
+    },
     { title: 'INSTANCE.DAILY_MESSAGE_COUNT', value: 'dailyMessageCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.OUTGOING_COUNT', value: 'outgoingMessageCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.INCOMING_COUNT', value: 'incomingMessageCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.DAILY_WARM_MESSAGES', value: 'dailyWarmUpCount', class: ['text-center'], sortable: true },
+    { title: 'INSTANCE.IP_ADDRESS', value: 'lastIpAddress', class: ['text-center'], sortable: true },
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',

@@ -13,6 +13,7 @@ export type InstanceItem = Pick<
   | 'profilePictureUrl'
   | 'gender'
   | 'name'
+  | 'lastIpAddress'
 >;
 
 export type SearchInstanceReq = { page: Pagination };

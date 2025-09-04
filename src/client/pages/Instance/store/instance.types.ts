@@ -17,6 +17,7 @@ export type InstanceItem = {
   isWarmingUp?: boolean;
   name: string;
   gender: 'male' | 'female' | 'other';
+  lastIpAddress?: string | null;
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;

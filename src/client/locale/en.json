@@ -73,6 +73,7 @@
     "NEXT_WARM_IN": "Next warm up will start in {{timeUntil}}",
     "INSTANCE_REGISTRATION_COMPLETED": "Instance '{{phoneNumber}}' registration completed",
     "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication.",
+    "IP_ADDRESS": "IP Address",
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     }
