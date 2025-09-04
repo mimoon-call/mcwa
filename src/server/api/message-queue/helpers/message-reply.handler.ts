@@ -1,3 +1,4 @@
+// message-reply.handler.ts
 import { ObjectId } from 'mongodb';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
@@ -90,7 +91,7 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
         replyTimeout.delete(timeoutKey);
       }
     },
-    60 * 1000 // 1 minute debounce
+    30 * 1000 // 30 seconds debounce
   );
 
   replyTimeout.set(timeoutKey, handle);

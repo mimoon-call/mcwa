@@ -17,6 +17,7 @@ export type InterestResult = {
 export type Role = 'LEAD' | 'YOU';
 export type LeadReplyItem = { from: Role; text: string; at?: string };
 
+/* -------------------------- STRICT SYSTEM PROMPT -------------------------- */
 const SYSTEM_PROMPT = `
 You are a strict classifier for sales outreach replies.
 Return ONLY the function result (JSON). No extra text. No markdown.
@@ -37,14 +38,21 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-- Inspect ONLY messages where from == "YOU" (ignore LEAD for this decision).
-- If ANY of those messages refer to **car/automotive** context (any language/emoji/synonyms, e.g., "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set:
-  department = "CAR".
-- ELSE if ANY of those messages refer to **mortgage/home-loan** context (any language/emoji/synonyms, including misspelling "mortage": "mortgage", "mortage", "משכנתא", "ипотека", "hipoteca", "hypothèque", "משכן", "رهن عقاري", "房屋贷款", "🏠💸"), set:
-  department = "MORTGAGE".
-- ELSE:
-  department = "GENERAL".
-- If both contexts appear in "YOU" messages, choose the context from the **most recent "YOU" message**.
+- Consider ONLY messages where from == "YOU" (ignore LEAD for this decision).
+- CAR: If ANY of those messages clearly refer to automotive context (any language/emoji/synonyms: "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set department="CAR".
+- MORTGAGE: Set department="MORTGAGE" ONLY if the message explicitly refers to a home-loan/mortgage context. This requires:
+  (A) a mortgage/home-loan keyword (e.g., "mortgage", "mortage", "משכנתא", "ипотека", "hipoteca", "hypothèque", "رهن عقاري", "房屋贷款", "home loan"),
+  OR a home/real-estate token ("בית", "דירה", "נכס", "🏠", "home", "house", "property", "real estate"),
+  AND
+  (B) a loan/finance term (e.g., "loan", "הלוואה", "credit", "financing") IN THE SAME MESSAGE.
+  Examples mapping to MORTGAGE: "הלוואת משכנתא", "home loan", "mortgage refinancing", "הלוואה לדירה".
+- IMPORTANT: Generic loans without explicit home context ("הלוואה", "personal loan", "business loan") are GENERAL.
+- If both CAR and MORTGAGE appear, choose the department from the most recent "YOU" message.
+- If neither CAR nor MORTGAGE is matched, department="GENERAL".
+
+EXAMPLES:
+- YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
+- YOU: "הלוואת משכנתא לרכישת דירה" → department="MORTGAGE"
 
 YOUR TASK:
 - Consider the whole CONVERSATION for interest/intent, but department must use only "YOU" messages.
@@ -68,6 +76,64 @@ DECISION RULES:
 Return only valid JSON matching the schema.
 `.trim();
 
+/* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */
+/**
+ * We still hard-guard the department locally to avoid LLM drift.
+ * Rule: scan ONLY YOU messages from newest to oldest.
+ * - If a message is CAR → CAR
+ * - Else if a message matches MORTGAGE rule → MORTGAGE
+ * - Else GENERAL
+ */
+const CAR_PATTERNS = [
+  /(?:^|\W)car(?:$|\W)|auto(?!\w)|vehicle|automobile/i,
+  /רכב/i,
+  /машин/i, // Russian stems
+  /voiture/i,
+  /coche/i,
+  /سيارة/i,
+  /자동차/i,
+  /🚗/,
+];
+
+const MORTGAGE_KEYWORDS = [
+  /mortgage/i,
+  /mortage/i,
+  /משכנת[אה]/i,
+  /ипотек/i,
+  /hipotec/i, // es/pt stems
+  /hypoth[eè]que/i,
+  /رهن\s?عقاري/i,
+  /房屋贷款|房贷/,
+  /home\s*loan/i,
+];
+
+const HOME_TOKENS = [/בית|דירה|נכס/i, /home|house|property|real\s*estate/i, /🏠/];
+
+const LOAN_TOKENS = /\b(loan|credit|financ\w+|הלווא[הות]?|אשראי)\b/i;
+
+function isCar(text: string): boolean {
+  return CAR_PATTERNS.some((r) => r.test(text));
+}
+
+/** Mortgage only if a mortgage word exists OR (home token AND loan token) exist in the SAME text */
+function isMortgage(text: string): boolean {
+  if (MORTGAGE_KEYWORDS.some((r) => r.test(text))) return true;
+  return HOME_TOKENS.some((r) => r.test(text)) && LOAN_TOKENS.test(text);
+}
+
+function inferDepartmentFromYouMessages(conversation: LeadReplyItem[]): LeadDepartmentEnum {
+  const youMessages = conversation.filter((m) => m.from === 'YOU');
+  if (youMessages.length === 0) return LeadDepartmentEnum.GENERAL;
+
+  for (let i = youMessages.length - 1; i >= 0; i--) {
+    const t = youMessages[i]?.text ?? '';
+    if (isCar(t)) return LeadDepartmentEnum.CAR;
+    if (isMortgage(t)) return LeadDepartmentEnum.MORTGAGE;
+  }
+  return LeadDepartmentEnum.GENERAL;
+}
+
+/* ------------------------------- MAIN FUNCTION ------------------------------- */
 export async function classifyInterest(
   openai: OpenAiService,
   params: {
@@ -90,9 +156,15 @@ export async function classifyInterest(
 
   const messages = [openai.createSystemMessage(SYSTEM_PROMPT), openai.createUserMessage(JSON.stringify(userPayload))];
 
-  return openai.requestWithJsonSchema<InterestResult>(messages, INTEREST_SCHEMA as any, {
+  const ai = await openai.requestWithJsonSchema<InterestResult>(messages, INTEREST_SCHEMA as any, {
     model: 'gpt-4o-mini',
     temperature: 0 as const,
     max_tokens: 300 as const,
   });
+
+  if (!ai) return null;
+
+  // Hard-guard department using ONLY YOU messages (latest precedence)
+  const safeDept = inferDepartmentFromYouMessages(userPayload.CONVERSATION);
+  return { ...ai, department: safeDept };
 }
