@@ -74,6 +74,7 @@
     "INSTANCE_REGISTRATION_COMPLETED": "תהליך הרשמת מספר '{{phoneNumber}}' הסתיים בהצלחה",
     "REAUTHENTICATE_NOTICE": "האם אתה בטוח שברצונך לבצע אימות מחדש?\nשים לב: פעולה זו תבטל את האימות הקיים",
     "IP_ADDRESS": "כתובת IP",
+    "SEARCH_BY_PHONE_NUMBER": "חפש לפי מספר טלפון",
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     }

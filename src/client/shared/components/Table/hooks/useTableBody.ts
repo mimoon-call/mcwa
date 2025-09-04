@@ -74,61 +74,57 @@ export const useTableBody = (
   const rowTexts = useRef<string[][]>([]);
   const searchText = useRef<string>('');
 
-  const setFocus = useCallback((itemIndex: number, stepIndex: -1 | 1 | 0) => {
-    if (keyboardTimeout.current && stepIndex === 0) {
-      return;
-    }
-
-    const focusIndex = itemIndex + stepIndex;
-    const clampedFocusIndex = Math.max(0, Math.min(focusIndex, (items || []).length - 1));
-    const focusTarget = rowRefs.current[clampedFocusIndex];
-    const scrollIndex = itemIndex + stepIndex * 3;
-    const clampedScrollIndex = Math.max(0, Math.min(scrollIndex, (items || []).length - 1));
-    const scrollTarget = rowRefs.current[clampedScrollIndex];
-
-    if (focusTarget) {
-      focusTarget.focus();
-      currentIndex.current = clampedFocusIndex;
-    }
-
-    scrollTarget?.scrollIntoView({ block: 'nearest' });
-    clearTimeout(keyboardTimeout.current);
-
-    if (stepIndex === 0) {
-      return;
-    }
-
-    keyboardTimeout.current = setTimeout(() => {
-      keyboardTimeout.current = undefined;
-    }, 1000);
-  }, [items]);
-
-  const setRow = useCallback((i: number) => (el: HTMLTableRowElement | null) => {
-    rowRefs.current[i] = el;
-
-    if (el) {
-      const children = el.querySelectorAll('[data-searchable="true"]');
-      rowTexts.current[i] = Array.from(children).map((cell) => (cell.textContent || '').toLowerCase());
-
-      el.onblur = () => {
-        // Only clear highlights from searchable cells
-        const searchableCells = el.querySelectorAll('[data-searchable="true"]');
-        searchableCells.forEach((cell) => {
-          unwrapHighlights(cell as HTMLElement);
-        });
-      };
-    }
-  }, []);
-
-  useEffect(() => {
-    if (rowRefs.current.length > 0) {
-      // Only focus first row if no row is currently focused
-      const hasFocusedRow = rowRefs.current.some((row) => row === document.activeElement);
-      if (!hasFocusedRow) {
-        rowRefs.current[0]?.focus();
+  const setFocus = useCallback(
+    (itemIndex: number, stepIndex: -1 | 1 | 0) => {
+      if (keyboardTimeout.current && stepIndex === 0) {
+        return;
       }
-    }
-  }, [items]);
+
+      const focusIndex = itemIndex + stepIndex;
+      const clampedFocusIndex = Math.max(0, Math.min(focusIndex, (items || []).length - 1));
+      const focusTarget = rowRefs.current[clampedFocusIndex];
+      const scrollIndex = itemIndex + stepIndex * 3;
+      const clampedScrollIndex = Math.max(0, Math.min(scrollIndex, (items || []).length - 1));
+      const scrollTarget = rowRefs.current[clampedScrollIndex];
+
+      if (focusTarget) {
+        focusTarget.focus();
+        currentIndex.current = clampedFocusIndex;
+      }
+
+      scrollTarget?.scrollIntoView({ block: 'nearest' });
+      clearTimeout(keyboardTimeout.current);
+
+      if (stepIndex === 0) {
+        return;
+      }
+
+      keyboardTimeout.current = setTimeout(() => {
+        keyboardTimeout.current = undefined;
+      }, 1000);
+    },
+    [items]
+  );
+
+  const setRow = useCallback(
+    (i: number) => (el: HTMLTableRowElement | null) => {
+      rowRefs.current[i] = el;
+
+      if (el) {
+        const children = el.querySelectorAll('[data-searchable="true"]');
+        rowTexts.current[i] = Array.from(children).map((cell) => (cell.textContent || '').toLowerCase());
+
+        el.onblur = () => {
+          // Only clear highlights from searchable cells
+          const searchableCells = el.querySelectorAll('[data-searchable="true"]');
+          searchableCells.forEach((cell) => {
+            unwrapHighlights(cell as HTMLElement);
+          });
+        };
+      }
+    },
+    []
+  );
 
   const clearHighlights = () => {
     rowRefs.current.forEach((row) => {
@@ -206,23 +202,26 @@ export const useTableBody = (
     }
   }, []);
 
-  const keyboardHandler = useCallback((ev: KeyboardEvent) => {
-    if (!tableRef.current?.contains(ev.target as Node)) {
-      return;
-    }
+  const keyboardHandler = useCallback(
+    (ev: KeyboardEvent) => {
+      if (!tableRef.current?.contains(ev.target as Node)) {
+        return;
+      }
 
-    if (ev.key.length === 1) {
+      if (ev.key.length === 1) {
+        clearTimeout(searchTimeout.current);
+        searchText.current = searchText.current + ev.key;
+        onSearch();
+
+        return;
+      }
+
+      searchText.current = '';
+      clearHighlights();
       clearTimeout(searchTimeout.current);
-      searchText.current = searchText.current + ev.key;
-      onSearch();
-
-      return;
-    }
-
-    searchText.current = '';
-    clearHighlights();
-    clearTimeout(searchTimeout.current);
-  }, [onSearch]);
+    },
+    [onSearch]
+  );
 
   useEffect(() => {
     if (!keyboardDisabled) {

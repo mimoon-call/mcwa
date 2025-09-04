@@ -11,6 +11,7 @@ import {
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
   INSTANCE_SEARCH_DATA,
+  INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE,
@@ -21,6 +22,7 @@ import type { ErrorResponse } from '@services/http/types';
 export interface InstanceState {
   [INSTANCE_SEARCH_DATA]: SearchInstanceRes['data'] | null;
   [INSTANCE_SEARCH_PAGINATION]: Partial<Omit<SearchInstanceRes, 'data'>>;
+  [INSTANCE_SEARCH_FILTER]: Partial<Omit<SearchInstanceReq, 'page'>>;
   [INSTANCE_LOADING]: boolean;
   [INSTANCE_ERROR]: ErrorResponse | null;
 }
@@ -28,6 +30,7 @@ export interface InstanceState {
 const initialState: InstanceState = {
   [INSTANCE_SEARCH_DATA]: null,
   [INSTANCE_SEARCH_PAGINATION]: { pageSize: 50, pageSort: { statusCode: 1 } },
+  [INSTANCE_SEARCH_FILTER]: {},
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
 };
@@ -35,11 +38,11 @@ const initialState: InstanceState = {
 // Async thunk for search instance
 const searchInstance = createAsyncThunk(
   `${StoreEnum.instance}/${SEARCH_INSTANCE}`,
-  async (payload: SearchInstanceReq = {}, { rejectWithValue, getState }) => {
+  async ({ page, ...payload }: SearchInstanceReq = {}, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.instance]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
-      const data = { page: { ...currentPagination, ...(payload?.page || {}) } };
+      const data = { ...payload, page: { ...currentPagination, ...(page || {}) } };
 
       return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data);
     } catch (error: unknown) {
@@ -88,12 +91,18 @@ const instanceSlice = createSlice({
         state[INSTANCE_SEARCH_DATA] = state[INSTANCE_SEARCH_DATA].map((i) => (i.phoneNumber === data.phoneNumber ? { ...i, ...data } : i));
       }
     },
+    updateFilter: (state, action) => {
+      state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(searchInstance.pending, (state) => {
+      .addCase(searchInstance.pending, (state, action) => {
         state[INSTANCE_LOADING] = true;
         state[INSTANCE_ERROR] = null;
+        
+        const { page: _page, ...filterParams } = action.meta.arg;
+        state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...filterParams };
       })
       .addCase(searchInstance.fulfilled, (state, action) => {
         state[INSTANCE_SEARCH_DATA] = action.payload.data;
@@ -122,4 +131,5 @@ export default {
   [INSTANCE_REFRESH]: refreshInstance,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
+  updateFilter: instanceSlice.actions.updateFilter,
 };

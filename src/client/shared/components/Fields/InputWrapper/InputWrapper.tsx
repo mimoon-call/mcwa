@@ -8,7 +8,7 @@ import { useTooltip } from '@hooks/useTooltip';
 
 const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
   const { t } = useTranslation();
-  const { className, children, label, debounce } = props;
+  const { className, children, label, debounce, hideDetails } = props;
 
   const isInit = useRef(true);
   const typingTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -132,7 +132,7 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
       <div
         ref={errorRef}
         className={cn(
-          { 'opacity-0': !error },
+          { 'opacity-0': !error, hidden: hideDetails && !error },
           'w-full ps-1 text-red-700 text-sm h-4 duration-200 error:opacity-100 mb-0.5 -mt-1 text-ellipsis overflow-hidden whitespace-nowrap form-error:opacity-100'
         )}
         role="alert"

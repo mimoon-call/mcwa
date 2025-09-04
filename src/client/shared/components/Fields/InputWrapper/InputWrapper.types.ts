@@ -13,4 +13,5 @@ export type InputWrapperProps = {
   pattern?: RegExp | string;
   debounce?: number;
   onChange?: (v: Value) => void;
+  hideDetails?: boolean;
 };

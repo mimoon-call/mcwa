@@ -1,5 +1,5 @@
 import type { EntityList, Pagination } from '@models';
-import type { GetInstanceConversationRes, GetInstanceConversationsRes, InstanceItem } from '@server/api/instance/instance.types';
+import type { GetInstanceConversationRes, GetInstanceConversationsRes, InstanceItem, SearchInstanceReq } from '@server/api/instance/instance.types';
 import {
   ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
@@ -14,31 +14,42 @@ import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
 
 export const instanceService = {
-  [SEARCH_INSTANCE]: async (page: Pagination): Promise<EntityList<InstanceItem>> => {
+  [SEARCH_INSTANCE]: async (payload: Omit<SearchInstanceReq, 'page'>, page: Pagination): Promise<EntityList<InstanceItem>> => {
+    const pipeline = [];
+    
+    // Add phone number filter if provided
+    if (payload.phoneNumber) {
+      pipeline.push({
+        $match: {
+          phoneNumber: { $regex: payload.phoneNumber, $options: 'i' }
+        }
+      });
+    }
+    
+    pipeline.push({
+      $project: {
+        phoneNumber: 1,
+        isActive: 1,
+        profilePictureUrl: 1,
+        dailyMessageCount: 1,
+        outgoingMessageCount: 1,
+        incomingMessageCount: 1,
+        statusCode: 1,
+        errorMessage: 1,
+        warmUpDay: 1,
+        dailyWarmUpCount: 1,
+        dailyWarmConversationCount: 1,
+        hasWarmedUp: 1,
+        gender: 1,
+        name: 1,
+        createdAt: 1,
+        lastIpAddress: 1,
+      },
+    });
+
     const { data, ...rest } = await WhatsAppAuth.pagination<InstanceItem>(
       { page },
-      [
-        {
-          $project: {
-            phoneNumber: 1,
-            isActive: 1,
-            profilePictureUrl: 1,
-            dailyMessageCount: 1,
-            outgoingMessageCount: 1,
-            incomingMessageCount: 1,
-            statusCode: 1,
-            errorMessage: 1,
-            warmUpDay: 1,
-            dailyWarmUpCount: 1,
-            dailyWarmConversationCount: 1,
-            hasWarmedUp: 1,
-            gender: 1,
-            name: 1,
-            createdAt: 1,
-            lastIpAddress: 1,
-          },
-        },
-      ],
+      pipeline,
       []
     );
 

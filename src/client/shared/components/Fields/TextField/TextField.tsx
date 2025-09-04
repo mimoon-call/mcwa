@@ -7,6 +7,7 @@ import global from '@components/Fields/Fields.module.css';
 import styles from '@components/Fields/TextField/TextField.module.css';
 import { cn } from '@client/plugins';
 import { onFieldChangeEvent } from '@components/Fields/Fields.helpers';
+import { useTranslation } from 'react-i18next';
 
 type TextFieldProps = InputWrapperProps & {
   className?: ClassValue;
@@ -35,11 +36,14 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
 };
 
 const TextField: FC<TextFieldProps> = (props) => {
-  const { className, onChange, name, label, rules, value, ...rest } = props;
+  const { t } = useTranslation();
+  const { className, onChange, name, label, rules, value, hideDetails, ...rest } = props;
+
+  const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange}>
-      <Input {...rest} value={value} onChange={(ev) => onChange?.(ev.target.value)} />
+    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
+      <Input {...rest} value={value} placeholder={placeholder} onChange={(ev) => onChange?.(ev.target.value)} />
     </InputWrapper>
   );
 };

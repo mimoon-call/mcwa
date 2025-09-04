@@ -8,5 +8,6 @@ export const UPDATE_INSTANCE = 'update-instance';
 
 export const INSTANCE_SEARCH_DATA = 'data';
 export const INSTANCE_SEARCH_PAGINATION = 'pagination';
+export const INSTANCE_SEARCH_FILTER = 'filter';
 export const INSTANCE_LOADING = 'loading';
 export const INSTANCE_ERROR = 'error';

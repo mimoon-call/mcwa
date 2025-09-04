@@ -7,6 +7,7 @@ import global from '@components/Fields/Fields.module.css';
 import styles from '@components/Fields/TextAreaField/TextAreaField.module.css';
 import { cn } from '@client/plugins';
 import { onFieldChangeEvent } from '@components/Fields/Fields.helpers';
+import { useTranslation } from 'react-i18next';
 
 type TextAreaFieldProps = InputWrapperProps & {
   className?: ClassValue;
@@ -37,11 +38,13 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ onChange, cla
 Textarea.displayName = 'Textarea';
 
 const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>((props, ref) => {
+  const { t } = useTranslation();
   const { className, onChange, name, label, rules, value, ...rest } = props;
+  const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange}>
-      <Textarea ref={ref} {...rest} value={value} onChange={(ev) => onChange?.(ev.target.value)} />
+      <Textarea ref={ref} {...rest} value={value} placeholder={placeholder} onChange={(ev) => onChange?.(ev.target.value)} />
     </InputWrapper>
   );
 });

@@ -1,12 +1,12 @@
 import type { Pagination } from '@models';
 import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
-import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
+import type { InstanceItem, InstanceUpdate, SearchInstanceReq, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { DateFormat } from '@client-constants';
+import { DateFormat, RegexPattern } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
@@ -31,6 +31,7 @@ import { liveUpdateHandler } from '@helpers/live-update-handler';
 import { useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
+import TextField from '@components/Fields/TextField/TextField';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -38,6 +39,8 @@ const InstanceTable = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const toast = useToast({ y: 'bottom' });
+  const [payload, setPayload] = useState<SearchInstanceReq>({});
+  const timeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const {
     [SEARCH_INSTANCE]: searchInstance,
@@ -228,9 +231,35 @@ const InstanceTable = () => {
     },
   ];
 
+  const onSearch = (data: SearchInstanceReq) => {
+    clearTimeout(timeoutRef.current);
+    const newPayload = { ...payload, ...data };
+    setPayload(newPayload);
+
+    timeoutRef.current = setTimeout(() => {
+      dispatch(searchInstance(newPayload));
+    }, 500);
+  };
+
   return (
-    <>
+    <div className="h-full flex flex-col">
+      <div className="grid p-4 bg-gray-50 m-2 rounded shadow" style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}>
+        {' '}
+        <TextField
+          hideDetails
+          autoComplete="off"
+          name="phoneNumber"
+          label="INSTANCE.PHONE_NUMBER"
+          placeholder="INSTANCE.SEARCH_BY_PHONE_NUMBER"
+          pattern={RegexPattern.PHONE_INPUT}
+          value={payload.phoneNumber}
+          onChange={(value) => onSearch({ phoneNumber: value })}
+        />
+      </div>
+
       <Table
+        className="overflow-y-visible flex-grow"
+        keyboardDisabled
         loading={instanceLoading}
         headers={headers}
         items={instanceList || []}
@@ -245,7 +274,7 @@ const InstanceTable = () => {
       />
 
       <AddInstanceModal ref={modelRef} />
-    </>
+    </div>
   );
 };
 
