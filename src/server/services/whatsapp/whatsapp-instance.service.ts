@@ -355,7 +355,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           mimetype: payload.mimetype,
           ptt: payload.ptt,
           seconds: payload.duration || payload.seconds,
-          text: payload.text,
         } as AnyMessageContent;
         break;
       case 'document':
@@ -960,10 +959,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               } else if (errorCode === 429) {
                 this.log('error', `🚫 Message blocked - Rate limited`);
                 await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-              } else if (errorCode === undefined || errorCode === null) {
-                this.log('warn', `⚠️ Message error with no specific error code - this might be normal for some message types`);
-                // Don't treat undefined error codes as blocked messages
-              } else {
+              } else if (errorCode !== undefined && errorCode !== null) {
                 this.log('error', `🚫 Message blocked - Error code: ${errorCode}`);
                 await this.handleMessageBlocked(toNumber, `ERROR_${errorCode}`);
               }
