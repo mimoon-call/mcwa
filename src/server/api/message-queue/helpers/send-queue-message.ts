@@ -17,7 +17,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, maxAttempts: numbe
       await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), instanceNumber } });
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
       success = true;
-      await new Promise((resolve) => setTimeout(resolve, 20000)); // wait 20 seconds between messages
+      await new Promise((resolve) => setTimeout(resolve, 5000)); // wait 5 seconds between messages
     } catch (e) {
       if (attempts === maxAttempts) {
         // Final attempt failed, mark as failed
