@@ -111,7 +111,7 @@ export type WAOutgoingContent =
   | { type: 'text'; text: string }
   | { type: 'image'; data: Buffer; caption?: string; mimetype?: string }
   | { type: 'video'; data: Buffer; caption?: string; mimetype?: string }
-  | { type: 'audio'; data: Buffer; caption?: string; mimetype?: string; ptt?: boolean; seconds?: number; duration?: number }
+  | { type: 'audio'; data: Buffer; caption?: string; mimetype?: string; ptt?: boolean; seconds?: number; duration?: number; text?: string }
   | { type: 'document'; data: Buffer; fileName: string; mimetype?: string; caption?: string };
 
 export type WAInstanceConfig<T extends object = Record<never, never>> = {

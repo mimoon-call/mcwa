@@ -29,7 +29,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, maxAttempts: numbe
           return await wa.sendMessage(
             null,
             doc.phoneNumber,
-            { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds },
+            { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds, text: textMessage },
             { deliveryTrackingTimeout: 60000, waitForDelivery: true, throwOnDeliveryError: true }
           );
         }

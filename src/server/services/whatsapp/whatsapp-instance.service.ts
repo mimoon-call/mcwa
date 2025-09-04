@@ -348,13 +348,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         content = { image: payload.data, caption: payload.caption, mimetype: payload.mimetype } as AnyMessageContent;
         break;
       case 'audio':
-        textForRecord = payload.caption ?? '';
+        textForRecord = payload.text ?? payload.caption ?? '';
         content = {
           audio: payload.data,
           caption: payload.caption,
           mimetype: payload.mimetype,
           ptt: payload.ptt,
           seconds: payload.duration || payload.seconds,
+          text: payload.text,
         } as AnyMessageContent;
         break;
       case 'document':
