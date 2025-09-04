@@ -41,7 +41,8 @@
     "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה",
     "SELECT_AN_OPTION": "בחר אפשרות",
     "SEARCH_PLACEHOLDER": "חפש...",
-    "NO_OPTIONS_FOUND": "לא נמצאו אפשרויות"
+    "NO_OPTIONS_FOUND": "לא נמצאו אפשרויות",
+    "TOTAL_ITEMS": "{{total}} פריטים"
   },
   "QUEUE": {
     "PHONE_NUMBER": "מספר טלפון",

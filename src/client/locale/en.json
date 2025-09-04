@@ -41,7 +41,8 @@
     "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted",
     "SELECT_AN_OPTION": "Select an option",
     "SEARCH_PLACEHOLDER": "Search...",
-    "NO_OPTIONS_FOUND": "No options found"
+    "NO_OPTIONS_FOUND": "No options found",
+    "TOTAL_ITEMS": "{{total}} items"
   },
   "QUEUE": {
     "PHONE_NUMBER": "Phone number",

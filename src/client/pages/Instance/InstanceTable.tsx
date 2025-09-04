@@ -251,35 +251,37 @@ const InstanceTable = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div
-        className="grid gap-4 p-4 bg-gray-50 m-2 rounded shadow"
-        style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}
-      >
-        {' '}
-        <TextField
-          clearable
-          hideDetails
-          autoComplete="off"
-          name="phoneNumber"
-          label="INSTANCE.PHONE_NUMBER"
-          placeholder="INSTANCE.SEARCH_BY_PHONE_NUMBER"
-          pattern={RegexPattern.PHONE_INPUT}
-          value={payload.phoneNumber}
-          onChange={(value) => onSearch({ phoneNumber: value })}
-        />
-        <SelectField
-          clearable
-          name="statusCode"
-          label="INSTANCE.STATUS_CODE"
-          value={payload.statusCode}
-          options={statusCode}
-          onChange={(value) => onSearch({ statusCode: value })}
-        />
+      <div className="flex justify-between items-end p-4 bg-gray-50 m-2 rounded shadow">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}>
+          {' '}
+          <TextField
+            clearable
+            hideDetails
+            autoComplete="off"
+            name="phoneNumber"
+            label="INSTANCE.PHONE_NUMBER"
+            placeholder="INSTANCE.SEARCH_BY_PHONE_NUMBER"
+            pattern={RegexPattern.PHONE_INPUT}
+            value={payload.phoneNumber}
+            onChange={(value) => onSearch({ phoneNumber: value })}
+          />
+          <SelectField
+            clearable
+            name="statusCode"
+            label="INSTANCE.STATUS_CODE"
+            value={payload.statusCode}
+            options={statusCode}
+            onChange={(value) => onSearch({ statusCode: value })}
+          />
+        </div>
+
+        <div className="text-gray-500 text-sm min-w-fit">{t('GENERAL.TOTAL_ITEMS', { total: instancePagination.totalItems })}</div>
       </div>
 
       <Table
         className="overflow-y-visible flex-grow"
         keyboardDisabled
+        rowClickable
         loading={instanceLoading}
         headers={headers}
         items={instanceList || []}
@@ -287,7 +289,6 @@ const InstanceTable = () => {
         onPageChange={onPageChange}
         deleteCallback={onDelete}
         onSort={onSort}
-        rowClickable={true}
         onRowClick={onRowClick}
         customActions={customActions}
         {...instancePagination}

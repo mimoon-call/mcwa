@@ -19,7 +19,8 @@
         @apply w-full flex-grow;
 
         thead {
-            @apply border-b sticky top-0 z-10 border;
+            @apply border-b sticky z-10 border;
+            top: -1px !important;
 
             tr {
                 @apply bg-secondary font-medium select-none;
