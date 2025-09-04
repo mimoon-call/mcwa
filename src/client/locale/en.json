@@ -38,7 +38,10 @@
     "WARNING": "Warning",
     "CREATED_AT": "Created at",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete {{value}}?",
-    "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted"
+    "ITEM_DELETE_SUCCESSFULLY": "Item successfully deleted",
+    "SELECT_AN_OPTION": "Select an option",
+    "SEARCH_PLACEHOLDER": "Search...",
+    "NO_OPTIONS_FOUND": "No options found"
   },
   "QUEUE": {
     "PHONE_NUMBER": "Phone number",
@@ -77,6 +80,12 @@
     "SEARCH_BY_PHONE_NUMBER": "Search by phone number",
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
+    },
+    "STATUS": {
+      "CONNECTED": "Connected",
+      "LOGGED_OUT": "Logged out",
+      "BLOCKED": "Blocked",
+      "REGISTRATION_INCOMPLETED": "Registration incomplete"
     }
   },
   "VALIDATE": {

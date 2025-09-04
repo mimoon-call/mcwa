@@ -1,0 +1,73 @@
+/* src/client/shared/components/Fields/SelectField/SelectField.module.css */
+.select-field {
+    @apply bg-white text-lg py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-slate-900 flex items-center;
+    transition: background-color ease-in-out 0.2s, border-color ease-in-out 0.2s, color ease-in-out 0.2s;
+}
+
+/* RTL/LTR support using CSS logical properties */
+.select-field:dir(rtl) {
+    @apply text-right;
+}
+
+.select-field:dir(ltr) {
+    @apply text-left;
+}
+
+.select-field[data-has-error="true"] {
+    @apply border-red-700 ring-red-600 ring-opacity-100 bg-red-50 text-red-700;
+}
+
+.select-container {
+    @apply relative;
+}
+
+.select-dropdown {
+    @apply absolute top-full left-0 right-0 z-50 bg-white border border-slate-300 rounded-md shadow-lg max-h-60 overflow-y-auto;
+    margin-top: 2px;
+}
+
+.select-option {
+    @apply px-3 py-2 text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors duration-150;
+}
+
+.select-option:dir(rtl) {
+    @apply text-right;
+}
+
+.select-option:dir(ltr) {
+    @apply text-left;
+}
+
+.select-option.selected {
+    @apply bg-blue-100 text-blue-900;
+}
+
+.select-option.highlighted {
+    @apply bg-slate-200;
+}
+
+.select-search {
+    @apply w-full px-3 py-2 border-b border-slate-200 focus:outline-none focus:border-blue-500;
+}
+
+.select-search:dir(rtl) {
+    @apply text-right;
+}
+
+.select-search:dir(ltr) {
+    @apply text-left;
+}
+
+/* Removed absolute positioning - now using flexbox layout */
+
+.no-options {
+    @apply px-3 py-2 text-slate-500 text-center;
+}
+
+.no-options:dir(rtl) {
+    @apply text-right;
+}
+
+.no-options:dir(ltr) {
+    @apply text-left;
+}

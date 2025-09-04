@@ -16,16 +16,15 @@ import ServerError from '@server/middleware/errors/server-error';
 export const instanceService = {
   [SEARCH_INSTANCE]: async (payload: Omit<SearchInstanceReq, 'page'>, page: Pagination): Promise<EntityList<InstanceItem>> => {
     const pipeline = [];
-    
-    // Add phone number filter if provided
+
     if (payload.phoneNumber) {
-      pipeline.push({
-        $match: {
-          phoneNumber: { $regex: payload.phoneNumber, $options: 'i' }
-        }
-      });
+      pipeline.push({ $match: { phoneNumber: { $regex: payload.phoneNumber, $options: 'i' } } });
     }
-    
+
+    if (payload.statusCode) {
+      pipeline.push({ $match: { statusCode: payload.statusCode } });
+    }
+
     pipeline.push({
       $project: {
         phoneNumber: 1,
@@ -47,11 +46,7 @@ export const instanceService = {
       },
     });
 
-    const { data, ...rest } = await WhatsAppAuth.pagination<InstanceItem>(
-      { page },
-      pipeline,
-      []
-    );
+    const { data, ...rest } = await WhatsAppAuth.pagination<InstanceItem>({ page }, pipeline, []);
 
     return { ...rest, data: data.map((item) => ({ ...item, isWarmingUp: wa.isWarmingUp(item.phoneNumber) })) };
   },

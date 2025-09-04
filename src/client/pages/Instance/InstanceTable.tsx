@@ -1,4 +1,4 @@
-import type { Pagination } from '@models';
+import type { Options, Pagination } from '@models';
 import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem, InstanceUpdate, SearchInstanceReq, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
@@ -32,6 +32,8 @@ import { useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
 import TextField from '@components/Fields/TextField/TextField';
+import { SelectField } from '@components/Fields';
+import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -241,11 +243,21 @@ const InstanceTable = () => {
     }, 500);
   };
 
+  const statusCode: Options<number> = [200, 401, 403, 408].map((value) => {
+    const translation = statusCodeMap.get(value);
+    const title = translation ? `${value} - ${t(translation)}` : String(value);
+    return { title, value };
+  });
+
   return (
     <div className="h-full flex flex-col">
-      <div className="grid p-4 bg-gray-50 m-2 rounded shadow" style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}>
+      <div
+        className="grid gap-4 p-4 bg-gray-50 m-2 rounded shadow"
+        style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}
+      >
         {' '}
         <TextField
+          clearable
           hideDetails
           autoComplete="off"
           name="phoneNumber"
@@ -254,6 +266,14 @@ const InstanceTable = () => {
           pattern={RegexPattern.PHONE_INPUT}
           value={payload.phoneNumber}
           onChange={(value) => onSearch({ phoneNumber: value })}
+        />
+        <SelectField
+          clearable
+          name="statusCode"
+          label="INSTANCE.STATUS_CODE"
+          value={payload.statusCode}
+          options={statusCode}
+          onChange={(value) => onSearch({ statusCode: value })}
         />
       </div>
 

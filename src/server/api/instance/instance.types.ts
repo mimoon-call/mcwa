@@ -16,7 +16,7 @@ export type InstanceItem = Pick<
   | 'lastIpAddress'
 >;
 
-export type SearchInstanceReq = { phoneNumber?: string; page: Pagination };
+export type SearchInstanceReq = Partial<{ phoneNumber: string; statusCode: number; page: Pagination }>;
 export type SearchInstanceRes = EntityList<InstanceItem>;
 
 export type InstanceConversationItem = { phoneNumber: string; name: string | null; lastMessage: string; lastMessageAt: string };

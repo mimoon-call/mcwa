@@ -1,7 +1,8 @@
 import type { BaseResponse } from '@services/http/types';
+import type { ReactNode } from 'react';
 
 export type Option<T, E = Record<never, never>> = E & {
-  title: string;
+  title: string | ReactNode;
   value: T;
 };
 

@@ -38,7 +38,10 @@
     "WARNING": "אזהרה",
     "CREATED_AT": "נוצר בתאריך",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק {{value}}?",
-    "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה"
+    "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה",
+    "SELECT_AN_OPTION": "בחר אפשרות",
+    "SEARCH_PLACEHOLDER": "חפש...",
+    "NO_OPTIONS_FOUND": "לא נמצאו אפשרויות"
   },
   "QUEUE": {
     "PHONE_NUMBER": "מספר טלפון",
@@ -77,6 +80,12 @@
     "SEARCH_BY_PHONE_NUMBER": "חפש לפי מספר טלפון",
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
+    },
+    "STATUS": {
+      "CONNECTED": "מחובר",
+      "LOGGED_OUT": "התנתק",
+      "BLOCKED": "חסום",
+      "REGISTRATION_INCOMPLETED": "הרשמה לא הושלמה"
     }
   },
   "VALIDATE": {

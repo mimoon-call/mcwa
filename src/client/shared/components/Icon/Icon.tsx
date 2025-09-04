@@ -19,7 +19,7 @@ type Props = {
 // Wrapper component to avoid React plugin preamble detection
 const SvgWrapper: FC<{ content: string }> = ({ content }) => {
   return React.createElement('g', {
-    dangerouslySetInnerHTML: { __html: content }
+    dangerouslySetInnerHTML: { __html: content },
   });
 };
 
@@ -54,7 +54,7 @@ const IconSvg: FC<Props> = (props) => {
 
   return (
     <svg
-      className={cn(styles['icon-svg'], clickable || (props.onClick && styles['icon-svg--clickable']), loading && styles['icon-svg--loading'])}
+      className={cn(styles['icon-svg'], (props.onClick || props.clickable) && styles['icon-svg--clickable'], loading && styles['icon-svg--loading'])}
       viewBox={viewBox}
       aria-label={ariaLabel}
       style={style}
