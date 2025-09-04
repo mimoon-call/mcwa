@@ -13,7 +13,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, maxAttempts: numbe
     try {
       attempts++;
       const textMessage = replaceStringVariable(doc.textMessage, doc);
-      const { instanceNumber } = await wa.sendMessage(null, doc.phoneNumber, textMessage);
+      const { instanceNumber } = await wa.sendMessage(null, doc.phoneNumber, textMessage, { deliveryTrackingTimeout: 30000, waitForDelivery: true });
       await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), instanceNumber } });
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
       success = true;

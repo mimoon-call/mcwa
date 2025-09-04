@@ -37,6 +37,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     lastSentMessage: { type: String, required: false }, // Date of last sent message (YYYY-MM-DD)
     hasPrivacyUpdated: { type: Boolean },
     profilePictureUrl: { type: String },
+    lastIpAddress: { type: String },
     createdAt: { type: Date },
     updatedAt: { type: Date },
     // warm
@@ -46,6 +47,16 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     dailyWarmConversationCount: { type: Number, required: true, default: 0 },
     totalWarmUpCount: { type: Number, required: true, default: 0 },
     lastWarmedUpDay: { type: String, required: false }, // Date of last warm-up day (YYYY-MM-DD)
+    // proxy
+    proxy: {
+      type: { type: String, enum: ['HTTP', 'SOCKS5'], default: 'HTTP' },
+      host: { type: String },
+      port: { type: Number },
+      username: { type: String },
+      password: { type: String },
+      stickyMinutes: { type: Number },
+      provider: { type: String },
+    },
     // persona
     name: { type: String, required: true },
     language: { type: String, required: true },

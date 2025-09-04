@@ -17,6 +17,7 @@ import type {
   WAMessageIncomingCallback,
   WAMessageUpdateCallback,
   WAOnReadyCallback,
+  WAProxyConfig,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -27,6 +28,9 @@ import {
   useMultiFileAuthState,
   WASocket,
 } from '@whiskeysockets/baileys';
+import type { Agent } from 'node:http';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode';
 import { pino } from 'pino';
@@ -36,6 +40,9 @@ import { promisify } from 'util';
 import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
+import type { Agent as HttpAgent } from 'http';
+import type { Agent as HttpsAgent } from 'https';
+import { getPublicIpThroughAgent } from '@server/helpers/get-public-ip-through-agent';
 
 type HandleOutgoingMessage = { jid: string; content: AnyMessageContent; record: WAMessageOutgoing };
 type CreateSocketOptions = Partial<{ connectTimeoutMs: number; keepAliveIntervalMs: number; retryRequestDelayMs: number }>;
@@ -55,6 +62,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private saveCreds: (() => Promise<void>) | null = null;
   private appState: WAAppAuth<T> | null = null;
   private hasManualDisconnected: boolean = false;
+  private agent?: HttpAgent | HttpsAgent;
 
   // Intervals
   private keepAliveInterval: NodeJS.Timeout | undefined = undefined;
@@ -531,7 +539,38 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return false;
   }
 
+  private buildProxyAgent(proxy?: WAProxyConfig): Agent | undefined {
+    // 1) per-session proxy (optional)
+    if (proxy?.host && proxy?.port) {
+      const user = proxy.username ? encodeURIComponent(proxy.username) : undefined;
+      const pass = proxy.password ? encodeURIComponent(proxy.password || '') : undefined;
+      const auth = user ? `${user}:${pass || ''}@` : '';
+      const scheme = (proxy.type || 'HTTP').toUpperCase() === 'SOCKS5' ? 'socks5h' : 'http';
+      const url = `${scheme}://${auth}${proxy.host}:${proxy.port}`;
+      return scheme.startsWith('socks5') ? new SocksProxyAgent(url) : new HttpsProxyAgent(url);
+    }
+
+    // 2) PacketStream fallback via env
+    const psUrl =
+      process.env.PS_PROXY_URL ||
+      (() => {
+        const scheme = (process.env.PS_SCHEME || '').toLowerCase(); // 'http' | 'socks5h'
+        const host = process.env.PS_HOST;
+        const port = process.env.PS_PORT;
+        const user = process.env.PS_USER ? encodeURIComponent(process.env.PS_USER) : undefined;
+        const key = process.env.PS_KEY ? encodeURIComponent(process.env.PS_KEY || '') : undefined;
+        if (!scheme || !host || !port || !user || !key) return undefined;
+        return `${scheme}://${user}:${key}@${host}:${port}`;
+      })();
+
+    if (!psUrl) return undefined;
+
+    return psUrl.startsWith('socks5') ? new SocksProxyAgent(psUrl) : new HttpsProxyAgent(psUrl);
+  }
+
   private createSocketConfig(version: any, state: any, options: CreateSocketOptions = {}) {
+    this.agent = this.buildProxyAgent(this.appState?.proxy);
+
     return {
       version,
       auth: state,
@@ -540,6 +579,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       keepAliveIntervalMs: options.keepAliveIntervalMs || 25000,
       retryRequestDelayMs: options.retryRequestDelayMs || 1000,
       emitOwnEvents: false,
+      ...this.agent,
       shouldIgnoreJid: (jid: string) => (jid && jid.includes && jid.includes('@broadcast')) || false,
       patchMessageBeforeSending: (msg: any) => {
         const requiresPatch = !!(msg.buttonsMessage || msg.templateMessage || msg.listMessage);
@@ -623,6 +663,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           if (this.appState?.lastSentMessage !== this.getTodayDate()) {
             await this.update({ dailyMessageCount: 0, outgoingMessageCount: 0 } as WAAppAuth<T>);
           }
+
+          const lastIpAddress = await getPublicIpThroughAgent(this.agent);
+          this.log('info', 'IP ADDRESS', lastIpAddress);
+
+          await this.update({ lastIpAddress } as WAAppAuth<T>);
 
           // Trigger ready callback
           await this.onReady(this);

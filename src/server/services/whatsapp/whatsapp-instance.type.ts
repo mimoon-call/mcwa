@@ -7,6 +7,16 @@ import WebMessageInfo = proto.WebMessageInfo;
 import { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
+export type WAProxyConfig = {
+  type?: 'HTTP' | 'SOCKS5'; // default HTTP
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  stickyMinutes?: number;
+  provider?: string;
+};
+
 export type WAAppAuth<T extends object> = T & {
   phoneNumber: string;
   creds: any;
@@ -20,6 +30,7 @@ export type WAAppAuth<T extends object> = T & {
   lastSentMessage: string; // Date of last sent message (YYYY-MM-DD)
   hasPrivacyUpdated?: boolean;
   profilePictureUrl?: string;
+  lastIpAddress?: string;
   // warm up
   warmUpDay: number;
   maxDailyMessages: number;
@@ -28,6 +39,8 @@ export type WAAppAuth<T extends object> = T & {
   dailyWarmConversationCount: number;
   totalWarmUpCount: number;
   lastWarmedUpDay: string; // Date of last warm-up day (YYYY-MM-DD)
+  // proxy
+  proxy?: WAProxyConfig;
 };
 
 export type WAAppKey = {

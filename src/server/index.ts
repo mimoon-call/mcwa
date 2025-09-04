@@ -1,4 +1,5 @@
 // src/server/index.ts
+import './shared/prototype/array';
 import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
