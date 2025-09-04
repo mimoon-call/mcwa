@@ -8,8 +8,6 @@ import authRoute from '@server/api/auth/auth.route';
 import { MongoService } from '@server/services/database/mongo.service';
 import { WhatsappWarmService } from '@server/services/whatsapp/whatsapp-warm.service';
 import { whatsappConfig } from '@server/services/whatsapp/whatsapp-config';
-import getLocalTime from '@server/helpers/get-local-time';
-import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import createViteSSR from '@server/create-vite-ssr';
 import instanceRoute from '@server/api/instance/instance.route';
@@ -18,8 +16,9 @@ import messageQueueRoute from '@server/api/message-queue/message-queue.route';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
 import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
-import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
-import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
+import { incomingMessageHandler } from '@server/api/instance/helpers/incoming-message.handler';
+import { outgoingMessageHandler } from '@server/api/instance/helpers/outgoing-message.handler';
+import { updateMessageHandler } from '@server/api/instance/helpers/update-message.handler';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -48,25 +47,9 @@ export const app = new ServerExpress({
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
-  onIncomingMessage: async (msg, raw, messageId) => {
-    // Internal message
-    if (msg.internalFlag) {
-      console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}]`, msg.text);
-
-      return;
-    }
-
-    const { _id } = await WhatsAppMessage.insertOne({ ...msg, raw, messageId, status: MessageStatusEnum.RECEIVED, createdAt: getLocalTime() });
-    await messageReplyHandler(_id);
-  },
-  onOutgoingMessage: async (msg, raw, deliveryStatus) => {
-    const messageId = deliveryStatus?.messageId || raw?.key?.id;
-    const messageData = { ...msg, raw, messageId, ...(deliveryStatus || {}), createdAt: getLocalTime() };
-    await WhatsAppMessage.insertOne(messageData);
-  },
-  onMessageUpdate: async (messageId, { status, sentAt, deliveredAt, errorMessage, errorCode }) => {
-    await WhatsAppMessage.updateOne({ messageId }, { $set: { status, sentAt, deliveredAt, errorMessage, errorCode } });
-  },
+  onIncomingMessage: incomingMessageHandler,
+  onOutgoingMessage: outgoingMessageHandler,
+  onMessageUpdate: updateMessageHandler,
 });
 
 (async () => {

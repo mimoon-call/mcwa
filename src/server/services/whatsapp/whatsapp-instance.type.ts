@@ -84,8 +84,16 @@ export type WAMessage = {
 
 export type WAMessageIncoming = WAMessage;
 export type WAMessageOutgoing = WAMessage;
+export type MediaType = 'image' | 'video' | 'audio' | 'ptt' | 'document' | 'sticker' | 'none';
 
-export type WAMessageIncomingRaw = IWebMessageInfo;
+export type WAMessageIncomingRaw = IWebMessageInfo & {
+  buffer?: Buffer;
+  mediaType?: MediaType;
+  mimeType?: string;
+  fileName?: string;
+  seconds?: number; // duration for audio/video when available
+};
+
 export type WAMessageOutgoingRaw = WebMessageInfo;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => Promise<unknown> | unknown;
@@ -103,7 +111,7 @@ export type WAOutgoingContent =
   | { type: 'text'; text: string }
   | { type: 'image'; data: Buffer; caption?: string; mimetype?: string }
   | { type: 'video'; data: Buffer; caption?: string; mimetype?: string }
-  | { type: 'audio'; data: Buffer; caption?: string; mimetype?: string }
+  | { type: 'audio'; data: Buffer; caption?: string; mimetype?: string; ptt?: boolean; seconds?: number; duration?: number }
   | { type: 'document'; data: Buffer; fileName: string; mimetype?: string; caption?: string };
 
 export type WAInstanceConfig<T extends object = Record<never, never>> = {
@@ -142,4 +150,11 @@ export type WAMessageDelivery = {
   errorMessage?: string;
 };
 
-export { IMessage, IWebMessageInfo, AuthenticationCreds, WebMessageInfo };
+type MediaPart =
+  | proto.Message.IVideoMessage
+  | proto.Message.IAudioMessage
+  | proto.Message.IImageMessage
+  | proto.Message.IDocumentMessage
+  | proto.Message.IStickerMessage;
+
+export { IMessage, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };

@@ -33,6 +33,9 @@ type Model =
   | 'gpt-3.5-turbo-0125'
   | 'gpt-3.5-turbo-1106';
 
+export type TTSModal = 'gpt-4o-mini-tts';
+export type STTModal = 'gpt-4o-mini-transcribe';
+
 type Role = 'user' | 'assistant' | 'system' | 'tool';
 
 type SchemaType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'integer';
@@ -141,3 +144,5 @@ export type OpenAiResponse = {
     };
   }[];
 };
+
+export type TTSFormat = 'ogg' | 'mp3' | 'wav' | 'pcm';

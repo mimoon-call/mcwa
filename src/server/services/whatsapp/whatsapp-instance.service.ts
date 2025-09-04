@@ -1,7 +1,6 @@
 // whatsapp-instance.service.ts
 import type {
   IMessage,
-  IWebMessageInfo,
   WAAppAuth,
   WAInstanceConfig,
   WAMessageBlockCallback,
@@ -18,6 +17,8 @@ import type {
   WAMessageUpdateCallback,
   WAOnReadyCallback,
   WAProxyConfig,
+  MediaPart,
+  MediaType,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -27,6 +28,8 @@ import {
   makeWASocket,
   useMultiFileAuthState,
   WASocket,
+  downloadMediaMessage,
+  proto,
 } from '@whiskeysockets/baileys';
 import type { Agent } from 'node:http';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -95,14 +98,31 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private recovering: boolean = false;
 
   private humanDelayFor(text: string): number {
+    if (!text) return 0;
+
     const words = Math.max(1, text.split(/\s+/).length);
     const base = 800 + words * 220; // base typing time
     const jitter = Math.floor(Math.random() * 1200);
+
     return base + jitter; // 1–5s typical
   }
 
   private randomIdle(min = 800, max = 3500): number {
     return min + Math.floor(Math.random() * (max - min));
+  }
+
+  private async delay(ms: number = 0) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
+    const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
+
+    if (this.debugMode === true || isValid) {
+      const now = getLocalTime();
+      const time = now.toTimeString().split(' ')[0];
+      console[type](time, `[${this.phoneNumber}]`, ...args);
+    }
   }
 
   constructor(phoneNumber: string, config: WAInstanceConfig<T>) {
@@ -177,24 +197,95 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onRegister = () => config.onRegistered?.(this.phoneNumber);
   }
 
-  protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
-    const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
-
-    if (this.debugMode === true || isValid) {
-      const now = getLocalTime();
-      const time = now.toTimeString().split(' ')[0];
-      console[type](time, `[${this.phoneNumber}]`, ...args);
-    }
+  private unwrapMessage<T extends proto.IMessage | undefined>(msg: T): T {
+    if (!msg) return msg;
+    const m: any = msg;
+    if (m.ephemeralMessage?.message) return m.ephemeralMessage.message;
+    if (m.viewOnceMessage?.message) return m.viewOnceMessage.message;
+    if (m.viewOnceMessageV2?.message) return m.viewOnceMessageV2.message;
+    return msg;
   }
 
-  private unwrapMessage(msg?: IMessage): IMessage | null {
-    let cur: IMessage | undefined | null = msg;
+  private pickMediaPart(raw: WAMessageIncomingRaw): { container?: proto.Message; key?: keyof proto.Message; part?: MediaPart } {
+    const msg = raw.message as proto.Message | undefined;
+    if (!msg) return {};
 
-    while (cur?.ephemeralMessage?.message || cur?.viewOnceMessage?.message) {
-      cur = cur.ephemeralMessage?.message ?? cur.viewOnceMessage?.message;
+    const tryPick = (container?: proto.Message) => {
+      if (!container) return {};
+      if (container.imageMessage) return { container, key: 'imageMessage' as const, part: container.imageMessage };
+      if (container.videoMessage) return { container, key: 'videoMessage' as const, part: container.videoMessage };
+      if (container.audioMessage) return { container, key: 'audioMessage' as const, part: container.audioMessage };
+      if (container.documentMessage) return { container, key: 'documentMessage' as const, part: container.documentMessage };
+      if (container.stickerMessage) return { container, key: 'stickerMessage' as const, part: container.stickerMessage };
+      return {};
+    };
+
+    // direct media
+    const unwrapped = this.unwrapMessage(msg);
+    const direct = tryPick(unwrapped);
+    if (direct.part) return direct;
+
+    // quoted media (when someone replies to a media message)
+    const ctx =
+      unwrapped?.extendedTextMessage?.contextInfo ??
+      unwrapped?.imageMessage?.contextInfo ??
+      unwrapped?.videoMessage?.contextInfo ??
+      unwrapped?.documentMessage?.contextInfo;
+
+    const quoted = this.unwrapMessage(ctx?.quotedMessage as proto.Message | undefined);
+    const q = tryPick(quoted);
+    if (q.part) return q;
+
+    return {};
+  }
+
+  private mapMediaType(key?: keyof proto.Message, part?: MediaPart): { mediaType: MediaType; isPTT: boolean } {
+    if (!key) return { mediaType: 'none', isPTT: false };
+    if (key === 'imageMessage') return { mediaType: 'image', isPTT: false };
+    if (key === 'videoMessage') return { mediaType: 'video', isPTT: false };
+    if (key === 'documentMessage') return { mediaType: 'document', isPTT: false };
+    if (key === 'stickerMessage') return { mediaType: 'sticker', isPTT: false };
+    if (key === 'audioMessage') return { mediaType: (part as proto.Message.IAudioMessage)?.ptt ? 'ptt' : 'audio', isPTT: !!(part as any)?.ptt };
+    return { mediaType: 'none', isPTT: false };
+  }
+
+  private async attachMediaBufferToRaw(raw: WAMessageIncomingRaw, sock: WASocket, sizeLimitBytes: number = 50 * 1024 * 1024): Promise<void> {
+    try {
+      const { container, key, part } = this.pickMediaPart(raw);
+      if (!container || !key || !part) {
+        raw.mediaType = 'none';
+        return;
+      }
+
+      const { mediaType } = this.mapMediaType(key, part);
+      const mimeType = (part as any)?.mimetype as string | undefined;
+      const fileName = (part as proto.Message.IDocumentMessage)?.fileName || (part as any)?.fileName || undefined;
+
+      // Baileys helper handles decrypt & reupload if required
+      const buffer = (await downloadMediaMessage(
+        raw as unknown as any,
+        'buffer',
+        {},
+        { reuploadRequest: sock.updateMediaMessage, logger: silentLogger }
+      )) as Buffer;
+
+      // metadata
+      raw.mediaType = mediaType;
+      raw.mimeType = mimeType;
+      raw.fileName = fileName;
+      raw.seconds = (part as proto.Message.IVideoMessage)?.seconds ?? (part as proto.Message.IAudioMessage)?.seconds ?? undefined;
+
+      // size guard
+      if (buffer && buffer.length <= sizeLimitBytes) {
+        raw.buffer = buffer;
+      } else {
+        // too large → keep meta, skip buffer to protect memory
+        raw.buffer = undefined;
+      }
+    } catch (err) {
+      this.log('warn', 'attachMediaBufferToRaw error:', err);
+      raw.mediaType = 'none';
     }
-
-    return cur || null;
   }
 
   private extractText(msg?: IMessage | null): string | null {
@@ -226,12 +317,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return quoted ? this.extractText(quoted) : null;
   }
 
-  private normalizeIncomingMessage(info: IWebMessageInfo, sock: WASocket): [WAMessageIncoming, WAMessageIncomingRaw] {
-    const text = this.extractText(info.message) || '';
-    const fromJid = info.key.remoteJid!;
+  private handleIncomingMessage(raw: WAMessageIncomingRaw, sock: WASocket): [WAMessageIncoming, WAMessageIncomingRaw] {
+    const text = this.extractText(raw.message) || '';
+    const fromJid = raw.key.remoteJid!;
     const toJid = sock.user!.id!;
 
-    return [{ fromNumber: this.jidToNumber(fromJid), toNumber: this.jidToNumber(toJid), text }, info];
+    return [{ fromNumber: this.jidToNumber(fromJid), toNumber: this.jidToNumber(toJid), text }, raw];
   }
 
   private handleOutgoingMessage(fromNumber: string, toNumber: string, payload: WAOutgoingContent): HandleOutgoingMessage {
@@ -253,9 +344,18 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         break;
       case 'image':
       case 'video':
-      case 'audio':
         textForRecord = payload.caption ?? '';
         content = { image: payload.data, caption: payload.caption, mimetype: payload.mimetype } as AnyMessageContent;
+        break;
+      case 'audio':
+        textForRecord = payload.caption ?? '';
+        content = {
+          audio: payload.data,
+          caption: payload.caption,
+          mimetype: payload.mimetype,
+          ptt: payload.ptt,
+          seconds: payload.duration || payload.seconds,
+        } as AnyMessageContent;
         break;
       case 'document':
         textForRecord = payload.caption ?? payload.fileName;
@@ -511,13 +611,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return { state, saveCreds };
   }
 
-  private numberToJid(phoneOrJid: string) {
+  private numberToJid(phoneOrJid: string): string {
     if (phoneOrJid.endsWith('@s.whatsapp.net')) return phoneOrJid;
 
     return `${phoneOrJid}@s.whatsapp.net`;
   }
 
-  private jidToNumber(jidOrPhone: string) {
+  private jidToNumber(jidOrPhone: string): string {
     if (jidOrPhone.endsWith('@s.whatsapp.net')) return jidOrPhone.split('@')[0];
 
     return jidOrPhone;
@@ -594,7 +694,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     };
   }
 
-  private async updateProfileUrl() {
+  private async updateProfileUrl(): Promise<void> {
     if (!this.socket || !this.socket.user?.id) return;
 
     try {
@@ -643,8 +743,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  private setupEventHandlers(sock: WASocket) {
-    const connectionUpdateHandler = async (update: any) => {
+  private setupEventHandlers(sock: WASocket): void {
+    const connectionUpdateHandler = async (update: any): Promise<void> => {
       const { connection, lastDisconnect } = update;
 
       if (connection === 'open') {
@@ -728,7 +828,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       }
     };
-    const messagesUpsertHandler = async (msg: any) => {
+    const messagesUpsertHandler = async (msg: any): Promise<void> => {
       if (msg.type !== 'notify' || !msg.messages?.length) return;
 
       // optional: simple mutex to avoid overlapping recoveries
@@ -773,7 +873,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Normalize & dispatch
         try {
-          const [data, raw] = this.normalizeIncomingMessage(message, sock);
+          await this.attachMediaBufferToRaw(message as WAMessageIncomingRaw, sock);
+          const [data, raw] = this.handleIncomingMessage(message as WAMessageIncomingRaw, sock);
+
           this.onIncomingMessage(data, raw, message.key.id);
         } catch (error: any) {
           this.log('error', 'onIncomingMessage failed:', error);
@@ -802,10 +904,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       }
     };
-    const messageUpdateHandler = async (updates: any) => {
+    const messageUpdateHandler = async (updates: any): Promise<void> => {
       for (const update of updates) {
         const { key, update: updateData } = update;
-        this.log('debug', `📱 Message update: ID=${key.id}, Status=${updateData.status}, RemoteJid=${key.remoteJid}`);
+        this.log('debug', `📱 Message update received: ID=${key.id}, Status=${updateData.status}, RemoteJid=${key.remoteJid}`);
 
         // Update delivery tracking if message ID exists
         if (key.id && updateData.status !== undefined) {
@@ -843,6 +945,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             case MessageStatusEnum.ERROR: {
               const errorCode = (updateData as any).statusCode;
               const errorMessage = (updateData as any).message || 'Unknown error';
+
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.ERROR, timestamp, errorCode, errorMessage);
 
               // Handle specific error scenarios
@@ -856,6 +959,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               } else if (errorCode === 429) {
                 this.log('error', `🚫 Message blocked - Rate limited`);
                 await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
+              } else if (errorCode === undefined || errorCode === null) {
+                this.log('warn', `⚠️ Message error with no specific error code - this might be normal for some message types`);
+                // Don't treat undefined error codes as blocked messages
               } else {
                 this.log('error', `🚫 Message blocked - Error code: ${errorCode}`);
                 await this.handleMessageBlocked(toNumber, `ERROR_${errorCode}`);
@@ -891,7 +997,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3) {
+  private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
     // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
@@ -917,7 +1023,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  private startKeepAlive() {
+  private startKeepAlive(): void {
     this.stopKeepAlive();
 
     this.keepAliveInterval = setInterval(async () => {
@@ -932,7 +1038,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }, 30000); // 30 seconds
   }
 
-  private stopKeepAlive() {
+  private stopKeepAlive(): void {
     clearInterval(this.keepAliveInterval);
     this.keepAliveInterval = undefined;
   }
@@ -999,7 +1105,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private handleDeliveryTimeout(messageId: string): void {
-    this.updateMessageDeliveryStatus(messageId, MessageStatusEnum.ERROR, undefined, 408, 'Delivery timeout');
+    this.log('warn', `📱 Delivery timeout for message ${messageId} - no status updates received from WhatsApp`);
+    this.updateMessageDeliveryStatus(messageId, MessageStatusEnum.ERROR, undefined, 408, 'Delivery timeout - no status updates received');
     this.clearDeliveryTimeout(messageId);
   }
 
@@ -1162,7 +1269,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }, timeout + 1000); // Give a bit of extra time for cleanup
   }
 
-  private startHealthCheck() {
+  private startHealthCheck(): void {
     this.stopHealthCheck();
 
     this.healthCheckInterval = setInterval(async () => {
@@ -1184,15 +1291,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }, 60000); // 60 seconds
   }
 
-  private stopHealthCheck() {
+  private stopHealthCheck(): void {
     clearInterval(this.healthCheckInterval);
     this.healthCheckInterval = undefined;
   }
 
-  /**
-   * Register the instance (equivalent to addInstanceQR)
-   * @returns Promise<string> - QR code data URL
-   */
   async register(): Promise<string> {
     if (this.connected) throw new Error(`Number [${this.phoneNumber}] is already registered and connected.`);
 
@@ -1281,9 +1384,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     });
   }
 
-  /**
-   * Restore existing instance
-   */
   async connect(): Promise<void> {
     this.appState ??= await this.getAppAuth();
 
@@ -1377,9 +1477,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  /**
-   * Handle incomplete session by cleaning up files and removing from active instances
-   */
   private async handleIncompleteSession(): Promise<void> {
     try {
       this.log('info', '🧹 Cleaning up incomplete session files...');
@@ -1404,9 +1501,22 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  /**
-   * Send a message with human-like behavior (typing indicators, delays, presence)
-   */
+  private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
+    if (!ms) return;
+    if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+
+    try {
+      await this.socket.presenceSubscribe(jid);
+      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
+      await this.delay(ms);
+      clearInterval(keepAlive);
+      await this.socket.sendPresenceUpdate('paused', jid);
+      await this.delay(250);
+    } finally {
+      await this.socket.sendPresenceUpdate('available');
+    }
+  }
+
   async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<WebMessageInfo & Partial<WAMessageDelivery>> {
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
     if (this.appState?.isActive === false) throw new Error('Instance is not active');
@@ -1428,13 +1538,26 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const raw: WebMessageInfo | undefined = await (async () => {
           if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
-          await this.socket.presenceSubscribe(jid); // Subscribe to presence updates
-          await this.socket.sendPresenceUpdate('composing', jid); // Send typing indicator
-          const text = typeof payload === 'string' ? payload : (payload as any)?.text || ''; // Calculate human-like typing delay
-          const typingDelay = this.humanDelayFor(text);
+          const isAudio = typeof payload === 'object' && (payload as any).type === 'audio';
 
-          await new Promise((resolve) => setTimeout(resolve, typingDelay));
-          await this.socket.sendPresenceUpdate('paused', jid); // Send paused indicator
+          // Ensure audio content has PTT + WhatsApp-friendly mimetype
+          if (isAudio && content && (content as any).audio) {
+            (content as any).ptt = (content as any).ptt ?? true;
+            (content as any).mimetype = (content as any).mimetype ?? 'audio/ogg; codecs=opus';
+          }
+
+          await this.socket.presenceSubscribe(jid);
+
+          if (isAudio) {
+            const seconds = (payload as any).duration || 0;
+            const ms = seconds * 1000; // Convert seconds to milliseconds
+            await this.emulateHuman(jid, 'recording', ms);
+          } else {
+            const text = typeof payload === 'string' ? payload : (payload as any)?.text || '';
+            const ms = this.humanDelayFor(text);
+            await this.emulateHuman(jid, 'composing', ms);
+          }
+
           const messageResult = await this.socket.sendMessage(jid, content); // Send the actual message
           if (options?.trackDelivery && messageResult?.key?.id) this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options); // Track message delivery if enabled
 
@@ -1672,9 +1795,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  /**
-   * Enhanced refresh method with better error handling
-   */
   async refresh(): Promise<boolean> {
     try {
       if (this.socket?.user?.id) {
@@ -1748,12 +1868,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  /**
-   * Disconnect the instance gracefully
-   * @param logout - Whether to logout from WhatsApp (default: true)
-   * @param clearSocket - Whether to clear the socket reference (default: false)
-   * @param reason - Optional reason for disconnection
-   */
   async disconnect(logout: boolean = true, clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
     try {
       this.log('info', '🔄 Initiating manual disconnect...');
@@ -1790,12 +1904,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  async enable() {
+  async enable(): Promise<void> {
     await this.update({ isActive: true } as WAAppAuth<T>);
     await this.connect();
   }
 
-  async disable() {
+  async disable(): Promise<void> {
     await this.update({ isActive: false } as WAAppAuth<T>);
     await this.disconnect(false);
   }

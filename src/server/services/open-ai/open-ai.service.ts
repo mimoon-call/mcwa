@@ -1,6 +1,6 @@
 // open-ai.service.ts
 import axios, { type AxiosResponse } from 'axios';
-import type { OpenAiRequest, OpenAiMessage, JsonSchema, OpenAiFunction, OpenAiResponse } from './open-ai.types';
+import type { OpenAiRequest, OpenAiMessage, JsonSchema, OpenAiFunction, OpenAiResponse, TTSFormat, STTModal, TTSModal } from './open-ai.types';
 
 export interface OpenAiServiceConfig {
   apiKey?: string;
@@ -28,6 +28,7 @@ export class OpenAiService {
 
   private extractErrMsg(err: unknown): string {
     const anyErr = err as any;
+
     return (
       anyErr?.response?.data?.error?.message ??
       (anyErr?.response?.data ? JSON.stringify(anyErr.response.data) : undefined) ??
@@ -116,6 +117,52 @@ export class OpenAiService {
       console.error('Raw response:', raw);
       return null;
     }
+  }
+
+  // open-ai.service.ts (inside OpenAiService class)
+  async textToSpeech(text: string, format: TTSFormat = 'ogg', options: { voice?: string; model?: TTSModal } = {}): Promise<Buffer | null> {
+    const ttsUrl = process.env.OPENAI_TTS_URL || 'https://api.openai.com/v1/audio/speech';
+    const model = options.model ?? 'gpt-4o-mini-tts';
+    const voice = options.voice ?? 'alloy';
+
+    // Use your built-in retry wrapper
+    return this.retryAsyncFunction<Buffer>(async (lastError, attempt) => {
+      if (lastError) console.warn('OpenAiService', `TTS retry ${attempt}: ${lastError}`);
+
+      const res = await axios.post(
+        ttsUrl,
+        { model, voice, input: text, format },
+        {
+          headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+          responseType: 'arraybuffer', // <-- get raw audio bytes
+        }
+      );
+
+      return Buffer.from(res.data);
+    });
+  }
+
+  async speechToText(
+    audio: Buffer,
+    mimeType: string = 'audio/ogg',
+    options: { model?: STTModal; prompt?: string; language?: string } = {}
+  ): Promise<string | null> {
+    const sttUrl = process.env.OPENAI_STT_URL || 'https://api.openai.com/v1/audio/transcriptions';
+    const model = options.model ?? 'gpt-4o-mini-transcribe'; // or "whisper-1"
+
+    return this.retryAsyncFunction<string>(async (lastError, attempt) => {
+      if (lastError) console.warn('OpenAiService', `STT retry ${attempt}: ${lastError}`);
+
+      const formData = new FormData();
+      formData.append('model', model);
+      if (options.prompt) formData.append('prompt', options.prompt);
+      if (options.language) formData.append('language', options.language);
+      formData.append('file', new Blob([audio], { type: mimeType }), 'audio.ogg');
+
+      const res = await axios.post(sttUrl, formData, { headers: { Authorization: `Bearer ${this.apiKey}` } });
+
+      return res.data?.text ?? null;
+    });
   }
 
   // Helper method to create a simple user message
