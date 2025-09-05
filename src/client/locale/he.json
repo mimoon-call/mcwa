@@ -59,7 +59,8 @@
     "MESSAGE_QUEUE_PROGRESS": "שליחה {{total}} / {{current}}",
     "DELETE_ALL": "מחק הכל",
     "MESSAGE_QUEUE_HAS_BEEN_CLEARED": "תור ההודעות נוקה בהצלחה",
-    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "האם אתה בטוח שברצונך לנקות את כל ההודעות שבתור?"
+    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "האם אתה בטוח שברצונך לנקות את כל ההודעות שבתור?",
+    "TEXT_TO_SPEECH": "שלח כהודעה קולית"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

@@ -46,8 +46,8 @@ export const messageQueueService = {
     return data;
   },
 
-  [ADD_MESSAGE_QUEUE]: async (textMessage: string, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
-    const bulk = data.map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), createdAt: getLocalTime() }));
+  [ADD_MESSAGE_QUEUE]: async (textMessage: string, tts: boolean, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
+    const bulk = data.map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), tts, createdAt: getLocalTime() }));
     await MessageQueueDb.insertMany(bulk);
 
     return { returnCode: 0 };

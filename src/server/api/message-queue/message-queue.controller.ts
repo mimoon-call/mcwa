@@ -27,18 +27,20 @@ export const messageQueueController = {
   },
 
   [ADD_MESSAGE_QUEUE]: async (req: Request<never, never, AddMessageQueueReq>, res: Response<BaseResponse>) => {
-    const { textMessage, data } = await new RecordValidator(req.body, [
+    const { textMessage, tts, data } = await new RecordValidator(req.body, [
+      ['tts', { type: ['Boolean'] }],
       ['textMessage', { required: [true] }],
       ['data.*.phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
       ['data.*.fullName', { required: [true] }],
     ]).validate();
 
-    res.send(await messageQueueService[ADD_MESSAGE_QUEUE](textMessage, data));
+    res.send(await messageQueueService[ADD_MESSAGE_QUEUE](textMessage, !!tts, data));
   },
 
   [EDIT_MESSAGE_QUEUE]: async (req: Request<never, never, EditMessageQueueReq>, res: Response<BaseResponse>) => {
     const data = await new RecordValidator(req.body, [
       ['_id', { required: [true] }],
+      ['tts', { type: ['Boolean'] }],
       ['phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
       ['fullName', { required: [true] }],
       ['textMessage', { required: [true] }],

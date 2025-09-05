@@ -22,9 +22,10 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const [payload, setPayload] = useState<{
+    tts: AddMessageQueueReq['tts'];
     textMessage: AddMessageQueueReq['textMessage'];
     data: PayloadData;
-  }>({ textMessage: '', data: [] });
+  }>({ textMessage: '', tts: false, data: [] });
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 
@@ -58,13 +59,17 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   );
 
   const Message = (
-    <TextAreaField
-      name="textMessage"
-      rules={{ required: [true], minLength: [4] }}
-      value={payload.textMessage}
-      onChange={(value) => setPayload({ ...payload, textMessage: value })}
-      rows={15}
-    />
+    <div className="flex flex-col gap-2">
+      <TextAreaField
+        name="textMessage"
+        rules={{ required: [true], minLength: [4] }}
+        value={payload.textMessage}
+        onChange={(value) => setPayload({ ...payload, textMessage: value })}
+        rows={13}
+      />
+
+      <Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />
+    </div>
   );
 
   const steps: StepperModalProps['steps'] = [
@@ -86,6 +91,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
 
     const data = {
       textMessage: payload.textMessage,
+      tts: payload.tts,
       data: payload.data.filter((item) => item.checkFlag).map((item) => ({ phoneNumber: item.phoneNumber, fullName: item.fullName })),
     };
 
@@ -100,7 +106,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         .filter((value) => RegexPattern.MOBILE_PHONE_IL.test(value.phoneNumber))
         .map((value) => ({ ...value, checkFlag: true }));
 
-      setPayload({ textMessage: '', data: payloadData });
+      setPayload({ textMessage: '', tts: false, data: payloadData });
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),

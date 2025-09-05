@@ -59,7 +59,8 @@
     "MESSAGE_QUEUE_PROGRESS": "Send {{current}} / {{total}}",
     "DELETE_ALL": "Delete all",
     "MESSAGE_QUEUE_HAS_BEEN_CLEARED": "Message queue has been cleared",
-    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "Are you sure you want to clear all messages in the queue?"
+    "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "Are you sure you want to clear all messages in the queue?",
+    "TEXT_TO_SPEECH": "Send as voice message"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

@@ -10,8 +10,9 @@ import { ADD_MESSAGE_QUEUE, EDIT_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@cl
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
+import { Checkbox } from '@components/Checkbox/Checkbox';
 
-type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage'> & Partial<{ _id: string }>;
+type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage' | 'tts'> & Partial<{ _id: string }>;
 export type AddQueueModalRef = Omit<ModalRef, 'open'> & { open: (payload?: Partial<Payload>) => Promise<void> };
 
 const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
@@ -23,12 +24,12 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   const { [ADD_MESSAGE_QUEUE]: addQueue, [EDIT_MESSAGE_QUEUE]: updateQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 
   const submit = async () => {
-    const { phoneNumber, fullName, textMessage } = payload;
+    const { phoneNumber, fullName, textMessage, tts } = payload;
 
     if (payload._id) {
       await updateQueue({ _id: payload._id, phoneNumber, fullName, textMessage });
     } else {
-      const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage };
+      const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage, tts };
       await addQueue(data);
     }
 
@@ -85,8 +86,10 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
           rules={{ required: [true] }}
           value={payload.textMessage}
           onChange={(value) => setPayload({ ...payload, textMessage: value })}
-          rows={12}
+          rows={10}
         />
+
+        <Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />
       </div>
     </Modal>
   );
