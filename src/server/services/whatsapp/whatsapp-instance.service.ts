@@ -916,7 +916,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             2: MessageStatusEnum.SENT,
             3: MessageStatusEnum.DELIVERED,
             4: MessageStatusEnum.READ,
-            5: MessageStatusEnum.ERROR,
+            5: MessageStatusEnum.PLAYED,
           }; // Map numeric status codes to string statuses
 
           const numericStatus = Number(updateData.status);
@@ -942,6 +942,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               if (readDelivery) this.log('info', `👁️ Message read by ${readDelivery.toNumber}`);
               break;
             }
+            case MessageStatusEnum.PLAYED: {
+              this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.PLAYED, timestamp);
+              const playedDelivery = this.messageDeliveries.get(key.id);
+              if (playedDelivery) this.log('info', `🎵 Audio message played by ${playedDelivery.toNumber}`);
+              break;
+            }
             case MessageStatusEnum.ERROR: {
               const errorCode = (updateData as any).statusCode;
               const errorMessage = (updateData as any).message || 'Unknown error';
@@ -965,6 +971,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
               }
               break;
             }
+            default:
+              // Log all status codes to help determine correct mappings
+              this.log('info', `🔍 STATUS DEBUG: Message ${key.id} received status code ${updateData.status} (type: ${typeof updateData.status})`);
+              break;
           }
         }
 

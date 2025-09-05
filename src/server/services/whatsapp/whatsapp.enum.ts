@@ -4,5 +4,6 @@ export enum MessageStatusEnum {
   SENT = 'SENT',
   DELIVERED = 'DELIVERED',
   READ = 'READ',
+  PLAYED = 'PLAYED',
   ERROR = 'ERROR',
 }
