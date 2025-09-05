@@ -58,7 +58,7 @@ const Header = ({ headers, draggable, sort, onSort, actions }: TableHeaderProps)
   return (
     <thead ref={theadRef} className="relative">
       <tr className={cn(styles.dataTableHeader)}>
-        {tableHeaders.map((header, idx) => {
+        {tableHeaders.map((header, headerIndex) => {
           const isSortable = !!(header.sortable && onSort);
           const headerClass = cn('flex justify-between items-center', isSortable && 'cursor-pointer', header.class);
 
@@ -85,17 +85,17 @@ const Header = ({ headers, draggable, sort, onSort, actions }: TableHeaderProps)
 
           return header.hidden ? null : (
             <td
-              key={idx}
+              key={headerIndex}
               ref={(el) => {
-                colRefs.current[idx] = el;
+                colRefs.current[headerIndex] = el;
               }}
               style={header.style}
               draggable={draggable}
               onClick={() => onClick(header.value, header.sortable)}
-              onMouseOver={onMouseOver(idx)}
+              onMouseOver={onMouseOver(headerIndex)}
               onMouseDown={onMouseDown}
             >
-              <div className={cn('border-s p-1', headerClass)}>
+              <div className={cn('p-1', headerClass)}>
                 {headerTitle}
                 {isSortable && (
                   <div className="ps-2">

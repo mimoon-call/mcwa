@@ -46,12 +46,12 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
 
   const List = (
     <InputWrapper
-      className="h-full d-flex flex-col gap-2"
+      className="d-flex flex-col gap-2"
       name="list"
       value={payload.data}
       rules={{ custom: [(value: PayloadData) => [value.some((item) => item.checkFlag), 'QUEUE.VALIDATE_NO_CONTACT_SELECTED']] }}
     >
-      <div className="overflow-y-visible error:outline-red-700 error:ring-red-600 ring-opacity-100 error:bg-red-50 error:text-red-700">
+      <div className="error:outline-red-700 error:ring-red-600 ring-opacity-100 error:bg-red-50 error:text-red-700">
         <Table headers={headers} items={payload.data} />
       </div>
     </InputWrapper>

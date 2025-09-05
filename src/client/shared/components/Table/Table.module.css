@@ -19,11 +19,15 @@
         @apply w-full flex-grow;
 
         thead {
-            @apply border-b sticky z-10 border;
+            @apply sticky z-10;
             top: -1px !important;
 
             tr {
-                @apply bg-secondary font-medium select-none;
+                @apply bg-secondary font-medium select-none border;
+                
+                td:not(:last-child) {
+                    @apply border-e;
+                }
             }
         }
 
