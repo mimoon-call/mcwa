@@ -72,6 +72,7 @@ export const messageQueueService = {
 
     (async () => {
       isSending = true;
+      messagePass = 0;
       messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
@@ -91,7 +92,6 @@ export const messageQueueService = {
       }
 
       isSending = false;
-      messageCount = 0;
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
 
@@ -105,7 +105,6 @@ export const messageQueueService = {
 
     app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
     isSending = false;
-    messageCount = 0;
 
     return { returnCode: 0 };
   },
@@ -113,8 +112,7 @@ export const messageQueueService = {
   [CLEAR_MESSAGE_QUEUE]: async (): Promise<BaseResponse> => {
     if (isSending) {
       isSending = false;
-      messageCount = 0;
-      messagePass = 0;
+      messageCount = messagePass;
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
     }
 
