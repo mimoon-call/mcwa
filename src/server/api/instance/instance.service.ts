@@ -25,7 +25,7 @@ export const instanceService = {
       pipeline.push({ $match: { statusCode: payload.statusCode } });
     }
 
-    if (payload.isActive) {
+    if (payload.isActive !== undefined) {
       pipeline.push({ $match: { isActive: payload.isActive } });
     }
 
