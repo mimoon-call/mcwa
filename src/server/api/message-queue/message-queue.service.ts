@@ -80,7 +80,7 @@ export const messageQueueService = {
         let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
 
         while (doc && isSending) {
-          await sendQueueMessage(doc, false, () => messagePass++);
+          await sendQueueMessage(doc, () => messagePass++);
           await new Promise((resolve) => setTimeout(resolve, 20000));
 
           app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
