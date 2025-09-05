@@ -1126,6 +1126,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return new Promise((resolve, reject) => {
       const timeout = options.waitTimeout || 30000;
       const targetStatus = options.waitForRead ? MessageStatusEnum.READ : MessageStatusEnum.DELIVERED;
+      let callbackDebounce: NodeJS.Timeout | undefined = undefined;
 
       // Set timeout for waiting
       const timeoutId = setTimeout(() => {
@@ -1154,15 +1155,20 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const delivery = this.messageDeliveries.get(messageId);
         if (!delivery) return;
 
-        // Trigger message update callbacks if provided
-        try {
-          // Call message-specific callback
-          options.onUpdate?.(messageId, delivery);
-          // Call global callback
-          this.onMessageUpdate?.(messageId, delivery);
-        } catch (error) {
-          this.log('error', 'Error in message update callback:', error);
-        }
+        clearTimeout(callbackDebounce);
+        callbackDebounce = undefined;
+
+        callbackDebounce = setTimeout(() => {
+          // Trigger message update callbacks if provided
+          try {
+            // Call message-specific callback
+            options.onUpdate?.(messageId, delivery);
+            // Call global callback
+            this.onMessageUpdate?.(messageId, delivery);
+          } catch (error) {
+            this.log('error', 'Error in message update callback:', error);
+          }
+        }, 5000);
 
         if (delivery.status === targetStatus) {
           clearTimeout(timeoutId);
@@ -1626,18 +1632,21 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (errorCode === 403 || errorMessage.includes('Forbidden')) {
           this.log('error', `🚫 User ${toNumber} has blocked this number`);
           await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
+          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: User has blocked this number`);
         }
 
         if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
           this.log('error', `🚫 Authentication failed - account may be blocked`);
           await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
+          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: Authentication failed`);
         }
 
         if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
           this.log('error', `🚫 Rate limited - too many messages`);
           await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
+          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: Rate limited`);
         }
 
@@ -1648,6 +1657,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           onFailure?.(lastError, attempt);
+          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
         }
       }
     }

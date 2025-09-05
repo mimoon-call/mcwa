@@ -27,6 +27,7 @@ export type WAAppAuth<T extends object> = T & {
   outgoingMessageCount: number; // Lifetime total - never reset
   incomingMessageCount: number; // Lifetime total - never reset
   dailyMessageCount: number; // Daily count for warm-up - resets daily
+  sendFailureCount: number;
   lastSentMessage: string; // Date of last sent message (YYYY-MM-DD)
   hasPrivacyUpdated?: boolean;
   profilePictureUrl?: string;
@@ -57,8 +58,6 @@ export type WASendOptions = {
   onFailure?: (error: any, attempts: number) => void;
   // Delivery tracking options
   trackDelivery?: boolean;
-  onDelivered?: (messageId: string, toNumber: string, timestamp: Date) => void;
-  onRead?: (messageId: string, toNumber: string, timestamp: Date) => void;
   // Timeout for delivery tracking (when messages are marked as ERROR)
   deliveryTrackingTimeout?: number; // milliseconds, default 30000
   // Wait for delivery confirmation
