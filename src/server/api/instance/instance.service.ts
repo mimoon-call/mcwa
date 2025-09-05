@@ -31,6 +31,7 @@ export const instanceService = {
         isActive: 1,
         profilePictureUrl: 1,
         dailyMessageCount: 1,
+        outgoingFailureCount: 1,
         outgoingMessageCount: 1,
         incomingMessageCount: 1,
         statusCode: 1,
