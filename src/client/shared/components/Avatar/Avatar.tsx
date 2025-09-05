@@ -1,6 +1,6 @@
 import type { SizeUnit } from '@models';
 import type { IconName } from '@components/Icon/Icon.type';
-import React, { type FC } from 'react';
+import React, { type FC, useState } from 'react';
 import styles from './Avatar.module.css';
 import { cn } from '@client/plugins';
 import Icon from '@components/Icon/Icon';
@@ -28,6 +28,8 @@ const Avatar: FC<AvatarProps> = ({
 }) => {
   const { t } = useTranslation();
   const style = size ? { width: size, height: size } : undefined;
+  const [localSrc, setLocalSrc] = useState(src);
+  const [isReady, setIsReady] = useState(false);
 
   const tooltipText = (() => {
     if (tooltip === true) {
@@ -42,11 +44,17 @@ const Avatar: FC<AvatarProps> = ({
   return (
     <div ref={avatarRef} className={cn(styles.avatar, className)} style={style}>
       {loading && <div className={styles['avatar__spinner']} />}
-      {src ? (
-        <img src={src} alt={alt ? t(alt) : alt} className={styles['avatar__image']} />
-      ) : (
-        <Icon className={cn(styles['avatar__image'], 'opacity-50')} name={iconName} size={size} />
+      {localSrc && (
+        <img
+          src={localSrc}
+          alt={alt ? t(alt) : alt}
+          className={cn(styles['avatar__image'], localSrc && !isReady && 'hidden')}
+          onLoad={() => setIsReady(true)}
+          onError={() => setLocalSrc(undefined)}
+        />
       )}
+
+      <Icon className={cn(styles['avatar__image'], 'opacity-50')} name={iconName} size={size} />
     </div>
   );
 };
