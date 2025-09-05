@@ -6,10 +6,13 @@ export type MessageQueueItem = {
   phoneNumber: string;
   fullName: string;
   textMessage: string;
-  createdAt: Date;
-  sentAt?: Date;
-  lastError?: string;
+  tts?: boolean;
+  attempt: number;
   instanceNumber?: string;
+  messageId: string;
+  lastError?: string;
+  sentAt?: Date;
+  createdAt: Date;
 };
 
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;

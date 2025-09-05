@@ -27,6 +27,7 @@ import getLocalTime from '@server/helpers/get-local-time';
 let isSending = false;
 let messageCount = 0;
 let messagePass = 0;
+let messageAttempt = 0;
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
@@ -67,19 +68,26 @@ export const messageQueueService = {
   },
 
   [START_QUEUE_SEND]: (): BaseResponse => {
+    messageAttempt = 0;
+
     (async () => {
       isSending = true;
       messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
-      let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false } });
+      for (messageAttempt = 0; messageAttempt < 3; messageAttempt++) {
+        // Process all documents with current attempt number (randomly)
+        let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
 
-      while (doc && isSending) {
-        await sendQueueMessage(doc);
+        while (doc && isSending) {
+          await sendQueueMessage(doc, false, () => messagePass++);
+          await new Promise((resolve) => setTimeout(resolve, 20000));
 
-        messagePass++;
-        app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
-        [doc] = await MessageQueueDb.aggregate([{ $match: { sentAt: { $exists: false } } }, { $sample: { size: 1 } }]);
+          app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+
+          // Get next document with same attempt number (randomly)
+          [doc] = await MessageQueueDb.aggregate([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
+        }
       }
 
       isSending = false;
