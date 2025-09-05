@@ -25,6 +25,10 @@ export const instanceService = {
       pipeline.push({ $match: { statusCode: payload.statusCode } });
     }
 
+    if (payload.isActive) {
+      pipeline.push({ $match: { isActive: payload.isActive } });
+    }
+
     pipeline.push({
       $project: {
         phoneNumber: 1,

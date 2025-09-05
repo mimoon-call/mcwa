@@ -24,6 +24,7 @@ import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 export const instanceController = {
   [SEARCH_INSTANCE]: async (req: Request<never, never, SearchInstanceReq>, res: Response<SearchInstanceRes>) => {
     const { page, ...data } = await new RecordValidator(req.body, [
+      ['isActive', { type: ['Boolean'] }],
       ['statusCode', { type: ['Number'] }],
       ['phoneNumber', { type: ['String'], required: [false] }],
       ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],

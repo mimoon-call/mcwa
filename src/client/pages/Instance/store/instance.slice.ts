@@ -81,10 +81,23 @@ const refreshInstance = createAsyncThunk(`${StoreEnum.instance}/${INSTANCE_REFRE
   await dispatch(searchInstance({}));
 });
 
+const resetInstance = createAsyncThunk(`${StoreEnum.instance}/reset`, async (_, { dispatch }) => {
+  // Reset filter and pagination to defaults and trigger search
+  await dispatch(instanceSlice.actions.reset());
+  await dispatch(searchInstance({}));
+});
+
 const instanceSlice = createSlice({
   name: StoreEnum.instance,
   initialState,
   reducers: {
+    clearSearch: (state) => {
+      state[INSTANCE_SEARCH_DATA] = null;
+    },
+    reset: (state) => {
+      state[INSTANCE_SEARCH_FILTER] = initialState[INSTANCE_SEARCH_FILTER];
+      state[INSTANCE_SEARCH_PAGINATION] = initialState[INSTANCE_SEARCH_PAGINATION];
+    },
     updateInstance: (state, action) => {
       const data = action.payload;
       if (state[INSTANCE_SEARCH_DATA]) {
@@ -100,7 +113,7 @@ const instanceSlice = createSlice({
       .addCase(searchInstance.pending, (state, action) => {
         state[INSTANCE_LOADING] = true;
         state[INSTANCE_ERROR] = null;
-        
+
         const { page: _page, ...filterParams } = action.meta.arg;
         state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...filterParams };
       })
@@ -132,4 +145,5 @@ export default {
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
   updateFilter: instanceSlice.actions.updateFilter,
+  resetInstance,
 };

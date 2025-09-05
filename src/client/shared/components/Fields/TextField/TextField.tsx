@@ -15,9 +15,10 @@ type TextFieldProps = InputWrapperProps & {
   clearable?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'>;
 
-type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'> & {
-  clearable?: boolean;
-};
+type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'> & {
+    clearable?: boolean;
+  };
 
 const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, clearable = false, ...rest }) => {
   const localValue = useRef<string>(value?.toString() || '');
@@ -27,7 +28,6 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
       localValue.current = value;
     }
   }, [value]);
-
 
   // Handle clear selection
   const handleClear = useCallback(
@@ -42,9 +42,9 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
     <div className={styles['text-field-container']}>
       <input
         className={cn(
-          global['field'], 
-          styles['text-field'], 
-          className, 
+          global['field'],
+          styles['text-field'],
+          className,
           disabled && '!bg-gray-200 !text-gray-600',
           clearable && value && styles['with-clear']
         )}
@@ -53,7 +53,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
         onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern) : undefined}
         {...rest}
       />
-      
+
       {clearable && value && !disabled && (
         <Icon
           name="svg:x-mark"
@@ -71,7 +71,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
 
 const TextField: FC<TextFieldProps> = (props) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, hideDetails, clearable = false, ...rest } = props;
+  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, ...rest } = props;
 
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 

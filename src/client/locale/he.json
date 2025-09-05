@@ -36,6 +36,7 @@
     "ENABLE": "הפעל",
     "REFRESH": "רענן",
     "WARNING": "אזהרה",
+    "CLEAR": "נקה",
     "CREATED_AT": "נוצר בתאריך",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק {{value}}?",
     "ITEM_DELETE_SUCCESSFULLY": "הפריט נמחק בהצלחה",

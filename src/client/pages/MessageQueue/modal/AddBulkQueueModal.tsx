@@ -36,7 +36,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         <Checkbox
           label={item.phoneNumber}
           id={item.phoneNumber}
-          checked={item.checkFlag}
+          value={item.checkFlag}
           onChange={() => onMarkChange(item.phoneNumber, !item.checkFlag)}
         />
       ),

@@ -20,5 +20,9 @@
 }
 
 .button--flat {
-    @apply font-medium rounded hover:underline hover:text-blue-600;
+    @apply font-medium rounded;
+    
+    &:not(:disabled) {
+        @apply hover:underline hover:text-blue-600;
+    }
 }
