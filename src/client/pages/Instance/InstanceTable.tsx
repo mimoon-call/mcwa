@@ -237,7 +237,7 @@ const InstanceTable = () => {
     },
   ];
 
-  const onSearch = (data: SearchInstanceReq) => {
+  const onSearch = (data: Omit<SearchInstanceReq, 'page'>) => {
     clearTimeout(timeoutRef.current);
     const newPayload = { ...payload, ...data };
     setPayload(newPayload);

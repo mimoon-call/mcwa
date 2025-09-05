@@ -18,6 +18,7 @@ import {
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
 import type { ErrorResponse } from '@services/http/types';
+import { isEqual } from 'lodash';
 
 export interface InstanceState {
   [INSTANCE_SEARCH_DATA]: SearchInstanceRes['data'] | null;
@@ -67,9 +68,7 @@ const toggleInstanceActivate = createAsyncThunk(
   async (phoneNumber: string, { dispatch, getState }) => {
     const state = getState() as RootState;
     const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
-
     const isActive = !!currentInstance?.isActive;
-
     await Http.post<void>(`${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
 
     dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
@@ -83,7 +82,7 @@ const refreshInstance = createAsyncThunk(`${StoreEnum.instance}/${INSTANCE_REFRE
 
 const resetInstance = createAsyncThunk(`${StoreEnum.instance}/reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
-  await dispatch(instanceSlice.actions.reset());
+  dispatch(instanceSlice.actions.reset());
   await dispatch(searchInstance({}));
 });
 
@@ -105,7 +104,14 @@ const instanceSlice = createSlice({
       }
     },
     updateFilter: (state, action) => {
+      const newFilter = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
+
+      if (isEqual(newFilter, state[INSTANCE_SEARCH_FILTER])) {
+        return;
+      }
+
       state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
+      state[INSTANCE_SEARCH_PAGINATION] = { ...state[INSTANCE_SEARCH_PAGINATION], pageIndex: 0 };
     },
   },
   extraReducers: (builder) => {
