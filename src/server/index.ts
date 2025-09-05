@@ -1,21 +1,22 @@
 // src/server/index.ts
+import type { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
+import type { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
+import type { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
 import './shared/prototype/array';
 import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { ServerExpress } from '@server/services/server-express/server-express';
 import authRoute from '@server/api/auth/auth.route';
+import instanceRoute from '@server/api/instance/instance.route';
+import messageQueueRoute from '@server/api/message-queue/message-queue.route';
+import conversationRoute from '@server/api/conversation/conversation.route';
 import { MongoService } from '@server/services/database/mongo.service';
 import { WhatsappWarmService } from '@server/services/whatsapp/whatsapp-warm.service';
 import { whatsappConfig } from '@server/services/whatsapp/whatsapp-config';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import createViteSSR from '@server/create-vite-ssr';
-import instanceRoute from '@server/api/instance/instance.route';
 import { InstanceEventEnum } from '@server/api/instance/instance-event.enum';
-import messageQueueRoute from '@server/api/message-queue/message-queue.route';
-import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
-import { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
-import { WAPersona, WAReadyEvent } from '@server/services/whatsapp/whatsapp.type';
 import { incomingMessageHandler } from '@server/api/instance/helpers/incoming-message.handler';
 import { outgoingMessageHandler } from '@server/api/instance/helpers/outgoing-message.handler';
 import { updateMessageHandler } from '@server/api/instance/helpers/update-message.handler';
@@ -40,6 +41,7 @@ export const app = new ServerExpress({
   routes: [
     ['/auth', authRoute],
     ['/instance', instanceRoute],
+    ['/conversation', conversationRoute],
     ['/queue', messageQueueRoute],
   ],
 });

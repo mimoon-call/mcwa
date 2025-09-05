@@ -1,4 +1,5 @@
-import { isEqual, pick } from 'lodash';
+import isEqual from 'lodash/isEqual';
+import pick from 'lodash/pick';
 
 declare global {
   interface Array<T extends object> {
