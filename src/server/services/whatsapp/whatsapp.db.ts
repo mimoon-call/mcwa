@@ -30,6 +30,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     statusCode: { type: Number, required: false },
     errorMessage: { type: String, required: false },
     blockedCount: { type: Number, required: true, default: 0 }, // Lifetime total - never reset
+    outgoingFailureCount: { type: Number, default: 0 }, // Lifetime total - never reset
     outgoingMessageCount: { type: Number, required: true, default: 0 }, // Lifetime total - never reset
     incomingMessageCount: { type: Number, required: true, default: 0 }, // Lifetime total - never reset
     dailyMessageCount: { type: Number, required: true, default: 0 }, // Daily count for warm-up - resets daily

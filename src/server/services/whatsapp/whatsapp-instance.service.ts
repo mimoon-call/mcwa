@@ -1642,21 +1642,21 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (errorCode === 403 || errorMessage.includes('Forbidden')) {
           this.log('error', `🚫 User ${toNumber} has blocked this number`);
           await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
-          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
+          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: User has blocked this number`);
         }
 
         if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
           this.log('error', `🚫 Authentication failed - account may be blocked`);
           await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
-          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
+          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: Authentication failed`);
         }
 
         if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
           this.log('error', `🚫 Rate limited - too many messages`);
           await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
+          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1 } as WAAppAuth<T>);
           throw new Error(`Message blocked: Rate limited`);
         }
 
@@ -1667,7 +1667,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           onFailure?.(lastError, attempt);
-          this.update({ sendFailureCount: (this.appState?.sendFailureCount || 0) + 1 } as WAAppAuth<T>);
+          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1 } as WAAppAuth<T>);
         }
       }
     }
