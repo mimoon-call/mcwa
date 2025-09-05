@@ -14,7 +14,7 @@ export type InstanceItem = Pick<
   | 'gender'
   | 'name'
   | 'lastIpAddress'
->;
+> & { isWarmingUp: boolean; isConnected: boolean };
 
 export type SearchInstanceReq = Partial<{ phoneNumber: string; statusCode: number; page: Pagination }>;
 export type SearchInstanceRes = EntityList<InstanceItem>;

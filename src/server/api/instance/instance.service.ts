@@ -49,7 +49,14 @@ export const instanceService = {
 
     const { data, ...rest } = await WhatsAppAuth.pagination<InstanceItem>({ page }, pipeline, []);
 
-    return { ...rest, data: data.map((item) => ({ ...item, isWarmingUp: wa.isWarmingUp(item.phoneNumber) })) };
+    return {
+      ...rest,
+      data: data.map((item) => ({
+        ...item,
+        isWarmingUp: wa.isWarmingUp(item.phoneNumber),
+        isConnected: !!wa.getInstance(item.phoneNumber)?.connected,
+      })),
+    };
   },
 
   [GET_INSTANCE_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetInstanceConversationRes> => {

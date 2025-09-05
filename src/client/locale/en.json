@@ -69,6 +69,7 @@
     "STATUS_CODE": "Status code",
     "ERROR_MESSAGE": "Error message",
     "DAILY_MESSAGE_COUNT": "Daily",
+    "OUTGOING_FAILURE_COUNT": "Failure",
     "OUTGOING_COUNT": "Outgoing",
     "INCOMING_COUNT": "Incoming",
     "WARM_END_TOAST": "Warm conversation between {{phoneNumber1}} to {{phoneNumber2}} ended.\nTotal messages: {{totalMessages}}, Total sent: {{sentMessages}}",

@@ -5,6 +5,7 @@ export type InstanceItem = {
   isActive: boolean;
   profilePictureUrl?: string;
   dailyMessageCount: number;
+  outgoingFailureCount: number;
   outgoingMessageCount: number;
   incomingMessageCount: number;
   statusCode: number;
@@ -14,10 +15,11 @@ export type InstanceItem = {
   dailyWarmConversationCount: number;
   hasWarmedUp: boolean;
   createdAt: string;
-  isWarmingUp?: boolean;
   name: string;
   gender: 'male' | 'female' | 'other';
   lastIpAddress?: string | null;
+  isWarmingUp: boolean;
+  isConnected: boolean;
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;

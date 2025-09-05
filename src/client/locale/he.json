@@ -69,6 +69,7 @@
     "STATUS_CODE": "סטטוס קוד",
     "ERROR_MESSAGE": "הודעת שגיאה",
     "DAILY_MESSAGE_COUNT": "יומי",
+    "OUTGOING_FAILURE_COUNT": "נכשל",
     "OUTGOING_COUNT": "יוצאות",
     "INCOMING_COUNT": "נכנסות",
     "WARM_END_TOAST": "שיחת חימום {{phoneNumber1}} לבין {{phoneNumber2}} הסתיימה.\nסה\"כ הודעות: {{totalMessages}} סה\"כ נשלח: {{sentMessages}}",
