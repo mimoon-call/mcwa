@@ -157,7 +157,7 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
     }
   }, [highlightedIndex]);
 
-  const placeholderText = placeholder ? t(placeholder) : t('GENERAL.SELECT_AN_OPTION');
+  const placeholderText = placeholder ? t(placeholder) : '';
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
@@ -172,7 +172,9 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
           aria-haspopup="listbox"
           data-has-error={Boolean(props.value === undefined && rules)}
         >
-          <span className={cn(!displayValue && 'text-slate-400', 'truncate flex-1 min-w-0')}>{displayValue || placeholderText}</span>
+          <span className={cn(styles['select-field__value'], !displayValue && 'text-slate-400', 'truncate flex-1 min-w-0')}>
+            {displayValue || placeholderText}
+          </span>
 
           {clearable && value && !disabled && (
             <Icon

@@ -269,7 +269,6 @@ const InstanceTable = () => {
             autoComplete="off"
             name="phoneNumber"
             label="INSTANCE.PHONE_NUMBER"
-            placeholder="INSTANCE.SEARCH_BY_PHONE_NUMBER"
             pattern={RegexPattern.PHONE_INPUT}
             value={payload.phoneNumber}
             onChange={(value) => onSearch({ phoneNumber: value })}

@@ -4,7 +4,7 @@
 }
 
 .text-field {
-    @apply bg-white text-lg py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-slate-900 w-full;
+    @apply h-10 bg-white text-lg py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-slate-900 w-full;
 
     transition: background-color ease-in-out 0.2s, border-color ease-in-out 0.2s, color ease-in-out 0.2s;
 }
