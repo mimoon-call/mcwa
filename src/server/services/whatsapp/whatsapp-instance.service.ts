@@ -761,7 +761,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.updateProfile();
 
           if (this.appState?.lastSentMessage !== this.getTodayDate()) {
-            await this.update({ dailyMessageCount: 0, outgoingMessageCount: 0 } as WAAppAuth<T>);
+            await this.update({ dailyMessageCount: 0 } as WAAppAuth<T>);
           }
 
           const lastIpAddress = await getPublicIpThroughAgent(this.agent);
@@ -1053,15 +1053,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   // Message delivery tracking methods
   private trackMessageDelivery(messageId: string, fromNumber: string, toNumber: string, options?: WASendOptions): void {
     if (!options?.trackDelivery) {
-      this.log('debug', `📱 Delivery tracking disabled for message ${messageId}`);
+      this.log('debug', `📱Delivery tracking disabled for message ${messageId}`);
       return;
     }
 
-    this.log('info', `📱 Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
+    this.log('info', `📱Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
 
     const delivery: WAMessageDelivery = { messageId, fromNumber, toNumber, status: 'PENDING', sentAt: getLocalTime() };
     this.messageDeliveries.set(messageId, delivery);
-    this.log('debug', `📱 Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
+    this.log('debug', `📱Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
 
     const trackingTimeout = options.deliveryTrackingTimeout || 30000; // Set delivery tracking timeout
     const timeoutId = setTimeout(() => this.handleDeliveryTimeout(messageId), trackingTimeout);
@@ -1077,22 +1077,35 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     errorMessage?: string
   ): void {
     const delivery = this.messageDeliveries.get(messageId);
+
     if (!delivery) {
-      this.log('warn', `📱 No delivery tracking found for message ${messageId} when updating status to ${status}`);
+      this.log('warn', `📱No delivery tracking found for message ${messageId} when updating status to ${status}`);
       return;
     }
 
-    this.log('info', `📱 Updating delivery status for message ${messageId}: ${delivery.status} -> ${status}`);
+    if (delivery.status === status) {
+      this.log('debug', `📱Same delivery status for message ${messageId}`);
+      return;
+    }
+
     delivery.status = status;
+    this.log('info', `📱Updating delivery status for message ${messageId}: ${delivery.status} -> ${status}`);
 
     switch (status) {
       case MessageStatusEnum.DELIVERED:
+        this.update({ outgoingMessageCount: (this.appState?.outgoingMessageCount || 0) + 1 } as WAAppAuth<T>);
         delivery.deliveredAt = timestamp || new Date();
         break;
       case MessageStatusEnum.READ:
+        this.update({ outgoingMessageCount: (this.appState?.outgoingReadCount || 0) + 1 } as WAAppAuth<T>);
         delivery.readAt = timestamp || new Date();
         break;
+      case MessageStatusEnum.PLAYED:
+        this.update({ outgoingMessageCount: (this.appState?.outgoingPlayCount || 0) + 1 } as WAAppAuth<T>);
+        delivery.playedAt = timestamp || new Date();
+        break;
       case MessageStatusEnum.ERROR:
+        this.update({ outgoingMessageCount: (this.appState?.outgoingErrorCount || 0) + 1 } as WAAppAuth<T>);
         delivery.errorCode = errorCode;
         delivery.errorMessage = errorMessage;
         break;
@@ -1642,21 +1655,21 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (errorCode === 403 || errorMessage.includes('Forbidden')) {
           this.log('error', `🚫 User ${toNumber} has blocked this number`);
           await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
-          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
           throw new Error(`Message blocked: User has blocked this number`);
         }
 
         if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
           this.log('error', `🚫 Authentication failed - account may be blocked`);
           await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
-          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
           throw new Error(`Message blocked: Authentication failed`);
         }
 
         if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
           this.log('error', `🚫 Rate limited - too many messages`);
           await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
           throw new Error(`Message blocked: Rate limited`);
         }
 
@@ -1667,7 +1680,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await new Promise((resolve) => setTimeout(resolve, delay));
         } else {
           onFailure?.(lastError, attempt);
-          this.update({ outgoingFailureCount: (this.appState?.outgoingFailureCount || 0) + 1, errorMessage } as WAAppAuth<T>);
         }
       }
     }

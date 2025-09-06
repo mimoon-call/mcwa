@@ -27,7 +27,9 @@ export type WAAppAuth<T extends object> = T & {
   outgoingMessageCount: number; // Lifetime total - never reset
   incomingMessageCount: number; // Lifetime total - never reset
   dailyMessageCount: number; // Daily count for warm-up - resets daily
-  outgoingFailureCount: number;
+  outgoingErrorCount: number;
+  outgoingReadCount: number;
+  outgoingPlayCount: number;
   lastSentMessage: string; // Date of last sent message (YYYY-MM-DD)
   hasPrivacyUpdated?: boolean;
   profilePictureUrl?: string;
@@ -145,6 +147,7 @@ export type WAMessageDelivery = {
   sentAt: Date;
   deliveredAt?: Date;
   readAt?: Date;
+  playedAt?: Date;
   errorCode?: number;
   errorMessage?: string;
 };

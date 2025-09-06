@@ -5,7 +5,7 @@ export type InstanceItem = {
   isActive: boolean;
   profilePictureUrl?: string;
   dailyMessageCount: number;
-  outgoingFailureCount: number;
+  outgoingErrorCount: number;
   outgoingMessageCount: number;
   incomingMessageCount: number;
   statusCode: number;

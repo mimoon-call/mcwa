@@ -118,7 +118,7 @@ const InstanceTable = () => {
       },
     },
     { title: 'INSTANCE.DAILY_MESSAGE_COUNT', value: 'dailyMessageCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.OUTGOING_FAILURE_COUNT', value: 'outgoingFailureCount', class: ['text-center'], sortable: true },
+    { title: 'INSTANCE.OUTGOING_FAILURE_COUNT', value: 'outgoingErrorCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.OUTGOING_COUNT', value: 'outgoingMessageCount', class: ['text-center', 'max-w-[100px'], sortable: true },
     { title: 'INSTANCE.INCOMING_COUNT', value: 'incomingMessageCount', class: ['text-center'], sortable: true },
     { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true },
