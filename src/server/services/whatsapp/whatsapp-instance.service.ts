@@ -46,6 +46,7 @@ import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import type { Agent as HttpAgent } from 'http';
 import type { Agent as HttpsAgent } from 'https';
 import { getPublicIpThroughAgent } from '@server/helpers/get-public-ip-through-agent';
+import { LRUCache } from 'lru-cache';
 
 type HandleOutgoingMessage = { jid: string; content: AnyMessageContent; record: WAMessageOutgoing };
 type CreateSocketOptions = Partial<{ connectTimeoutMs: number; keepAliveIntervalMs: number; retryRequestDelayMs: number }>;
@@ -72,7 +73,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private healthCheckInterval: NodeJS.Timeout | undefined = undefined;
 
   // Message delivery tracking
-  private messageDeliveries: Map<string, WAMessageDelivery> = new Map();
+  private messageDeliveries = new LRUCache<string, WAMessageDelivery>({ max: 10000, ttl: 1000 * 60 * 30 });
   private deliveryTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   // Callbacks
