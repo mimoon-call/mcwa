@@ -74,7 +74,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   // Message delivery tracking
   private messageDeliveries = new LRUCache<string, WAMessageDelivery>({ max: 10000, ttl: 1000 * 60 * 30 });
-  private deliveryTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private deliveryTimeouts = new LRUCache<string, NodeJS.Timeout>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours max
 
   // Callbacks
   private readonly getAppAuth: () => Promise<WAAppAuth<T> | null>;
