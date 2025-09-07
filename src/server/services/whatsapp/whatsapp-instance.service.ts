@@ -1104,23 +1104,29 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.log('info', `📱 Updating delivery status for message ${messageId}: ${delivery.status} -> ${status}`);
 
     switch (status) {
-      case MessageStatusEnum.DELIVERED:
-        this.update({ outgoingMessageCount: (this.appState?.outgoingMessageCount || 0) + 1 } as WAAppAuth<T>);
+      case MessageStatusEnum.DELIVERED: {
+        const currentCount = this.appState?.outgoingMessageCount || 0;
+        const newCount = currentCount + 1;
+        this.update({ outgoingMessageCount: newCount } as WAAppAuth<T>);
         delivery.deliveredAt = timestamp || new Date();
         break;
-      case MessageStatusEnum.READ:
+      }
+      case MessageStatusEnum.READ: {
         this.update({ outgoingReadCount: (this.appState?.outgoingReadCount || 0) + 1 } as WAAppAuth<T>);
         delivery.readAt = timestamp || new Date();
         break;
-      case MessageStatusEnum.PLAYED:
+      }
+      case MessageStatusEnum.PLAYED: {
         this.update({ outgoingPlayCount: (this.appState?.outgoingPlayCount || 0) + 1 } as WAAppAuth<T>);
         delivery.playedAt = timestamp || new Date();
         break;
-      case MessageStatusEnum.ERROR:
+      }
+      case MessageStatusEnum.ERROR: {
         this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1 } as WAAppAuth<T>);
         delivery.errorCode = errorCode;
         delivery.errorMessage = errorMessage;
         break;
+      }
     }
 
     // Clear timeout if message is delivered or read
@@ -1955,11 +1961,22 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   async update(data: Partial<WAAppAuth<T>>): Promise<void> {
-    if (Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value)) {
+    const hasChanges = Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value);
+
+    if (data.outgoingMessageCount !== undefined) {
+      this.log(
+        'info',
+        `📱 Update check for outgoingMessageCount: current=${this.appState?.outgoingMessageCount}, new=${data.outgoingMessageCount}, hasChanges=${hasChanges}`
+      );
+    }
+
+    if (hasChanges) {
       this.set(data);
 
       this.set((await this.updateAppAuth(data)) || this.appState);
       this.onUpdate(data);
+    } else if (data.outgoingMessageCount !== undefined) {
+      this.log('warn', `📱 Update skipped for outgoingMessageCount: no changes detected`);
     }
   }
 
