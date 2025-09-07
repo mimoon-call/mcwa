@@ -302,7 +302,7 @@ const InstanceTable = () => {
       </div>
 
       <Table
-        className="overflow-y-visible flex-grow px-2"
+        className="overflow-y-visible flex-grow"
         keyboardDisabled
         rowClickable
         loading={instanceLoading}
