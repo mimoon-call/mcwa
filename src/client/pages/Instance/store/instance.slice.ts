@@ -30,7 +30,7 @@ export interface InstanceState {
 
 const initialState: InstanceState = {
   [INSTANCE_SEARCH_DATA]: null,
-  [INSTANCE_SEARCH_PAGINATION]: { pageSize: 50, pageSort: { statusCode: 1 } },
+  [INSTANCE_SEARCH_PAGINATION]: { pageSize: 50 },
   [INSTANCE_SEARCH_FILTER]: {},
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
@@ -42,8 +42,9 @@ const searchInstance = createAsyncThunk(
   async ({ page, ...payload }: SearchInstanceReq = {}, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
+      const currentFilter = state[StoreEnum.instance]?.[INSTANCE_SEARCH_FILTER];
       const currentPagination = state[StoreEnum.instance]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
-      const data = { ...payload, page: { ...currentPagination, ...(page || {}) } };
+      const data = { ...currentFilter, ...payload, page: { ...currentPagination, ...(page || {}) } };
 
       return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data);
     } catch (error: unknown) {
