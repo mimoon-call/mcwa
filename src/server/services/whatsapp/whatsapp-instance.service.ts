@@ -1109,15 +1109,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         delivery.deliveredAt = timestamp || new Date();
         break;
       case MessageStatusEnum.READ:
-        this.update({ outgoingMessageCount: (this.appState?.outgoingReadCount || 0) + 1 } as WAAppAuth<T>);
+        this.update({ outgoingReadCount: (this.appState?.outgoingReadCount || 0) + 1 } as WAAppAuth<T>);
         delivery.readAt = timestamp || new Date();
         break;
       case MessageStatusEnum.PLAYED:
-        this.update({ outgoingMessageCount: (this.appState?.outgoingPlayCount || 0) + 1 } as WAAppAuth<T>);
+        this.update({ outgoingPlayCount: (this.appState?.outgoingPlayCount || 0) + 1 } as WAAppAuth<T>);
         delivery.playedAt = timestamp || new Date();
         break;
       case MessageStatusEnum.ERROR:
-        this.update({ outgoingMessageCount: (this.appState?.outgoingErrorCount || 0) + 1 } as WAAppAuth<T>);
+        this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1 } as WAAppAuth<T>);
         delivery.errorCode = errorCode;
         delivery.errorMessage = errorMessage;
         break;
@@ -1643,7 +1643,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         this.update({
           lastSentMessage: this.getTodayDate(),
           dailyMessageCount: this.appState?.lastSentMessage !== this.getTodayDate() ? 1 : (this.appState?.dailyMessageCount || 0) + 1,
-          outgoingMessageCount: (this.appState?.outgoingMessageCount || 0) + 1,
         } as WAAppAuth<T>);
 
         // Trigger outgoing message callback
