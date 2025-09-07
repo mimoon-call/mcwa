@@ -98,6 +98,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public connected: boolean = false;
   private recovering: boolean = false;
 
+  private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
+  private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
+  private randomDelayBetween = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+  private getRealisticDelay = (min: number, max: number) =>
+    Math.random() < 0.8 ? this.randomDelayBetween(min, max) : this.randomDelayBetween(min * 3, max * 3);
+
   private humanDelayFor(text: string): number {
     if (!text) return 0;
 
@@ -106,14 +112,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const jitter = Math.floor(Math.random() * 1200);
 
     return base + jitter; // 1–5s typical
-  }
-
-  private randomIdle(min = 800, max = 3500): number {
-    return min + Math.floor(Math.random() * (max - min));
-  }
-
-  private async delay(ms: number = 0) {
-    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
@@ -873,12 +871,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
 
         // Send read receipt before processing
-        try {
-          await sock.readMessages([message.key]);
-          this.log('debug', `📖 Read receipt sent for message ${message.key.id}`);
-        } catch (error) {
-          this.log('warn', `⚠️ Failed to send read receipt for message ${message.key.id}:`, error);
-        }
+        setTimeout(
+          async () => {
+            try {
+              await sock.readMessages([message.key]);
+              this.log('debug', `📖 Read receipt sent for message ${message.key.id}`);
+            } catch (error) {
+              this.log('warn', `⚠️ Failed to send read receipt for message ${message.key.id}:`, error);
+            }
+          },
+          this.getRealisticDelay(3, 10)
+        );
 
         // Normalize & dispatch
         try {
