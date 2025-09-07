@@ -942,19 +942,19 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             case MessageStatusEnum.DELIVERED: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.DELIVERED, timestamp);
               const delivery = this.messageDeliveries.get(key.id);
-              if (delivery) this.log('info', `✅ Message delivered to ${delivery.toNumber}`);
+              if (delivery) this.log('info', `✅  Message ${key.id} delivered to ${delivery.toNumber}`);
               break;
             }
             case MessageStatusEnum.READ: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.READ, timestamp);
               const readDelivery = this.messageDeliveries.get(key.id);
-              if (readDelivery) this.log('info', `👁️ Message read by ${readDelivery.toNumber}`);
+              if (readDelivery) this.log('info', `👁️ Message ${key.id} read by ${readDelivery.toNumber}`);
               break;
             }
             case MessageStatusEnum.PLAYED: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.PLAYED, timestamp);
               const playedDelivery = this.messageDeliveries.get(key.id);
-              if (playedDelivery) this.log('info', `🎵 Audio message played by ${playedDelivery.toNumber}`);
+              if (playedDelivery) this.log('info', `🎵 Audio message ${key.id} played by ${playedDelivery.toNumber}`);
               break;
             }
             case MessageStatusEnum.ERROR: {
@@ -1062,15 +1062,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   // Message delivery tracking methods
   private trackMessageDelivery(messageId: string, fromNumber: string, toNumber: string, options?: WASendOptions): void {
     if (!options?.trackDelivery) {
-      this.log('debug', `📱Delivery tracking disabled for message ${messageId}`);
+      this.log('debug', `📱 Delivery tracking disabled for message ${messageId}`);
       return;
     }
 
-    this.log('info', `📱Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
+    this.log('info', `📱 Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
 
     const delivery: WAMessageDelivery = { messageId, fromNumber, toNumber, status: 'PENDING', sentAt: getLocalTime() };
     this.messageDeliveries.set(messageId, delivery);
-    this.log('debug', `📱Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
+    this.log('debug', `📱 Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
 
     const trackingTimeout = options.deliveryTrackingTimeout || 30000; // Set delivery tracking timeout
     const timeoutId = setTimeout(() => this.handleDeliveryTimeout(messageId), trackingTimeout);
@@ -1088,17 +1088,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const delivery = this.messageDeliveries.get(messageId);
 
     if (!delivery) {
-      this.log('warn', `📱No delivery tracking found for message ${messageId} when updating status to ${status}`);
+      this.log('warn', `📱 No delivery tracking found for message ${messageId} when updating status to ${status}`);
       return;
     }
 
     if (delivery.status === status) {
-      this.log('debug', `📱Same delivery status for message ${messageId}`);
+      this.log('debug', `📱 Same delivery status for message ${messageId}`);
       return;
     }
 
     delivery.status = status;
-    this.log('info', `📱Updating delivery status for message ${messageId}: ${delivery.status} -> ${status}`);
+    this.log('info', `📱 Updating delivery status for message ${messageId}: ${delivery.status} -> ${status}`);
 
     switch (status) {
       case MessageStatusEnum.DELIVERED:
