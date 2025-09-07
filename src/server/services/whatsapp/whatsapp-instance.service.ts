@@ -872,6 +872,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('error', '❌ Failed to update inbound counters:', error);
         }
 
+        // Send read receipt before processing
+        try {
+          await sock.readMessages([message.key]);
+          this.log('debug', `📖 Read receipt sent for message ${message.key.id}`);
+        } catch (error) {
+          this.log('warn', `⚠️ Failed to send read receipt for message ${message.key.id}:`, error);
+        }
+
         // Normalize & dispatch
         try {
           await this.attachMediaBufferToRaw(message as WAMessageIncomingRaw, sock);
