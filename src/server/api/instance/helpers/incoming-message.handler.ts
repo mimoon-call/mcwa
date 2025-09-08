@@ -1,9 +1,35 @@
-import type { WAMessageIncomingCallback } from '@server/services/whatsapp/whatsapp-instance.type';
+import type { WAMessageIncomingCallback, WAMessageIncomingRaw } from '@server/services/whatsapp/whatsapp-instance.type';
 import getLocalTime from '@server/helpers/get-local-time';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
+
+const speechToText = async (raw: WAMessageIncomingRaw) => {
+  // Check if raw message contains audio and has buffer
+  if (raw.mediaType === 'audio' || raw.mediaType === 'ptt') {
+    if (raw.buffer && raw.mimeType) {
+      try {
+        const openAiService = new OpenAiService();
+        const transcribedText = await openAiService.speechToText(raw.buffer, raw.mimeType, {
+          model: 'gpt-4o-mini-transcribe',
+          language: 'he', // Force Hebrew output regardless of input language
+        });
+
+        if (transcribedText) {
+          console.log(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcribed:`, transcribedText);
+          return transcribedText;
+        }
+      } catch (error) {
+        console.error(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcription failed:`, error);
+      }
+    } else {
+      console.log(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio message without buffer or mimeType`);
+    }
+  }
+
+  return null;
+};
 
 export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw, messageId) => {
   // Internal message
@@ -13,37 +39,18 @@ export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw
     return;
   }
 
-  const speechText = await (async () => {
-    // Check if raw message contains audio and has buffer
-    if (raw.mediaType === 'audio' || raw.mediaType === 'ptt') {
-      if (raw.buffer && raw.mimeType) {
-        try {
-          const openAiService = new OpenAiService();
-          console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}] Converting audio to text...`);
-          const transcribedText = await openAiService.speechToText(raw.buffer, raw.mimeType, {
-            model: 'gpt-4o-mini-transcribe',
-            language: 'he', // Force Hebrew output regardless of input language
-          });
+  if (msg.fromNumber.includes('@')) {
+    console.log(getLocalTime(), `[${msg.fromNumber}]`, '[NON-PM]', msg.text);
 
-          if (transcribedText) {
-            console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}] Audio transcribed:`, transcribedText);
-            return transcribedText;
-          }
-        } catch (error) {
-          console.error(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}] Audio transcription failed:`, error);
-        }
-      } else {
-        console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}] Audio message without buffer or mimeType`);
-      }
-    }
+    return;
+  }
 
-    return null;
-  })();
+  const speechText = await speechToText(raw);
 
   // Update message text with transcribed audio if available
   const messageData = {
     ...msg,
-    text: msg.text || speechText, // Use transcribed text if available, otherwise use original text
+    text: msg.text || speechText, // Use original text if available, otherwise use transcribed text
     raw,
     messageId,
     status: MessageStatusEnum.RECEIVED,
