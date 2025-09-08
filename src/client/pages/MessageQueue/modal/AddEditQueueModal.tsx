@@ -11,11 +11,15 @@ import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
 import { Checkbox } from '@components/Checkbox/Checkbox';
+import { useToast } from '@hooks';
+import { useTranslation } from 'react-i18next';
 
 type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage' | 'tts'> & Partial<{ _id: string }>;
 export type AddQueueModalRef = Omit<ModalRef, 'open'> & { open: (payload?: Partial<Payload>) => Promise<void> };
 
 const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
+  const { t } = useTranslation();
+  const toast = useToast({ y: 'bottom' });
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const [payload, setPayload] = useState<Payload>({ phoneNumber: '', fullName: '', textMessage: '' });
@@ -30,7 +34,16 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
       await updateQueue({ _id: payload._id, phoneNumber, fullName, textMessage });
     } else {
       const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage, tts };
-      await addQueue(data);
+      const { addedCount, blockedCount } = await addQueue(data);
+
+      if (blockedCount > 0 && addedCount > 0) {
+        const totalCount = addedCount + blockedCount;
+        toast.warning(t('QUEUE.ADDED_PARTIAL_MESSAGES_TO_QUEUE', { addedCount, totalCount }));
+      } else if (blockedCount > 0) {
+        toast.error(t('QUEUE.BLOCKED_MESSAGES_NOT_ADDED_TO_QUEUE'));
+      } else {
+        toast.success(t('QUEUE.ADDED_MESSAGES_TO_QUEUE', { addedCount }));
+      }
     }
 
     modalRef.current?.close();

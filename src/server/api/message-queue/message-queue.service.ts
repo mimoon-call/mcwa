@@ -2,6 +2,7 @@ import type { Pagination } from '@models';
 import type { BaseResponse } from '@server/models/base-response';
 import {
   AddMessageQueueReq,
+  AddMessageQueueRes,
   EditMessageQueueReq,
   MessageQueueActiveEvent,
   MessageQueueItem,
@@ -23,6 +24,7 @@ import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-e
 import replaceStringVariable from '@server/helpers/replace-string-variable';
 import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
 import getLocalTime from '@server/helpers/get-local-time';
+import { WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
 
 let isSending = false;
 let messageCount = 0;
@@ -46,11 +48,18 @@ export const messageQueueService = {
     return data;
   },
 
-  [ADD_MESSAGE_QUEUE]: async (textMessage: string, tts: boolean, data: AddMessageQueueReq['data']): Promise<BaseResponse> => {
-    const bulk = data.map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), tts, createdAt: getLocalTime() }));
-    await MessageQueueDb.insertMany(bulk);
+  [ADD_MESSAGE_QUEUE]: async (textMessage: string, tts: boolean, data: AddMessageQueueReq['data']): Promise<AddMessageQueueRes> => {
+    const blocked = (await WhatsAppUnsubscribe.find({ phoneNumber: { $in: data.map((d) => d.phoneNumber) } }, { phoneNumber: 1, _id: 0 })).map(
+      (doc) => doc.phoneNumber
+    );
 
-    return { returnCode: 0 };
+    const bulk = data
+      .filter(({ phoneNumber }) => !blocked.includes(phoneNumber))
+      .map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), tts, createdAt: getLocalTime() }));
+
+    const inserted = await MessageQueueDb.insertMany(bulk);
+
+    return { returnCode: 0, addedCount: inserted.length, blockedCount: blocked.length };
   },
 
   [EDIT_MESSAGE_QUEUE]: async ({ _id, ...data }: EditMessageQueueReq): Promise<BaseResponse> => {

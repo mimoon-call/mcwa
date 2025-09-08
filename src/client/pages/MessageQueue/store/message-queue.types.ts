@@ -20,6 +20,8 @@ export type AddMessageQueueReq = {
   tts?: MessageQueueItem['tts'];
 };
 
+export type AddMessageQueueRes = { addedCount: number; blockedCount: number };
+
 export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' | 'fullName' | 'textMessage'>;
 
 export type MessageQueueActiveEvent = { messageCount: number; messagePass: number; isSending: boolean };

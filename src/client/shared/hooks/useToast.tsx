@@ -31,7 +31,7 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     root.render(<Toast ref={refHandler} {...props} />);
   }, []);
 
-  const error = (message: string | ReactNode, options: ToastOptions = {}) => {
+  const error = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
 
     openToast?.(
@@ -40,11 +40,11 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-red-50 text-red-700', ...options }
+      { className: 'bg-red-50 text-red-700', duration, ...options }
     );
   };
 
-  const warning = (message: string | ReactNode, options: ToastOptions = {}) => {
+  const warning = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
 
     openToast?.(
@@ -53,7 +53,7 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-yellow-50 text-yellow-700', ...options }
+      { className: 'bg-yellow-50 text-yellow-700', duration, ...options }
     );
   };
 

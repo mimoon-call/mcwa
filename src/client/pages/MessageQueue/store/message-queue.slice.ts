@@ -1,6 +1,7 @@
 import type { ErrorResponse } from '@services/http/types';
 import type {
   AddMessageQueueReq,
+  AddMessageQueueRes,
   EditMessageQueueReq,
   SearchMessageQueueReq,
   SearchMessageQueueRes,
@@ -64,7 +65,7 @@ const searchMessageQueue = createAsyncThunk(
 );
 
 const addMessageQueue = async (data: AddMessageQueueReq) => {
-  await Http.post<void, AddMessageQueueReq>(`${StoreEnum.queue}/${ADD_MESSAGE_QUEUE}`, data);
+  return await Http.post<AddMessageQueueRes, AddMessageQueueReq>(`${StoreEnum.queue}/${ADD_MESSAGE_QUEUE}`, data);
 };
 
 const updateMessageQueue = async (data: EditMessageQueueReq) => {

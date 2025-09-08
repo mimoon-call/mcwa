@@ -1,13 +1,53 @@
 // message-reply.handler.ts
 import { ObjectId } from 'mongodb';
-import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
+import { WhatsAppMessage, WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
-import { classifyInterest } from '@server/api/message-queue/reply/interest.classifier';
+import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { wa } from '@server/index';
+import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
+
+const handleWebhook = async (phoneNumber: string, text: string, ai: InterestResult) => {
+  switch (ai.department) {
+    case LeadDepartmentEnum.CAR:
+      console.log('CAR LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
+      break;
+    case LeadDepartmentEnum.MORTGAGE:
+      console.log('MORTGAGE LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
+      break;
+    case LeadDepartmentEnum.GENERAL:
+      console.log('GENERAL LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
+      break;
+  }
+};
+
+const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestResult | null) => {
+  if (!ai) return;
+
+  switch (ai?.intent) {
+    case LeadIntentEnum.UNSUBSCRIBE: {
+      await WhatsAppUnsubscribe.findOneAndUpdate(
+        { phoneNumber },
+        { $set: { text, intent: ai.intent, reason: ai.reason, confidence: ai.confidence }, $setOnInsert: { createdAt: new Date() } },
+        { upsert: true }
+      );
+
+      // unsubscribe webhook
+
+      break;
+    }
+
+    case LeadIntentEnum.NEUTRAL:
+    case LeadIntentEnum.REQUEST_INFO:
+    case LeadIntentEnum.POSITIVE_INTEREST:
+    case LeadIntentEnum.NOT_NOW:
+      await handleWebhook(phoneNumber, text, ai);
+      break;
+  }
+};
 
 export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
   const { fromNumber, toNumber, startId, text } = await (async () => {
@@ -83,6 +123,8 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
 
           // persist classification on the outreach message
           await WhatsAppMessage.updateOne({ _id: startId }, { $set: ai });
+
+          await handleAiInterest(leadNumber, text, ai);
 
           if (ai.suggestedReply) {
             try {

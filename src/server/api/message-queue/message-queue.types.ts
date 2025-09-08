@@ -1,4 +1,5 @@
 import type { EntityList, Pagination } from '@models';
+import type { BaseResponse } from '@server/models';
 import { ObjectId } from 'mongodb';
 
 export type MessageQueueItem = {
@@ -18,6 +19,7 @@ export type MessageQueueItem = {
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
 export type SearchMessageQueueReq = Partial<{ page: Pagination; hasBeenSent?: boolean }>;
 export type AddMessageQueueReq = { data: Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>[]; textMessage: string; tts?: MessageQueueItem['tts'] };
+export type AddMessageQueueRes = BaseResponse<{ addedCount: number; blockedCount: number }>;
 export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' | 'fullName' | 'textMessage' | 'tts'>;
 
 export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;

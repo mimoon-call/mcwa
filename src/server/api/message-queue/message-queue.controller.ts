@@ -8,7 +8,13 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
 } from '@server/api/message-queue/message-queue.map';
-import { AddMessageQueueReq, EditMessageQueueReq, SearchMessageQueueReq, SearchMessageQueueRes } from '@server/api/message-queue/message-queue.types';
+import {
+  AddMessageQueueReq,
+  AddMessageQueueRes,
+  EditMessageQueueReq,
+  SearchMessageQueueReq,
+  SearchMessageQueueRes,
+} from '@server/api/message-queue/message-queue.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 import { messageQueueService } from '@server/api/message-queue/message-queue.service';
@@ -26,7 +32,7 @@ export const messageQueueController = {
     res.send(await messageQueueService[SEARCH_MESSAGE_QUEUE](page, hasBeenSent));
   },
 
-  [ADD_MESSAGE_QUEUE]: async (req: Request<never, never, AddMessageQueueReq>, res: Response<BaseResponse>) => {
+  [ADD_MESSAGE_QUEUE]: async (req: Request<never, never, AddMessageQueueReq>, res: Response<AddMessageQueueRes>) => {
     const { textMessage, tts, data } = await new RecordValidator(req.body, [
       ['tts', { type: ['Boolean'] }],
       ['textMessage', { required: [true] }],

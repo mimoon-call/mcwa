@@ -60,7 +60,11 @@
     "DELETE_ALL": "Delete all",
     "MESSAGE_QUEUE_HAS_BEEN_CLEARED": "Message queue has been cleared",
     "ARE_YOU_SURE_YOU_WANT_TO_CLEAR_QUEUE": "Are you sure you want to clear all messages in the queue?",
-    "TEXT_TO_SPEECH": "Send as voice message"
+    "TEXT_TO_SPEECH": "Send as voice message",
+    "ADDED_PARTIAL_MESSAGES_TO_QUEUE": "Added {{addedCount}} of {{totalCount}} partial messages to the queue",
+    "BLOCKED_MESSAGES_NOT_ADDED_TO_QUEUE": "All destinations were unsubscribed; messages were not added to the queue",
+    "ADDED_MESSAGES_TO_QUEUE": "Added {{addedCount}} messages to the queue",
+    "NO_VALID_PHONE_NUMBERS_WERE_FOUND": "No valid phone numbers were found"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "Add new instance",

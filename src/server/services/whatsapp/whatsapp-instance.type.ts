@@ -7,6 +7,7 @@ import IWebMessageInfo = proto.IWebMessageInfo;
 import WebMessageInfo = proto.WebMessageInfo;
 import { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
+import { LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 
 export type WAProxyConfig = {
   type?: 'HTTP' | 'SOCKS5'; // default HTTP
@@ -82,6 +83,16 @@ export type WAMessage = {
   toJid?: string;
   internalFlag?: boolean;
   warmingFlag?: boolean;
+};
+
+export type WAUnsubscribe = {
+  phoneNumber: string;
+  text: string;
+  intent: keyof typeof LeadIntentEnum;
+  reason: string;
+  confidence: number;
+  updatedAt: Date;
+  createdAt: Date;
 };
 
 export type WAMessageIncoming = WAMessage;

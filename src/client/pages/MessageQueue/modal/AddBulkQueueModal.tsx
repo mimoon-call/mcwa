@@ -14,11 +14,15 @@ import { useDispatch } from 'react-redux';
 import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
 import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';
 import { RegexPattern } from '@client-constants';
+import { useToast } from '@hooks';
+import { useTranslation } from 'react-i18next';
 
 type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data']) => void };
 type PayloadData = (Pick<MessageQueueItem, 'phoneNumber' | 'fullName'> & { checkFlag?: boolean })[];
 
 const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
+  const { t } = useTranslation();
+  const toast = useToast({ y: 'bottom' });
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const [payload, setPayload] = useState<{
@@ -95,18 +99,32 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
       data: payload.data.filter((item) => item.checkFlag).map((item) => ({ phoneNumber: item.phoneNumber, fullName: item.fullName })),
     };
 
-    await addQueue(data);
+    const { addedCount, blockedCount } = await addQueue(data);
+
+    if (blockedCount > 0 && addedCount > 0) {
+      const totalCount = addedCount + blockedCount;
+      toast.warning(t('QUEUE.ADDED_PARTIAL_MESSAGES_TO_QUEUE', { addedCount, totalCount }));
+    } else if (blockedCount > 0) {
+      toast.error(t('QUEUE.BLOCKED_MESSAGES_NOT_ADDED_TO_QUEUE'));
+    } else {
+      toast.success(t('QUEUE.ADDED_MESSAGES_TO_QUEUE', { addedCount }));
+    }
   };
 
   useImperativeHandle(ref, () => ({
     open: async (data): Promise<void> => {
-      const payloadData = data
-        .map((val) => ({ ...val, phoneNumber: val.phoneNumber.replace(/\D/g, '') }))
-        .uniqueBy(['phoneNumber'])
+      const payloadData = data.map((val) => ({ ...val, phoneNumber: val.phoneNumber.replace(/\D/g, '') }));
+      const nonDuplicateData = payloadData.uniqueBy(['phoneNumber']);
+      const nonInvalidData = nonDuplicateData
         .filter((value) => RegexPattern.MOBILE_PHONE_IL.test(value.phoneNumber))
         .map((value) => ({ ...value, checkFlag: true }));
 
-      setPayload({ textMessage: '', tts: false, data: payloadData });
+      if (!nonInvalidData.length) {
+        toast.error(t('QUEUE.NO_VALID_PHONE_NUMBERS_WERE_FOUND'));
+        return;
+      }
+
+      setPayload({ textMessage: '', tts: false, data: nonInvalidData });
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),

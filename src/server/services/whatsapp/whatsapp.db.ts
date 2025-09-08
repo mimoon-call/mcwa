@@ -1,4 +1,12 @@
-import type { WAAppAuth, WAAppKey, WAMessage, WAMessageIncomingRaw, WAMessageOutgoingRaw, WAMessageDelivery } from './whatsapp-instance.type';
+import {
+  WAAppAuth,
+  WAAppKey,
+  WAMessage,
+  WAMessageIncomingRaw,
+  WAMessageOutgoingRaw,
+  WAMessageDelivery,
+  WAUnsubscribe,
+} from './whatsapp-instance.type';
 import type { WAPersona } from './whatsapp.type';
 import { Schema } from 'mongoose';
 import getLocalTime from '../../helpers/get-local-time';
@@ -137,6 +145,26 @@ export const WhatsAppMessage = new MongoService<
       { fields: { status: 1, readAt: 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },
     ],
     preSave: setModifiedAndCreationDate,
+  }
+);
+
+export const WhatsAppUnsubscribe = new MongoService<WAUnsubscribe>(
+  'WhatsAppUnsubscribe',
+  {
+    phoneNumber: { type: String, required: true },
+    text: { type: String, required: true },
+    intent: { type: String, enum: Object.values(LeadIntentEnum) },
+    reason: { type: String },
+    confidence: { type: Number }, // 0..1
+    updatedAt: { type: Date },
+    createdAt: { type: Date },
+  },
+  { timestamps: false },
+  {
+    indexes: [
+      { fields: { phoneNumber: 1 }, options: { unique: true, name: 'phoneNumber_unique' } },
+      { fields: { createdAt: 1 }, options: { name: 'createdAt_index' } },
+    ],
   }
 );
 
