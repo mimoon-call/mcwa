@@ -11,13 +11,14 @@ import { Checkbox } from '@components/Checkbox/Checkbox';
 import { ADD_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
 import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
 import { useDispatch } from 'react-redux';
-import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
+import TextAreaField, { type TextAreaFieldRef } from '@components/Fields/TextAreaField/TextAreaField';
 import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';
 import { RegexPattern } from '@client-constants';
 import { useToast } from '@hooks';
 import { useTranslation } from 'react-i18next';
+import Button from '@components/Button/Button';
 
-type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data']) => void };
+type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data'], map: Record<string, string>) => void };
 type PayloadData = (Pick<MessageQueueItem, 'phoneNumber' | 'fullName'> & { checkFlag?: boolean })[];
 
 const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
@@ -25,6 +26,9 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   const toast = useToast({ y: 'bottom' });
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
+  const textAreaRef = useRef<TextAreaFieldRef>(null);
+  const [dynamicFields, setDynamicFields] = useState<Record<string, string>>({});
+
   const [payload, setPayload] = useState<{
     tts: AddMessageQueueReq['tts'];
     textMessage: AddMessageQueueReq['textMessage'];
@@ -65,6 +69,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   const Message = (
     <div className="flex flex-col gap-2">
       <TextAreaField
+        ref={textAreaRef}
         name="textMessage"
         rules={{ required: [true], minLength: [4] }}
         value={payload.textMessage}
@@ -72,13 +77,33 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         rows={13}
       />
 
-      <Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />
+      <div className="mb-6">
+        <label className="flex flex-col text-slate-600 text-base mb-1 font-medium">{t('QUEUE.DYNAMIC_FIELDS')}</label>
+
+        <div className="flex gap-2">
+          {Object.entries(dynamicFields).map(([value, title]) => (
+            <Button
+              key={value}
+              className="bg-blue-50 outline-0"
+              type="button"
+              buttonType="flat"
+              onClick={() => textAreaRef.current?.insertDynamicField(title, `{${value}}`)}
+            >
+              {title}
+            </Button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
   const steps: StepperModalProps['steps'] = [
     { title: 'QUEUE.CONTACT_LIST', component: List },
-    { title: 'QUEUE.TEXT_MESSAGE', component: Message },
+    {
+      title: 'QUEUE.TEXT_MESSAGE',
+      component: Message,
+      additionalActions: <Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />,
+    },
   ];
 
   const onMarkChange = (phoneNumber: string, checkFlag: boolean) => {
@@ -112,7 +137,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   };
 
   useImperativeHandle(ref, () => ({
-    open: async (data): Promise<void> => {
+    open: async (data, map): Promise<void> => {
       const payloadData = data.map((val) => ({ ...val, phoneNumber: val.phoneNumber.replace(/\D/g, '') }));
       const nonDuplicateData = payloadData.uniqueBy(['phoneNumber']);
       const nonInvalidData = nonDuplicateData
@@ -125,6 +150,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
       }
 
       setPayload({ textMessage: '', tts: false, data: nonInvalidData });
+      setDynamicFields(map);
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),

@@ -9,10 +9,11 @@ import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.sl
 import { ADD_MESSAGE_QUEUE, EDIT_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
-import TextAreaField from '@components/Fields/TextAreaField/TextAreaField';
+import TextAreaField, { type TextAreaFieldRef } from '@components/Fields/TextAreaField/TextAreaField';
 import { Checkbox } from '@components/Checkbox/Checkbox';
 import { useToast } from '@hooks';
 import { useTranslation } from 'react-i18next';
+import Button from '@components/Button/Button';
 
 type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage' | 'tts'> & Partial<{ _id: string }>;
 export type AddQueueModalRef = Omit<ModalRef, 'open'> & { open: (payload?: Partial<Payload>) => Promise<void> };
@@ -22,6 +23,7 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   const toast = useToast({ y: 'bottom' });
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
+  const textAreaRef = useRef<TextAreaFieldRef>(null);
   const [payload, setPayload] = useState<Payload>({ phoneNumber: '', fullName: '', textMessage: '' });
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -66,6 +68,7 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
       size={OverlayEnum.MD}
       closeCallback={async () => dispatch(searchQueue({}))}
       submitCallback={submit}
+      additionalActions={<Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />}
     >
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
@@ -95,15 +98,28 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
         </div>
 
         <TextAreaField
+          ref={textAreaRef}
           label="QUEUE.TEXT_MESSAGE"
           name="textMessage"
           rules={{ required: [true] }}
           value={payload.textMessage}
-          onChange={(value) => setPayload({ ...payload, textMessage: value })}
+          onChange={(value) => setPayload((prev) => ({ ...prev, textMessage: value }))}
           rows={10}
         />
 
-        <Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />
+        <div className="flex gap-2">
+          {Object.entries({ fullName: 'QUEUE.FULL_NAME', phoneNumber: 'QUEUE.PHONE_NUMBER' }).map(([value, title]) => (
+            <Button
+              key={value}
+              className="bg-blue-50 outline-0"
+              type="button"
+              buttonType="flat"
+              onClick={() => textAreaRef.current?.insertDynamicField(t(title), `{${value}}`)}
+            >
+              {t(title)}
+            </Button>
+          ))}
+        </div>
       </div>
     </Modal>
   );

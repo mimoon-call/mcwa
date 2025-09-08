@@ -9,7 +9,7 @@ const Form = forwardRef<FormRef, PropsWithChildren<FormProps>>((props, ref) => {
   const validate = () => {
     // Force validation on all InputWrapper components by triggering a custom validation event
     const inputWrappers = formRef.current?.querySelectorAll('[data-input-wrapper]');
-    
+
     inputWrappers?.forEach((wrapper) => {
       // Trigger a custom validation event on the InputWrapper itself
       const validationEvent = new CustomEvent('forceValidation', { bubbles: true });
@@ -45,7 +45,7 @@ const Form = forwardRef<FormRef, PropsWithChildren<FormProps>>((props, ref) => {
   }));
 
   return (
-    <form ref={formRef} className={cn('flex flex-col', className)} onSubmit={submitHandler}>
+    <form ref={formRef} className={cn('flex flex-col', className)} onSubmit={onSubmit ? submitHandler : undefined}>
       {children}
     </form>
   );

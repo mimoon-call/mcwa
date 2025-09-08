@@ -92,7 +92,7 @@ const MessageQueue = () => {
 
   const importFile = async () => {
     const file = await FileService.uploadFile();
-    const data = await (async () => {
+    const [data, map] = await (async () => {
       try {
         return await loadCsvFromFile<Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>>(file![0], ['fullName', 'phoneNumber'], true);
       } catch {
@@ -101,7 +101,7 @@ const MessageQueue = () => {
       }
     })();
 
-    addBulkQueueModalRef.current?.open(data);
+    addBulkQueueModalRef.current?.open(data, map);
   };
 
   useEffect(() => {

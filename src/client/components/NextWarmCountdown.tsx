@@ -54,12 +54,7 @@ export const NextWarmCountdown = ({ className }: { className?: ClassValue }) => 
     const socket = getClientSocket();
 
     const update = ({ nextWarmAt }: { nextWarmAt: Date | string | null }) => {
-      if (nextWarmAt) {
-        const nextWarmTime = new Date(nextWarmAt);
-        dispatch(globalStore.setNextWarmAt(nextWarmTime));
-      } else {
-        dispatch(globalStore.setNextWarmAt(null));
-      }
+      dispatch(globalStore.setNextWarmAt(nextWarmAt));
     };
 
     socket?.on(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, update);

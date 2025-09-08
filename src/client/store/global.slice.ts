@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 export interface GlobalState {
-  nextWarmAt: Date | null;
+  nextWarmAt: string | null;
 }
 
 const initialState: GlobalState = {
@@ -13,8 +13,14 @@ const globalSlice = createSlice({
   name: 'global',
   initialState,
   reducers: {
-    setNextWarmAt: (state, action: PayloadAction<Date | null>) => {
-      state.nextWarmAt = action.payload;
+    setNextWarmAt: (state, action: PayloadAction<Date | string | null>) => {
+      if (action.payload === null) {
+        state.nextWarmAt = null;
+      } else if (action.payload instanceof Date) {
+        state.nextWarmAt = action.payload.toISOString();
+      } else {
+        state.nextWarmAt = action.payload;
+      }
     },
   },
 });

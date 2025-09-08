@@ -8,7 +8,7 @@ export const useGlobalState = () => {
 
   const nextWarmAt = useSelector((state: RootState) => state[StoreEnum.global].nextWarmAt);
 
-  const updateNextWarmAt = (date: Date | null) => {
+  const updateNextWarmAt = (date: Date | string | null) => {
     dispatch(globalStore.setNextWarmAt(date));
   };
 

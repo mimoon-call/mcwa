@@ -57,6 +57,7 @@ const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
       cancelText={cancelCaption}
       cancelCallback={onCancelCallback}
       hideCancelButton={hideBack}
+      additionalActions={steps[stepIndex].additionalActions}
       {...rest}
     >
       {steps[stepIndex].component}

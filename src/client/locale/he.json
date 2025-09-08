@@ -64,7 +64,8 @@
     "ADDED_PARTIAL_MESSAGES_TO_QUEUE": "נוספו {{addedCount}} מתוך {{totalCount}} הודעות חלקיות לתור",
     "BLOCKED_MESSAGES_NOT_ADDED_TO_QUEUE": "כל היעדים נמצאים ברשימת הסרה מדיוור, לא נוספו הודעות לתור",
     "ADDED_MESSAGES_TO_QUEUE": "נוספו {{addedCount}} הודעות לתור",
-    "NO_VALID_PHONE_NUMBERS_WERE_FOUND": "לא נמצאו מספרי טלפון חוקיים"
+    "NO_VALID_PHONE_NUMBERS_WERE_FOUND": "לא נמצאו מספרי טלפון חוקיים",
+    "DYNAMIC_FIELDS": "שדות דינמיים"
   },
   "INSTANCE": {
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",

@@ -8,5 +8,6 @@ export type StepperModalProps = Omit<ModalProps, 'cancelCallback'> & {
     component: ReactNode;
     onSubmit?: () => Promise<void> | void;
     hideBack?: boolean;
+    additionalActions?: ModalProps['additionalActions'];
   }[];
 };

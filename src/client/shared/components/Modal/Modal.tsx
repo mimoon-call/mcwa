@@ -82,7 +82,11 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
             </div>
           )}
 
-          <Form ref={formRef} className="flex-grow overflow-y-auto" onSubmit={onSubmit}>
+          <Form 
+            ref={formRef} 
+            className="flex-grow overflow-y-auto" 
+            onSubmit={onSubmit}
+          >
             {children}
           </Form>
 
