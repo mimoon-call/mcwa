@@ -1,9 +1,9 @@
+import type { WAMessageIncomingCallback } from '@server/services/whatsapp/whatsapp-instance.type';
 import getLocalTime from '@server/helpers/get-local-time';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
-import type { WAMessageIncomingCallback } from '@server/services/whatsapp/whatsapp-instance.type';
 
 export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw, messageId) => {
   // Internal message

@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import type {
+import {
   IMessage,
   WAAppAuth,
   WAInstanceConfig,
@@ -19,6 +19,7 @@ import type {
   WAProxyConfig,
   MediaPart,
   MediaType,
+  IMessageKey,
 } from './whatsapp-instance.type';
 import {
   AnyMessageContent,
@@ -85,6 +86,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private readonly onRemove: () => Promise<unknown> | unknown;
   private readonly onIncomingMessage: WAMessageIncomingCallback;
   private readonly onOutgoingMessage: WAMessageOutgoingCallback;
+  private readonly onSendingMessage: (toNumber: string) => Promise<unknown> | unknown;
   private readonly onMessageUpdate: WAMessageUpdateCallback;
   private readonly hasGlobalMessageUpdateCallback: boolean;
   private readonly onMessageBlocked: WAMessageBlockCallback;
@@ -100,9 +102,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
   private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
-  private randomDelayBetween = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-  private getRealisticDelay = (min: number, max: number) =>
-    Math.random() < 0.8 ? this.randomDelayBetween(min, max) : this.randomDelayBetween(min * 3, max * 3);
 
   private humanDelayFor(text: string): number {
     if (!text) return 0;
@@ -141,6 +140,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onDisconnect = (reason: string) => config.onDisconnect?.(phoneNumber, reason);
     this.onIncomingMessage = (data, ...arg) => config.onIncomingMessage?.({ ...data, toNumber: phoneNumber }, ...arg);
     this.onOutgoingMessage = (data, ...arg) => config.onOutgoingMessage?.({ ...data, fromNumber: phoneNumber }, ...arg);
+    this.onSendingMessage = (toNumber: string) => config?.onSendingMessage?.(this, toNumber);
     this.onMessageUpdate = (...arg) => config.onMessageUpdate?.(...arg);
     this.hasGlobalMessageUpdateCallback = !!config.onMessageUpdate;
     this.onMessageBlocked = async (fromNumber: string, toNumber: string, blockReason: string) => {
@@ -611,7 +611,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private numberToJid(phoneOrJid: string): string {
-    if (phoneOrJid.endsWith('@s.whatsapp.net')) return phoneOrJid;
+    if (phoneOrJid.includes('@')) return phoneOrJid;
 
     return `${phoneOrJid}@s.whatsapp.net`;
   }
@@ -742,6 +742,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
+  public async read(messageKey: IMessageKey): Promise<void> {
+    try {
+      if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+
+      await this.socket.readMessages([messageKey]);
+      this.log('debug', `📖 Read receipt sent for message ${messageKey.id}`);
+    } catch (error) {
+      this.log('warn', `⚠️ Failed to send read receipt for message ${messageKey.id}:`, error);
+    }
+  }
+
   private setupEventHandlers(sock: WASocket): void {
     const connectionUpdateHandler = async (update: any): Promise<void> => {
       const { connection, lastDisconnect } = update;
@@ -869,19 +880,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         } catch (error) {
           this.log('error', '❌ Failed to update inbound counters:', error);
         }
-
-        // Send read receipt before processing
-        setTimeout(
-          async () => {
-            try {
-              await sock.readMessages([message.key]);
-              this.log('debug', `📖 Read receipt sent for message ${message.key.id}`);
-            } catch (error) {
-              this.log('warn', `⚠️ Failed to send read receipt for message ${message.key.id}:`, error);
-            }
-          },
-          this.getRealisticDelay(3, 10)
-        );
 
         // Normalize & dispatch
         try {
@@ -1573,6 +1571,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if ((typeof payload === 'object' && payload.type === 'text' && !payload.text) || (typeof payload === 'string' && !payload)) {
       throw new Error('Empty message');
     }
+
+    this.onSendingMessage(toNumber);
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       attempts = attempt;

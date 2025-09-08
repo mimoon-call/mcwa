@@ -1,6 +1,7 @@
 import { WhatsappInstance } from './whatsapp-instance.service';
 import { proto } from '@whiskeysockets/baileys';
 
+import IMessageKey = proto.IMessageKey;
 import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
 import WebMessageInfo = proto.WebMessageInfo;
@@ -103,6 +104,7 @@ export type WAMessageOutgoingCallback = (
   raw?: WAMessageOutgoingRaw,
   deliveryStatus?: WAMessageDelivery
 ) => Promise<unknown> | unknown;
+export type WASendingMessageCallback<T extends object> = (instance: WhatsappInstance<T>, toNumber: string) => Promise<unknown> | unknown;
 export type WAMessageBlockCallback = (fromNumber: string, toNumber: string, reason: string) => Promise<unknown> | unknown;
 export type WAMessageUpdateCallback = (messageId: string, deliveryStatus: WAMessageDelivery) => Promise<unknown> | unknown;
 export type WAOnReadyCallback<T extends object> = (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
@@ -128,6 +130,7 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
   // Callbacks for message events
   onIncomingMessage: WAMessageIncomingCallback;
   onOutgoingMessage: WAMessageOutgoingCallback;
+  onSendingMessage?: WASendingMessageCallback<T>;
   onMessageBlocked: WAMessageBlockCallback;
   onMessageUpdate: WAMessageUpdateCallback;
   // Callbacks for instance events
@@ -159,4 +162,4 @@ type MediaPart =
   | proto.Message.IDocumentMessage
   | proto.Message.IStickerMessage;
 
-export { IMessage, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };
+export { IMessage, IMessageKey, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };

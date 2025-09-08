@@ -20,6 +20,7 @@ import { InstanceEventEnum } from '@server/api/instance/instance-event.enum';
 import { incomingMessageHandler } from '@server/api/instance/helpers/incoming-message.handler';
 import { outgoingMessageHandler } from '@server/api/instance/helpers/outgoing-message.handler';
 import { updateMessageHandler } from '@server/api/instance/helpers/update-message.handler';
+import { messageSendingHandler } from '@server/api/instance/helpers/message-sending.handler';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -52,6 +53,7 @@ export const wa = new WhatsappWarmService({
   onIncomingMessage: incomingMessageHandler,
   onOutgoingMessage: outgoingMessageHandler,
   onMessageUpdate: updateMessageHandler,
+  onSendingMessage: messageSendingHandler,
 });
 
 (async () => {
