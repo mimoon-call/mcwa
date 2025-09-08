@@ -13,14 +13,16 @@ import Icon from '@components/Icon/Icon';
 type TextFieldProps = InputWrapperProps & {
   className?: ClassValue;
   clearable?: boolean;
+  beforeChange?: (value: string) => string;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'>;
 
 type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
   Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'> & {
     clearable?: boolean;
+    beforeChange?: (value: string) => string;
   };
 
-const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, clearable = false, ...rest }) => {
+const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, ...rest }) => {
   const localValue = useRef<string>(value?.toString() || '');
 
   useEffect(() => {
@@ -50,7 +52,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
         )}
         value={value}
         disabled={disabled}
-        onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern) : undefined}
+        onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern, beforeChange) : undefined}
         {...rest}
       />
 
@@ -71,13 +73,13 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
 
 const TextField: FC<TextFieldProps> = (props) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, ...rest } = props;
+  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, ...rest } = props;
 
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
-      <Input {...rest} value={value} placeholder={placeholder} clearable={clearable} onChange={(ev) => onChange?.(ev.target.value)} />
+      <Input {...rest} value={value} placeholder={placeholder} clearable={clearable} beforeChange={beforeChange} onChange={(ev) => onChange?.(ev.target.value)} />
     </InputWrapper>
   );
 };

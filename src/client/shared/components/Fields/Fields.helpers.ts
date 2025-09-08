@@ -1,13 +1,17 @@
 // src/client/shared/components/Fields/Fields.helpers.ts
 import type { ChangeEvent } from 'react';
 
-export const onFieldChangeEvent = (onChangeCallback: (v: string) => void, currentValue: string, pattern?: RegExp | string) => {
+export const onFieldChangeEvent = (
+  onChangeCallback: (v: string) => void,
+  currentValue: string,
+  pattern?: RegExp | string,
+  beforeChange?: (value: string) => string
+) => {
   return (ev: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const newValue = ev.target.value;
+    const newValue = beforeChange?.(ev.target.value) || ev.target.value || '';
 
     if (!pattern) {
       onChangeCallback(newValue);
-
       return;
     }
 
