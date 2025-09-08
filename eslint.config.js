@@ -26,6 +26,12 @@ export default defineConfig([
     },
   },
   pluginReact.configs.flat.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      'react/prop-types': 'off', // Disable prop-types for TypeScript files
+    },
+  },
   { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: ['json/recommended'] },
   { files: ['**/*.jsonc'], plugins: { json }, language: 'json/jsonc', extends: ['json/recommended'] },
   { files: ['**/*.json5'], plugins: { json }, language: 'json/json5', extends: ['json/recommended'] },
