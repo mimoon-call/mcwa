@@ -69,12 +69,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const now = new Date();
     this.nextDailyWarmUpTime = new Date(now);
     this.nextDailyWarmUpTime.setUTCHours(randomHour, randomMinute, randomSecond, 0);
-    
-    // If the calculated time is in the past, advance to the next day
-    if (this.nextDailyWarmUpTime.getTime() <= now.getTime()) {
-      this.nextDailyWarmUpTime.setUTCDate(this.nextDailyWarmUpTime.getUTCDate() + 1);
-    }
-    
     this.log('debug', `Next daily warm-up time set to ${this.nextDailyWarmUpTime.toISOString()} (UTC)`);
 
     return this.nextDailyWarmUpTime;
@@ -525,7 +519,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         clearTimeout(this.nextStartWarming);
         this.nextCheckUpdate?.(null);
 
-        // Schedule next warm-up session for tomorrow
+        // Randomize next schedule time between 6-9 AM (UTC)
+        const randomHour = this.randomDelayBetween(6, 9);
+        const randomMinute = this.randomDelayBetween(0, 59);
+        const randomSecond = this.randomDelayBetween(0, 59);
+        const now = new Date();
+        this.nextDailyWarmUpTime = new Date(now);
+        this.nextDailyWarmUpTime.setUTCHours(randomHour, randomMinute, randomSecond, 0);
+
         const nextWarmingTime = this.randomNextDailyWarmUpTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
