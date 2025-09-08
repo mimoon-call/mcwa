@@ -104,7 +104,7 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
           rules={{ required: [true] }}
           value={payload.textMessage}
           onChange={(value) => setPayload((prev) => ({ ...prev, textMessage: value }))}
-          rows={10}
+          rows={12}
         />
 
         <div className="flex gap-2">
