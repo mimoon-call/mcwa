@@ -25,7 +25,7 @@
             tr {
                 @apply bg-secondary font-medium select-none border;
                 
-                td:not(:last-child) {
+                td:not([data-header="_actions"]):not(:last-child) {
                     @apply border-e;
                 }
             }

@@ -89,6 +89,7 @@ const Header = ({ headers, draggable, sort, onSort, actions }: TableHeaderProps)
               ref={(el) => {
                 colRefs.current[headerIndex] = el;
               }}
+              data-header={header.value}
               style={header.style}
               draggable={draggable}
               onClick={() => onClick(header.value, header.sortable)}
@@ -306,7 +307,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   }
 
   return actions.length ? (
-    <td>
+    <td data-header="_actions" style={{ maxWidth: 'fit-content' }}>
       <div className="flex justify-end pe-1">
         <Menu className="my-auto" showSingleAction items={actions} activator="svg:dots-vertical" />
       </div>
