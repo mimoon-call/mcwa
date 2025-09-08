@@ -17,7 +17,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
-  private nextDailyWarmUpTime: Date;
+  private readonly dailyScheduleTimeHour = 9;
   private isWarming: boolean = false;
   private nextStartWarming: NodeJS.Timeout | undefined;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
@@ -48,11 +48,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     super({ ...config, onIncomingMessage, onOutgoingMessage });
 
     this.isEmulation = !!isEmulation;
-    
-    // Initialize nextDailyWarmUpTime to 9:00 AM today
-    const now = getLocalTime();
-    this.nextDailyWarmUpTime = new Date(now);
-    this.nextDailyWarmUpTime.setHours(9, 0, 0, 0);
   }
 
   public isWarmingUp(phoneNumber: string): boolean {
@@ -67,7 +62,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     // Get current time in Jerusalem timezone
     const now = getLocalTime();
 
-    if (now < this.nextDailyWarmUpTime) {
+    if (now.getHours() < this.dailyScheduleTimeHour) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday.toISOString().split('T')[0];
@@ -80,13 +75,15 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const now = getLocalTime();
     let nextWarmingTime: Date;
 
-    if (now < this.nextDailyWarmUpTime) {
-      // Today - use the scheduled time
-      nextWarmingTime = new Date(this.nextDailyWarmUpTime);
+    if (now.getHours() < this.dailyScheduleTimeHour) {
+      // Today
+      nextWarmingTime = new Date(now);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
     } else {
-      // Tomorrow - use the scheduled time for tomorrow
-      nextWarmingTime = new Date(this.nextDailyWarmUpTime);
+      // Tomorrow
+      nextWarmingTime = new Date(now);
       nextWarmingTime.setDate(nextWarmingTime.getDate() + 1);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
     }
 
     // Add phone-specific jitter for better distribution
@@ -394,13 +391,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         clearTimeout(this.nextStartWarming);
         this.nextCheckUpdate?.(null);
 
-        // Randomize next schedule time between 6-9 AM
-        const randomHour = this.randomDelayBetween(6, 9);
-        const randomMinute = this.randomDelayBetween(0, 59);
-        const randomSecond = this.randomDelayBetween(0, 59);
-        const now = getLocalTime();
-        this.nextDailyWarmUpTime = new Date(now);
-        this.nextDailyWarmUpTime.setHours(randomHour, randomMinute, randomSecond, 0);
         const nextWarmingTime = this.getNextWarmingTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
