@@ -17,7 +17,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
-  private readonly dailyScheduleTimeHour = 9;
+  private dailyTimeWindow = [
+    [6, 0],
+    [9, 59],
+  ];
+  private dailyScheduleTimeHour = 9;
+  private dailyScheduleTimeMinute = 0;
   private isWarming: boolean = false;
   private nextStartWarming: NodeJS.Timeout | undefined;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
@@ -50,24 +55,26 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.isEmulation = !!isEmulation;
   }
 
-  public isWarmingUp(phoneNumber: string): boolean {
-    return Array.from(this.activeConversation.keys()).some((key) => {
-      const [from, to] = key.split(':');
-
-      return from === phoneNumber || to === phoneNumber;
-    });
+  private randomNextTimeWindow() {
+    this.dailyScheduleTimeHour = this.randomDelayBetween(this.dailyTimeWindow[0][0], this.dailyTimeWindow[1][0]);
+    this.dailyScheduleTimeMinute = this.randomDelayBetween(this.dailyTimeWindow[0][1], this.dailyTimeWindow[1][1]);
   }
 
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const now = getLocalTime();
 
-    if (now.getHours() < this.dailyScheduleTimeHour) {
+    // If we're before the daily schedule time, consider it still "yesterday" for warm-up purposes
+    if (
+      now.getHours() < this.dailyScheduleTimeHour ||
+      (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)
+    ) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday.toISOString().split('T')[0];
     }
 
+    // If we're at or past the daily schedule time, return today's date
     return now.toISOString().split('T')[0];
   }
 
@@ -75,21 +82,20 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const now = getLocalTime();
     let nextWarmingTime: Date;
 
-    if (now.getHours() < this.dailyScheduleTimeHour) {
+    if (now.getHours() < this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute) {
       // Today
+      this.randomNextTimeWindow();
       nextWarmingTime = new Date(now);
-      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, this.dailyScheduleTimeMinute, 0, 0);
     } else {
       // Tomorrow
+      this.randomNextTimeWindow();
       nextWarmingTime = new Date(now);
       nextWarmingTime.setDate(nextWarmingTime.getDate() + 1);
-      nextWarmingTime.setHours(this.dailyScheduleTimeHour, 0, 0, 0);
+      nextWarmingTime.setHours(this.dailyScheduleTimeHour, this.dailyScheduleTimeMinute, 0, 0);
     }
 
-    // Add phone-specific jitter for better distribution
-    // Since this is a global warming time, we'll use a consistent but distributed offset
-    const baseJitter = 5 + Math.floor(Math.random() * 55); // 5-60 minutes
-    nextWarmingTime.setMinutes(nextWarmingTime.getMinutes() + baseJitter);
+    this.log('info', `Next warming time set to ${nextWarmingTime.toISOString()}`);
 
     return nextWarmingTime;
   }
@@ -358,11 +364,21 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private async getWarmInstances(instances: WAInstance<WAPersona>[]) {
     const warmInstances: WAInstance<WAPersona>[] = [];
+    const todayDate = this.getTodayDate();
+    const actualToday = new Date().toISOString().split('T')[0]; // Real today's date
 
     for (const instance of instances) {
-      if (instance.get('lastWarmedUpDay') !== this.getTodayDate()) {
+      const lastWarmedUpDay = instance.get('lastWarmedUpDay');
+      const dailyWarmUpCount = instance.get('dailyWarmUpCount') || 0;
+      const dailyWarmConversationCount = instance.get('dailyWarmConversationCount') || 0;
+
+      // Only reset daily counters if this is a new day AND the instance hasn't warmed up today
+      // Check if the instance has already warmed up today by looking at lastWarmedUpDay and counters
+      const hasWarmedUpToday = lastWarmedUpDay === actualToday && (dailyWarmUpCount > 0 || dailyWarmConversationCount > 0);
+
+      if (lastWarmedUpDay !== todayDate && !hasWarmedUpToday) {
         await instance.update({
-          lastWarmedUpDay: this.getTodayDate(),
+          lastWarmedUpDay: todayDate,
           warmUpDay: (instance.get('warmUpDay') || 0) + 1,
           dailyWarmUpCount: 0,
           dailyWarmConversationCount: 0,
@@ -377,67 +393,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     return warmInstances;
-  }
-
-  public async startWarmingUp() {
-    try {
-      const allActiveInstances = this.getAllInstances();
-      const warmUpTodayInstances: WAInstance<WAPersona>[] = await this.getWarmInstances(allActiveInstances);
-
-      this.log('debug', `Warm-up today: ${warmUpTodayInstances.length}`);
-
-      if (warmUpTodayInstances.length === 0) {
-        this.log('debug', 'No instances need warming up, stopping warm-up process');
-        clearTimeout(this.nextStartWarming);
-        this.nextCheckUpdate?.(null);
-
-        const nextWarmingTime = this.getNextWarmingTime();
-        const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
-
-        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-        this.nextWarmUp = getLocalTime(nextWarmingTime);
-        this.nextCheckUpdate?.(this.nextWarmUp);
-
-        const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
-        this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
-
-        return;
-      }
-
-      this.log('debug', warmUpTodayInstances.map(({ phoneNumber }) => phoneNumber).join(','), `Start Warming Up ${warmUpTodayInstances.length}`);
-      const instancesPairs = this.getAllUniquePairs('phoneNumber', warmUpTodayInstances, this.getFallbackInstance(allActiveInstances));
-      this.isWarming = true;
-
-      // Process conversations sequentially with delays to prevent simultaneous creation
-      for (const pair of instancesPairs) {
-        if (pair.length < 2) return;
-
-        // Add a delay between conversation creations to prevent simultaneous processing
-        if (this.activeConversation.size > 0) {
-          const delay = this.randomDelayBetween(3, 8) * 1000; // 3-8 seconds delay
-          this.log('debug', `Waiting ${delay / 1000}s before creating next conversation to prevent simultaneous processing`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-
-        await this.createConversation(pair);
-
-        const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
-        await new Promise((resolve) => setTimeout(resolve, setupDelay));
-      }
-    } catch (error) {
-      this.log('error', 'Error occurred', error);
-      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), 5 * 60 * 1000); // Retry in 5 minutes
-    }
-  }
-
-  public stopWarmingUp() {
-    this.isWarming = false;
-
-    Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
-    this.nextCheckUpdate?.(null);
-    this.timeoutConversation.clear();
-    this.activeConversation.clear();
-    this.creatingConversation.clear(); // Clear conversations being created
   }
 
   private async handleConversationMessage(conversationKey: string): Promise<void> {
@@ -562,6 +517,79 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     };
 
     this.timeoutConversation.set(conversationKey, send());
+  }
+
+  public isWarmingUp(phoneNumber: string): boolean {
+    return Array.from(this.activeConversation.keys()).some((key) => {
+      const [from, to] = key.split(':');
+
+      return from === phoneNumber || to === phoneNumber;
+    });
+  }
+
+  public setStartWindow = (fromTime: [number, number], toTime: [number, number]) => {
+    this.dailyTimeWindow = [fromTime, toTime];
+  };
+
+  public async startWarmingUp() {
+    try {
+      const allActiveInstances = this.getAllInstances();
+      const warmUpTodayInstances: WAInstance<WAPersona>[] = await this.getWarmInstances(allActiveInstances);
+
+      this.log('debug', `Warm-up today: ${warmUpTodayInstances.length}`);
+
+      if (warmUpTodayInstances.length === 0) {
+        this.log('debug', 'No instances need warming up, stopping warm-up process');
+        clearTimeout(this.nextStartWarming);
+        this.nextCheckUpdate?.(null);
+
+        const nextWarmingTime = this.getNextWarmingTime();
+        const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
+
+        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
+        this.nextWarmUp = getLocalTime(nextWarmingTime);
+        this.nextCheckUpdate?.(this.nextWarmUp);
+
+        const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
+        this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
+
+        return;
+      }
+
+      this.log('debug', warmUpTodayInstances.map(({ phoneNumber }) => phoneNumber).join(','), `Start Warming Up ${warmUpTodayInstances.length}`);
+      const instancesPairs = this.getAllUniquePairs('phoneNumber', warmUpTodayInstances, this.getFallbackInstance(allActiveInstances));
+      this.isWarming = true;
+
+      // Process conversations sequentially with delays to prevent simultaneous creation
+      for (const pair of instancesPairs) {
+        if (pair.length < 2) return;
+
+        // Add a delay between conversation creations to prevent simultaneous processing
+        if (this.activeConversation.size > 0) {
+          const delay = this.randomDelayBetween(3, 8) * 1000; // 3-8 seconds delay
+          this.log('debug', `Waiting ${delay / 1000}s before creating next conversation to prevent simultaneous processing`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+
+        await this.createConversation(pair);
+
+        const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
+        await new Promise((resolve) => setTimeout(resolve, setupDelay));
+      }
+    } catch (error) {
+      this.log('error', 'Error occurred', error);
+      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), 5 * 60 * 1000); // Retry in 5 minutes
+    }
+  }
+
+  public stopWarmingUp() {
+    this.isWarming = false;
+
+    Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
+    this.nextCheckUpdate?.(null);
+    this.timeoutConversation.clear();
+    this.activeConversation.clear();
+    this.creatingConversation.clear(); // Clear conversations being created
   }
 
   onSchedule(callback?: (nextWarmAt: Date | null) => unknown) {
