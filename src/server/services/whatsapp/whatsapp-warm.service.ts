@@ -82,7 +82,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const now = getLocalTime();
     let nextWarmingTime: Date;
 
-    if (now.getHours() < this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute) {
+    if (now.getHours() < this.dailyScheduleTimeHour || 
+        (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)) {
       // Today
       this.randomNextTimeWindow();
       nextWarmingTime = new Date(now);
