@@ -5,6 +5,7 @@ import { WAInstance, WhatsappService } from './whatsapp.service';
 import { WhatsAppMessage } from './whatsapp.db';
 import { clearTimeout } from 'node:timers';
 
+import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
 type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean };
@@ -16,11 +17,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
-  private nextDailyWarmUpTime: Date = new Date();
-  private nextDailyWarmUpFrom: [[number, number], [number, number]] = [
-    [9, 0],
-    [11, 59],
-  ]; // Between 9:00-11:59 AM UTC
+  private nextDailyWarmUpTime: Date;
   private isWarming: boolean = false;
   private nextStartWarming: NodeJS.Timeout | undefined;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
@@ -51,32 +48,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     super({ ...config, onIncomingMessage, onOutgoingMessage });
 
     this.isEmulation = !!isEmulation;
-    this.randomNextDailyWarmUpTime();
-  }
-
-  private randomNextDailyWarmUpTime() {
-    const [startHour, startMinute] = this.nextDailyWarmUpFrom[0];
-    const [endHour, endMinute] = this.nextDailyWarmUpFrom[1];
-
-    const randomHour = this.randomDelayBetween(startHour, endHour);
-    const randomMinute = (() => {
-      if (randomHour === startHour) return this.randomDelayBetween(startMinute, 59);
-      if (randomHour === endHour) return this.randomDelayBetween(0, endMinute);
-      return this.randomDelayBetween(0, 59);
-    })();
-
-    const randomSecond = this.randomDelayBetween(0, 59);
-    const now = new Date();
+    
+    // Initialize nextDailyWarmUpTime to 9:00 AM today
+    const now = getLocalTime();
     this.nextDailyWarmUpTime = new Date(now);
-    this.nextDailyWarmUpTime.setUTCHours(randomHour, randomMinute, randomSecond, 0);
-    this.log('debug', `Next daily warm-up time set to ${this.nextDailyWarmUpTime.toISOString()} (UTC)`);
-
-    return this.nextDailyWarmUpTime;
-  }
-
-  public setWarmBetweenTime(start: [number, number], end: [number, number]) {
-    this.nextDailyWarmUpFrom = [start, end];
-    this.randomNextDailyWarmUpTime();
+    this.nextDailyWarmUpTime.setHours(9, 0, 0, 0);
   }
 
   public isWarmingUp(phoneNumber: string): boolean {
@@ -88,19 +64,37 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   private getTodayDate(): string {
-    // Get current time in UTC
-    const now = new Date();
+    // Get current time in Jerusalem timezone
+    const now = getLocalTime();
 
     if (now < this.nextDailyWarmUpTime) {
-      // If current time is before today's warm-up time, consider it still "yesterday" for warm-up purposes
-      // This ensures daily counters don't reset until after the warm-up window
       const yesterday = new Date(now);
-      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      yesterday.setDate(yesterday.getDate() - 1);
       return yesterday.toISOString().split('T')[0];
     }
 
-    // Return today's date in UTC (YYYY-MM-DD format)
     return now.toISOString().split('T')[0];
+  }
+
+  private getNextWarmingTime(): Date {
+    const now = getLocalTime();
+    let nextWarmingTime: Date;
+
+    if (now < this.nextDailyWarmUpTime) {
+      // Today - use the scheduled time
+      nextWarmingTime = new Date(this.nextDailyWarmUpTime);
+    } else {
+      // Tomorrow - use the scheduled time for tomorrow
+      nextWarmingTime = new Date(this.nextDailyWarmUpTime);
+      nextWarmingTime.setDate(nextWarmingTime.getDate() + 1);
+    }
+
+    // Add phone-specific jitter for better distribution
+    // Since this is a global warming time, we'll use a consistent but distributed offset
+    const baseJitter = 5 + Math.floor(Math.random() * 55); // 5-60 minutes
+    nextWarmingTime.setMinutes(nextWarmingTime.getMinutes() + baseJitter);
+
+    return nextWarmingTime;
   }
 
   private getHoursAndMinutes(milliseconds: number): { hours: number; minutes: number } {
@@ -400,19 +394,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         clearTimeout(this.nextStartWarming);
         this.nextCheckUpdate?.(null);
 
-        // Randomize next schedule time between 6-9 AM (UTC)
+        // Randomize next schedule time between 6-9 AM
         const randomHour = this.randomDelayBetween(6, 9);
         const randomMinute = this.randomDelayBetween(0, 59);
         const randomSecond = this.randomDelayBetween(0, 59);
-        const now = new Date();
+        const now = getLocalTime();
         this.nextDailyWarmUpTime = new Date(now);
-        this.nextDailyWarmUpTime.setUTCHours(randomHour, randomMinute, randomSecond, 0);
-
-        const nextWarmingTime = this.randomNextDailyWarmUpTime();
+        this.nextDailyWarmUpTime.setHours(randomHour, randomMinute, randomSecond, 0);
+        const nextWarmingTime = this.getNextWarmingTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-        this.nextWarmUp = nextWarmingTime;
+        this.nextWarmUp = getLocalTime(nextWarmingTime);
         this.nextCheckUpdate?.(this.nextWarmUp);
 
         const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
@@ -495,7 +488,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
             if (Math.random() > 0.8) throw new Error('Emulate error');
 
-            currentMessage.sentAt = new Date();
+            currentMessage.sentAt = getLocalTime();
             const remainingMessages = currentState.filter((msg) => !msg.sentAt);
 
             if (remainingMessages.length === 0) {
@@ -542,7 +535,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
 
-          currentMessage.sentAt = new Date();
+          currentMessage.sentAt = getLocalTime();
 
           try {
             const client = this.getInstance(currentMessage.fromNumber);
