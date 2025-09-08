@@ -100,13 +100,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return nextWarmingTime;
   }
 
-  private getHoursAndMinutes(milliseconds: number): { hours: number; minutes: number } {
-    const hours = Math.floor(milliseconds / (1000 * 60 * 60));
-    const minutes = Math.floor((milliseconds % (1000 * 60 * 60)) / (1000 * 60));
-
-    return { hours, minutes };
-  }
-
   private getAllUniquePairs<T extends object>(key: keyof T, arr: T[], fallbackInstance?: (phoneNumber: string) => T): [T, T][] {
     if (arr.length === 1) {
       const fallback = fallbackInstance?.(arr[0][key] as string);
@@ -329,11 +322,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       if (stillNeededWarm.length > 0) {
         const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
-        const { hours, minutes } = this.getHoursAndMinutes(delay);
-        const totalMinutes = hours * 60 + minutes;
         this.nextWarmUp = new Date(new Date().valueOf() + delay);
         this.nextCheckUpdate?.(this.nextWarmUp);
-        this.log('debug', `[${conversationKey}]`, `Will check again in ${totalMinutes} minutes`);
 
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), delay);
       }
@@ -549,9 +539,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
         this.nextWarmUp = getLocalTime(nextWarmingTime);
         this.nextCheckUpdate?.(this.nextWarmUp);
-
-        const { hours, minutes } = this.getHoursAndMinutes(timeUntilNextWarming);
-        this.log('debug', `Next warming session scheduled in ${hours}h ${minutes}m`);
 
         return;
       }
