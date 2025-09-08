@@ -15,6 +15,8 @@ import ServerError from '@server/middleware/errors/server-error';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (payload: Omit<SearchInstanceReq, 'page'>, page: Pagination): Promise<EntityList<InstanceItem>> => {
+    const today = new Date().toISOString().split('T')[0];
+
     const pipeline = [];
 
     if (payload.phoneNumber) {
@@ -41,8 +43,8 @@ export const instanceService = {
         statusCode: 1,
         errorMessage: 1,
         warmUpDay: 1,
-        dailyWarmUpCount: 1,
-        dailyWarmConversationCount: 1,
+        dailyWarmUpCount: { $cond: [{ $eq: ['$lastWarmedUpDay', today] }, '$dailyWarmUpCount', 0] },
+        dailyWarmConversationCount: { $cond: [{ $eq: ['$lastWarmedUpDay', today] }, '$dailyWarmConversationCount', 0] },
         hasWarmedUp: 1,
         gender: 1,
         name: 1,
