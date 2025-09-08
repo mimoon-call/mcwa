@@ -12,6 +12,7 @@ type TextAreaFieldProps = InputWrapperProps & {
   className?: ClassValue;
   rows?: number;
   placeholder?: string;
+  fieldMaps?: Record<string, string>;
 } & Omit<HTMLAttributes<HTMLDivElement>, 'onChange' | 'pattern' | 'placeholder'>;
 
 export type TextAreaFieldRef = {
@@ -86,7 +87,7 @@ const setCursorAfterElement = (element: HTMLElement) => {
 
 const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, ref) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, rows = 4, ...rest } = props;
+  const { className, onChange, name, label, rules, value, rows = 4, fieldMaps, ...rest } = props;
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -231,8 +232,9 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
           }
 
           // Create span for the dynamic field
-          // Use fieldName as both title and value for now
-          const span = createNonEditableSpan(fieldName, fullMatch);
+          // Use fieldMaps to get the title, fallback to fieldName (without braces) if not found
+          const title = fieldMaps?.[fieldName] || fieldName;
+          const span = createNonEditableSpan(title, fullMatch);
           nodes.push(span);
 
           lastIndex = matchIndex + fullMatch.length;
@@ -253,7 +255,7 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
         div.textContent = value;
       }
     }
-  }, [value]);
+  }, [value, fieldMaps]);
 
   const minHeight = rows * 1.5; // Approximate line height
 
