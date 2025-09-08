@@ -933,8 +933,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           const status = statusMap[numericStatus] || MessageStatusEnum.ERROR;
           const timestamp = new Date();
 
-          this.log('info', `📱 Updating message status: ${key.id} -> ${status} (numeric: ${numericStatus})`);
-
           switch (status) {
             case MessageStatusEnum.SENT: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.SENT, timestamp);
@@ -1962,13 +1960,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   async update(data: Partial<WAAppAuth<T>>): Promise<void> {
     const hasChanges = Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value);
-
-    if (data.outgoingMessageCount !== undefined) {
-      this.log(
-        'info',
-        `📱 Update check for outgoingMessageCount: current=${this.appState?.outgoingMessageCount}, new=${data.outgoingMessageCount}, hasChanges=${hasChanges}`
-      );
-    }
 
     if (hasChanges) {
       this.set(data);
