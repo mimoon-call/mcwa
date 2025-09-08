@@ -28,7 +28,7 @@ export const liveUpdateHandler = <T extends object>(
         return;
       }
 
-      const timeoutKey = [idKey, fieldKey].join(':');
+      const timeoutKey = `${String(idKey)}:${fieldKey}`;
       clearTimeout(timeoutMap.get(timeoutKey));
       const valueFormatter = fieldFormatter?.[fieldKey as keyof typeof fieldFormatter];
       const tempValue = valueFormatter ? valueFormatter(fieldValue) : fieldValue;
@@ -38,6 +38,7 @@ export const liveUpdateHandler = <T extends object>(
       updateCallback(tempData);
 
       const timeoutId = setTimeout(() => {
+        console.log(`Timeout executing for key: ${timeoutKey}`);
         timeoutMap.delete(timeoutKey);
 
         // Apply final update with original value
@@ -45,6 +46,7 @@ export const liveUpdateHandler = <T extends object>(
       }, delay);
 
       timeoutMap.set(timeoutKey, timeoutId);
+      console.log(`Timeout set for key: ${timeoutKey}, delay: ${delay}ms`);
     });
   };
 };
