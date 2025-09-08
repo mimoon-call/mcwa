@@ -4,14 +4,14 @@ import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 export const messageSendingHandler: WASendingMessageCallback<WAAppAuth<WAPersona>> = async (instance, toNumber) => {
+  const fromNumber = instance.phoneNumber;
+
   const messageKeys = await WhatsAppMessage.aggregate<IMessageKey>([
-    { $match: { fromNumber: toNumber, status: MessageStatusEnum.RECEIVED } },
+    { $match: { fromNumber: toNumber, toNumber: fromNumber, status: MessageStatusEnum.RECEIVED } },
     { $replaceRoot: { newRoot: '$raw.key' } },
   ]);
 
   for (const key of messageKeys) {
     await instance.read(key);
   }
-
-  await WhatsAppMessage.updateMany({ fromNumber: toNumber, status: MessageStatusEnum.RECEIVED }, { $set: { status: MessageStatusEnum.READ } });
 };

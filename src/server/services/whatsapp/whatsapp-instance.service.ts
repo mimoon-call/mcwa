@@ -743,9 +743,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   public async read(messageKey: IMessageKey): Promise<void> {
-    try {
-      if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+    if (!this.connected || !this.socket) return;
 
+    try {
       await this.socket.readMessages([messageKey]);
       this.log('debug', `📖 Read receipt sent for message ${messageKey.id}`);
     } catch (error) {

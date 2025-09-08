@@ -99,6 +99,7 @@ export type WAMessageIncomingRaw = IWebMessageInfo & {
 export type WAMessageOutgoingRaw = WebMessageInfo;
 
 export type WAMessageIncomingCallback = (message: WAMessageIncoming, raw: WAMessageIncomingRaw, messageId: string) => Promise<unknown> | unknown;
+
 export type WAMessageOutgoingCallback = (
   message: WAMessageOutgoing,
   raw?: WAMessageOutgoingRaw,

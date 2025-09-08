@@ -26,6 +26,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
   private readonly outgoingMessageCallback: WAServiceConfig<T>['onOutgoingMessage'] | undefined;
   private readonly incomingMessageCallback: WAServiceConfig<T>['onIncomingMessage'] | undefined;
   private readonly messageUpdateCallback: WAServiceConfig<T>['onMessageUpdate'] | undefined;
+  private readonly sendingMessageCallback: WAServiceConfig<T>['onSendingMessage'] | undefined;
 
   // Callbacks for auth key management
   protected readonly getAppAuth: WAServiceConfig<T>['getAppAuth'];
@@ -101,17 +102,21 @@ export class WhatsappService<T extends object = Record<never, never>> {
       return config.onOutgoingMessage?.(...arg);
     };
 
-    this.incomingMessageCallback = async (message, ...arg) => {
+    this.incomingMessageCallback = async (message, raw, ...arg) => {
       const internalPhoneNumber = (await this.listAppAuth()).map(({ phoneNumber }) => phoneNumber);
       const internalFlag = internalPhoneNumber.includes(message.fromNumber);
 
+      const fromInstance = this.instances.get(message.fromNumber);
+      fromInstance?.read(raw.key);
+
       return Promise.allSettled([
-        config.onIncomingMessage?.({ ...message, internalFlag }, ...arg),
-        ...this.messageCallback.map((cb) => cb?.({ ...message, internalFlag }, ...arg)),
+        config.onIncomingMessage?.({ ...message, internalFlag }, raw, ...arg),
+        ...this.messageCallback.map((cb) => cb?.({ ...message, internalFlag }, raw, ...arg)),
       ]);
     };
 
     this.messageUpdateCallback = (...arg) => config.onMessageUpdate?.(...arg);
+    this.sendingMessageCallback = config.onSendingMessage;
     if (config.onUpdate) this.updateCallback.push(config.onUpdate);
 
     // Initialize the service immediately
@@ -243,6 +248,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
       updateAppKey: this.updateAppKey,
       onIncomingMessage: this.incomingMessageCallback,
       onOutgoingMessage: this.outgoingMessageCallback,
+      onSendingMessage: this.sendingMessageCallback,
       onMessageUpdate: this.messageUpdateCallback,
       onReady: this.readyCallback,
       onRegistered: this.registeredCallback,
