@@ -4,10 +4,12 @@ import type {
   GetConversationRes,
   SearchConversationReq,
   SearchConversationRes,
+  GetAllConversationPairsReq,
+  GetAllConversationPairsRes,
 } from '@server/api/conversation/conversation.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS } from '@server/api/conversation/conversation.map';
+import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS } from '@server/api/conversation/conversation.map';
 import { conversationService } from '@server/api/conversation/conversation.service';
 
 export const conversationController = {
@@ -21,6 +23,17 @@ export const conversationController = {
     ]).validate();
 
     res.send(await conversationService[GET_CONVERSATION](phoneNumber, withPhoneNumber, page));
+  },
+
+  [SEARCH_ALL_CONVERSATIONS]: async (req: Request<never, never, GetAllConversationPairsReq>, res: Response<GetAllConversationPairsRes>) => {
+    const { page, searchValue } = await new RecordValidator(req.body, [
+      ['searchValue', { type: ['String'] }],
+      ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
+      ['page.pageIndex', { type: ['Number'] }],
+      ['page.pageSort', { type: [['Object', 'Null']] }],
+    ]).validate();
+
+    res.send(await conversationService[SEARCH_ALL_CONVERSATIONS](page, searchValue));
   },
 
   [SEARCH_CONVERSATIONS]: async (req: Request<{ phoneNumber: string }, never, SearchConversationReq>, res: Response<SearchConversationRes>) => {
