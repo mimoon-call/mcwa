@@ -89,7 +89,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   };
 
   return (
-    <div className={cn('w-1/3 bg-white border-r border-gray-200 flex flex-col', className)}>
+    <div className={cn('w-1/4 min-w-[400px] bg-white border-e border-gray-200 flex flex-col', className)}>
       {/* Header */}
       <div className={`${searchMetadata?.isConnected ? 'bg-green-600' : 'bg-red-600'} text-white p-4 flex items-center justify-between`}>
         <div className="flex items-center space-x-3">
@@ -121,7 +121,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       </div>
 
       {/* Search Bar */}
-      <div className="p-0.5 border-b border-gray-200">
+      <div className="px-0.5 py-1 border-b border-gray-200">
         <TextField hideDetails name="search" placeholder={t('GENERAL.SEARCH_PLACEHOLDER')} value={localSearchValue} onChange={handleSearchChange} />
       </div>
 
