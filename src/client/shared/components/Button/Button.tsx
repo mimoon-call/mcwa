@@ -12,10 +12,15 @@ type ButtonProps = {
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'>;
 
 const Button: FC<ButtonProps> = (props) => {
-  const { loading, disabled, className, buttonType = 'solid', children, ...rest } = props;
+  const { loading, disabled, className, buttonType = 'solid', children, type = 'button', ...rest } = props;
 
   return (
-    <button className={cn(styles['button'], styles[`button--${buttonType}`], loading && 'relative', className)} disabled={disabled} {...rest}>
+    <button
+      className={cn(styles['button'], styles[`button--${buttonType}`], loading && 'relative', className)}
+      type={type}
+      disabled={disabled}
+      {...rest}
+    >
       {loading && (
         <div className="absolute flex align-middle justify-center w-full h-full opacity-50">
           <Spinner size="2rem" />

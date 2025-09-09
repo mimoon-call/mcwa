@@ -1,12 +1,12 @@
-import type { Options, Pagination } from '@models';
+import type { Pagination } from '@models';
 import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
-import type { InstanceItem, InstanceUpdate, SearchInstanceReq, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
+import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { DateFormat, RegexPattern } from '@client-constants';
+import { DateFormat } from '@client-constants';
 import Table from '@components/Table/Table';
 import { useSelector, useDispatch } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
@@ -31,11 +31,7 @@ import { liveUpdateHandler } from '@helpers/live-update-handler';
 import { useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
-import TextField from '@components/Fields/TextField/TextField';
-import { SelectField } from '@components/Fields';
-import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
-import { Checkbox } from '@components/Checkbox/Checkbox';
-import Button from '@components/Button/Button';
+import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceSearchPanel';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -43,8 +39,6 @@ const InstanceTable = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const toast = useToast({ y: 'bottom' });
-  const [payload, setPayload] = useState<SearchInstanceReq>({});
-  const timeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const {
     [SEARCH_INSTANCE]: searchInstance,
@@ -52,7 +46,6 @@ const InstanceTable = () => {
     [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
     [INSTANCE_REFRESH]: refreshInstance,
     [UPDATE_INSTANCE]: updateInstance,
-    resetInstance,
   } = instanceStore;
 
   const {
@@ -237,65 +230,9 @@ const InstanceTable = () => {
     },
   ];
 
-  const onSearch = (data: Omit<SearchInstanceReq, 'page'>) => {
-    clearTimeout(timeoutRef.current);
-    const newPayload = { ...payload, ...data };
-    setPayload(newPayload);
-
-    timeoutRef.current = setTimeout(() => {
-      dispatch(searchInstance(newPayload));
-    }, 500);
-  };
-
-  const onClear = () => {
-    setPayload({});
-    dispatch(resetInstance());
-  };
-
-  const statusCode: Options<number> = [200, 401, 403, 408].map((value) => {
-    const translation = statusCodeMap.get(value);
-    const title = translation ? `${value} - ${t(translation)}` : String(value);
-    return { title, value };
-  });
-
   return (
     <div className="h-full flex flex-col">
-      <div className="flex justify-between p-4 bg-gray-50 m-2 rounded shadow">
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}>
-          {' '}
-          <TextField
-            clearable
-            hideDetails
-            autoComplete="off"
-            name="phoneNumber"
-            label="INSTANCE.PHONE_NUMBER"
-            pattern={RegexPattern.PHONE_INPUT}
-            value={payload.phoneNumber}
-            onChange={(value) => onSearch({ phoneNumber: value })}
-          />
-          <SelectField
-            clearable
-            name="statusCode"
-            label="INSTANCE.STATUS_CODE"
-            value={payload.statusCode}
-            options={statusCode}
-            onChange={(value) => onSearch({ statusCode: value })}
-          />
-          <Checkbox
-            className="mt-2 ms-2"
-            label="GENERAL.ACTIVE"
-            id="isActive"
-            value={payload.isActive || false}
-            onChange={() => onSearch({ isActive: !payload.isActive })}
-          />
-        </div>
-
-        <div className="flex gap-2 items-center pe-2">
-          <Button disabled={!Object.values(payload).length} buttonType="flat" onClick={onClear}>
-            {t('GENERAL.CLEAR')}
-          </Button>
-        </div>
-      </div>
+      <InstanceSearchPanel />
 
       <div className="flex justify-end pb-2 px-2">
         <div className="text-gray-500 text-sm min-w-fit">{t('GENERAL.TOTAL_ITEMS', { total: instancePagination.totalItems })}</div>
