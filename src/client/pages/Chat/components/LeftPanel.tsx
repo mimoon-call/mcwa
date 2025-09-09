@@ -94,9 +94,9 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
             {searchMetadata?.errorMessage && (
               <div className="text-xs opacity-75 mt-1">
-                {searchMetadata.statusCode && `${t('GENERAL.STATUS_CODE')}: ${searchMetadata.statusCode}`}
+                {searchMetadata.statusCode && `${t('INSTANCE.STATUS_CODE')}: ${searchMetadata.statusCode}`}
                 {searchMetadata.statusCode && ' | '}
-                {t('GENERAL.ERROR_MESSAGE')}: {searchMetadata.errorMessage}
+                {t('INSTANCE.ERROR_MESSAGE')}: {searchMetadata.errorMessage}
               </div>
             )}
           </div>
@@ -108,13 +108,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* Search Bar */}
       <div className="p-0.5 border-b border-gray-200">
-        <TextField 
-          hideDetails 
-          name="search" 
-          placeholder={t('GENERAL.SEARCH_PLACEHOLDER')}
-          value={localSearchValue}
-          onChange={handleSearchChange}
-        />
+        <TextField hideDetails name="search" placeholder={t('GENERAL.SEARCH_PLACEHOLDER')} value={localSearchValue} onChange={handleSearchChange} />
       </div>
 
       {/* Chat List */}
@@ -159,7 +153,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
                 </div>
               </div>
             ))}
-            
+
             {/* Loading indicator for infinite scroll */}
             {loading && conversations && conversations.length > 0 && (
               <div className="flex items-center justify-center p-4">
