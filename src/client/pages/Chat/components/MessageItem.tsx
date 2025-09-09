@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Icon from '@client/shared/components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
+import { DateFormat } from '@client/shared/constants';
 import type { ChatMessage } from '../store/chat.types';
 
 type MessageItemProps = {
@@ -22,10 +23,26 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const { t } = useTranslation();
 
   const formatTime = (dateString: string) => {
+    const date = dayjs(dateString);
+    const now = dayjs();
+    
+    // If showFullDateTime is true, always show full date and time
     if (showFullDateTime) {
-      return dayjs(dateString).format('DD/MM/YYYY HH:mm');
+      return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
     }
-    return dayjs(dateString).format('HH:mm');
+    
+    // If the date is today, show only time
+    if (date.isSame(now, 'day')) {
+      return date.format(DateFormat.TIME_FORMAT);
+    }
+    
+    // If the date is yesterday, show "Yesterday" with time
+    if (date.isSame(now.subtract(1, 'day'), 'day')) {
+      return `${t('GENERAL.YESTERDAY')} ${date.format(DateFormat.TIME_FORMAT)}`;
+    }
+    
+    // For all other dates (not today or yesterday), show full date and time
+    return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
 
   const formatMessageText = (text: string) => {

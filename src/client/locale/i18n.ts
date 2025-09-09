@@ -22,10 +22,12 @@ i18n.use(initReactI18next).init({
   react: { useSuspense: false },
 });
 
-// Save language to localStorage when it changes
+// Save language to localStorage when it changes and dispatch global event
 i18n.on('languageChanged', (lng) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('language', lng);
+    // Dispatch custom event for dayjs to listen to
+    window.dispatchEvent(new CustomEvent('i18n:languageChanged', { detail: { lng } }));
   }
 });
 

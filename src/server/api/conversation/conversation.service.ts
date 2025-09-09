@@ -31,7 +31,7 @@ export const conversationService = {
   [SEARCH_CONVERSATIONS]: async (phoneNumber: string, page: Pagination, searchValue?: string): Promise<SearchConversationRes> => {
     const pipeline: PipelineStage[] = [
       // only messages where myNumber is involved
-      { $match: { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] } },
+      { $match: { $and: [{ $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] }, { internalFlag: false }] } },
 
       // extract the other participant per message and pushName if available
       {
