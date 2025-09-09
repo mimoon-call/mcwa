@@ -37,11 +37,12 @@ export interface ChatState {
   [CHAT_SELECTED_PHONE_NUMBER]: string | null;
   [CHAT_LOADING]: boolean;
   [CHAT_ERROR]: ErrorResponse | null;
+  lastSearchParams: { phoneNumber: string; searchValue: string } | null;
 }
 
 const initialState: ChatState = {
   [CHAT_SEARCH_DATA]: null,
-  [CHAT_SEARCH_PAGINATION]: { pageSize: 50 },
+  [CHAT_SEARCH_PAGINATION]: { pageSize: 50, hasMore: false },
   [CHAT_SEARCH_METADATA]: null,
   [CHAT_SEARCH_VALUE]: '',
   [CHAT_MESSAGES_DATA]: null,
@@ -49,6 +50,7 @@ const initialState: ChatState = {
   [CHAT_SELECTED_PHONE_NUMBER]: null,
   [CHAT_LOADING]: false,
   [CHAT_ERROR]: null,
+  lastSearchParams: null,
 };
 
 // Async thunk for search conversations
@@ -64,7 +66,14 @@ const searchConversations = createAsyncThunk(
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue
       };
 
-      return await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
+      const result = await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
+      
+      // Add metadata to track if this is a new search
+      return {
+        ...result,
+        isNewSearch: searchValue !== currentSearchValue,
+        phoneNumber
+      };
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -131,6 +140,16 @@ const chatSlice = createSlice({
       state[CHAT_SEARCH_DATA] = null;
       state[CHAT_SEARCH_METADATA] = null;
       state[CHAT_SEARCH_VALUE] = '';
+      state[CHAT_SEARCH_PAGINATION] = initialState[CHAT_SEARCH_PAGINATION];
+    },
+    clearSearchData: (state) => {
+      state[CHAT_SEARCH_DATA] = null;
+      state[CHAT_SEARCH_METADATA] = null;
+      state[CHAT_SEARCH_VALUE] = '';
+      // Don't reset pagination - keep hasMore state
+    },
+    resetPagination: (state) => {
+      state[CHAT_SEARCH_PAGINATION] = initialState[CHAT_SEARCH_PAGINATION];
     },
     clearMessages: (state) => {
       state[CHAT_MESSAGES_DATA] = null;
@@ -175,20 +194,44 @@ const chatSlice = createSlice({
         state[CHAT_ERROR] = null;
       })
       .addCase(searchConversations.fulfilled, (state, action) => {
+        const { phoneNumber } = action.payload as SearchConversationsRes & { isNewSearch: boolean; phoneNumber: string };
+        const currentSearchValue = state[CHAT_SEARCH_VALUE] || '';
+        const searchValue = action.meta.arg.searchValue || currentSearchValue;
+        
+        // Check if this is a new search (different phone number or search value)
+        const isNewPhoneNumber = !state.lastSearchParams || state.lastSearchParams.phoneNumber !== phoneNumber;
+        const isNewSearchValue = !state.lastSearchParams || state.lastSearchParams.searchValue !== searchValue;
+        const shouldResetPagination = isNewPhoneNumber || isNewSearchValue;
+        
         state[CHAT_SEARCH_DATA] = action.payload.data;
-        state[CHAT_SEARCH_PAGINATION] = {
-          totalItems: action.payload.totalItems,
-          hasMore: action.payload.hasMore,
-          pageIndex: action.payload.pageIndex,
-          pageSize: action.payload.pageSize,
-          totalPages: action.payload.totalPages,
-          pageSort: action.payload.pageSort,
-        };
+        
+        // Only update pagination if it's a new search
+        if (shouldResetPagination) {
+          state[CHAT_SEARCH_PAGINATION] = {
+            totalItems: action.payload.totalItems,
+            hasMore: action.payload.hasMore,
+            pageIndex: action.payload.pageIndex,
+            pageSize: action.payload.pageSize,
+            totalPages: action.payload.totalPages,
+            pageSort: action.payload.pageSort,
+          };
+        } else {
+          // Keep existing pagination but update data
+          state[CHAT_SEARCH_DATA] = action.payload.data;
+        }
+        
         state[CHAT_SEARCH_METADATA] = {
           isConnected: action.payload.isConnected,
           statusCode: action.payload.statusCode,
           errorMessage: action.payload.errorMessage,
         };
+        
+        // Update last search params
+        state.lastSearchParams = {
+          phoneNumber,
+          searchValue
+        };
+        
         state[CHAT_LOADING] = false;
       })
       .addCase(searchConversations.rejected, (state, action) => {
@@ -272,6 +315,8 @@ export default {
   loadMoreMessages,
   loadMoreConversations,
   clearSearch: chatSlice.actions.clearSearch,
+  clearSearchData: chatSlice.actions.clearSearchData,
+  resetPagination: chatSlice.actions.resetPagination,
   clearMessages: chatSlice.actions.clearMessages,
   reset: chatSlice.actions.reset,
   setSelectedPhoneNumber: chatSlice.actions.setSelectedPhoneNumber,

@@ -58,12 +58,10 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     return () => clearTimeout(timeoutId);
   }, [localSearchValue, onSearch]);
 
-  // Update local search value when prop changes (only if different)
+  // Initialize local search value only on mount
   useEffect(() => {
-    if (searchValue !== localSearchValue) {
-      setLocalSearchValue(searchValue);
-    }
-  }, [searchValue, localSearchValue]);
+    setLocalSearchValue(searchValue);
+  }, []); // Empty dependency array - only run on mount
 
   const handleSearchChange = useCallback((value: string) => {
     setLocalSearchValue(value);

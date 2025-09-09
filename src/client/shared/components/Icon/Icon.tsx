@@ -41,7 +41,14 @@ const IconSvg: FC<Props> = (props) => {
 
   const viewBox = useMemo(() => {
     if (iconType !== 'svg') return undefined;
-    return ICONS[iconName]?.viewBox || (fallbackIconName && ICONS[fallbackIconName]?.viewBox) || `0 0 ${size} ${size}`;
+    
+    // If icon has a specific viewBox, use it
+    if (ICONS[iconName]?.viewBox) return ICONS[iconName].viewBox;
+    if (fallbackIconName && ICONS[fallbackIconName]?.viewBox) return ICONS[fallbackIconName].viewBox;
+    
+    // Extract numeric value from size unit for viewBox
+    const numericSize = parseFloat(size.toString());
+    return `0 0 ${numericSize} ${numericSize}`;
   }, [iconType, iconName, fallbackIconName, size]);
 
   const style: CSSProperties = {

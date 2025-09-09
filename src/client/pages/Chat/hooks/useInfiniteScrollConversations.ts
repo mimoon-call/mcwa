@@ -24,17 +24,31 @@ export const useInfiniteScrollConversations = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
   const hasInitialLoadedRef = useRef(false);
+  const lastLoadTimeRef = useRef(0);
+  const lastPhoneNumberRef = useRef<string | undefined>(phoneNumber);
+  const requestCountRef = useRef(0);
+  const maxRequestsRef = useRef(10); // Circuit breaker - max 10 requests per session
   
   // Get current conversations to detect when new ones are added
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
   const pagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_PAGINATION]);
 
   const loadMoreConversations = useCallback(() => {
-    if (!phoneNumber || loading || isLoadingMoreRef.current || !hasMore) {
+    const now = Date.now();
+    const timeSinceLastLoad = now - lastLoadTimeRef.current;
+    
+    // Circuit breaker - stop if we've made too many requests
+    if (requestCountRef.current >= maxRequestsRef.current) {
+      return;
+    }
+    
+    if (!phoneNumber || loading || isLoadingMoreRef.current || !hasMore || timeSinceLastLoad < 1000) {
       return;
     }
 
+    requestCountRef.current += 1;
     isLoadingMoreRef.current = true;
+    lastLoadTimeRef.current = now;
     const nextPageIndex = (pagination.pageIndex || 0) + 1;
     
     dispatch(chatSlice.loadMoreConversations({ 
@@ -62,9 +76,22 @@ export const useInfiniteScrollConversations = ({
     }
   }, [loadMoreConversations, hasMore, loading, threshold]);
 
+  // Reset initial loading state when phone number changes
+  useEffect(() => {
+    if (lastPhoneNumberRef.current !== phoneNumber) {
+      hasInitialLoadedRef.current = false;
+      lastPhoneNumberRef.current = phoneNumber;
+    }
+  }, [phoneNumber]);
+
   // Auto-load more conversations until we have minimum items or no more data
   useEffect(() => {
-    if (!hasInitialLoadedRef.current && phoneNumber && !loading && hasMore) {
+    // Only run auto-loading if we haven't completed initial loading
+    if (hasInitialLoadedRef.current) {
+      return;
+    }
+    
+    if (phoneNumber && !loading && hasMore) {
       const currentCount = conversations.length;
       
       if (currentCount < minimumItems) {

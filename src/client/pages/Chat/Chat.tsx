@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -44,6 +44,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   // Load conversations on component mount
   useEffect(() => {
     if (phoneNumber) {
+      dispatch(chatSlice.resetPagination());
       dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber }));
     }
   }, [phoneNumber, dispatch]);
@@ -73,13 +74,18 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     }
   };
 
-  const handleSearch = (value: string) => {
+  const handleSearch = useCallback((value: string) => {
     if (phoneNumber) {
+      // Reset pagination only if search value actually changed
+      if (value !== searchValue) {
+        dispatch(chatSlice.resetPagination());
+      }
+      
       // Clear current data and search with new value
-      dispatch(chatSlice.clearSearch());
+      dispatch(chatSlice.clearSearchData());
       dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
     }
-  };
+  }, [phoneNumber, searchValue, dispatch]);
 
   // Show error if phoneNumber is not provided
   if (!phoneNumber) {
