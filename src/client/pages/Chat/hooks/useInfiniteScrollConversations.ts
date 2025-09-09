@@ -73,18 +73,18 @@ export const useInfiniteScrollConversations = ({
       } else {
         hasInitialLoadedRef.current = true;
       }
-    } else if (conversations.length >= minimumItems) {
+    } else if (conversations.length >= minimumItems || !hasMore) {
       hasInitialLoadedRef.current = true;
     }
   }, [conversations.length, phoneNumber, loading, hasMore, minimumItems, loadMoreConversations]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container) return;
+    if (!container || !hasMore) return;
 
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  }, [handleScroll, hasMore]);
 
   return {
     scrollContainerRef,

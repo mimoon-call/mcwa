@@ -74,7 +74,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   };
 
   const handleSearch = (value: string) => {
-    dispatch(chatSlice.setSearchValue(value));
     if (phoneNumber) {
       // Clear current data and search with new value
       dispatch(chatSlice.clearSearch());

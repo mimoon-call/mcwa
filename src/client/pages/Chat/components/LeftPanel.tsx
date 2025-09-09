@@ -52,18 +52,18 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   // Debounced search effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (localSearchValue !== searchValue) {
-        onSearch(localSearchValue);
-      }
+      onSearch(localSearchValue);
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [localSearchValue, searchValue, onSearch]);
+  }, [localSearchValue, onSearch]);
 
-  // Update local search value when prop changes
+  // Update local search value when prop changes (only if different)
   useEffect(() => {
-    setLocalSearchValue(searchValue);
-  }, [searchValue]);
+    if (searchValue !== localSearchValue) {
+      setLocalSearchValue(searchValue);
+    }
+  }, [searchValue, localSearchValue]);
 
   const handleSearchChange = useCallback((value: string) => {
     setLocalSearchValue(value);
