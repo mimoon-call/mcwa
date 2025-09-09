@@ -63,7 +63,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, p
 
       <div className="relative z-10">
         {/* Sticky Date Separator */}
-        <StickyDateSeparator messages={messages} />
+        <StickyDateSeparator messages={messages} scrollContainerRef={scrollContainerRef} />
 
         {/* Load More Button - Only show if hasMore is true */}
         {hasMore && (

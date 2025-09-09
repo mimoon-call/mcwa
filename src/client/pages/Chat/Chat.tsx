@@ -17,6 +17,7 @@ import {
   CHAT_MESSAGES_DATA,
   CHAT_MESSAGES_PAGINATION,
   CHAT_LOADING,
+  SEARCH_LOADING,
   CHAT_ERROR,
 } from './store/chat.constants';
 import { LeftPanel, RightPanel } from './components';
@@ -38,7 +39,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const searchValue = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_VALUE]);
   const messages = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_DATA]) || [];
   const messagesPagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_PAGINATION]);
-  const loading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
+  const chatLoading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
+  const searchLoading = useSelector((state: RootState) => state[StoreEnum.chat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_ERROR]) !== null;
 
   // Load conversations on component mount
@@ -108,7 +110,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         searchMetadata={searchMetadata}
         conversations={conversations}
         selectedPhoneNumber={withPhoneNumber}
-        loading={loading}
+        loading={searchLoading}
         error={error}
         hasMore={searchPagination?.hasMore || false}
         searchValue={searchValue}
@@ -119,7 +121,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         selectedContact={selectedContact}
         messages={selectedMessages}
         disabled={!searchMetadata?.isConnected}
-        loading={loading}
+        loading={chatLoading}
         error={error}
         phoneNumber={phoneNumber}
         withPhoneNumber={withPhoneNumber}

@@ -96,6 +96,7 @@ export const conversationService = {
       isConnected: instance?.connected || false,
       statusCode: instance?.get('statusCode') || null,
       errorMessage: instance?.get('errorMessage') || null,
+      profilePictureUrl: instance?.get('profilePictureUrl') || null,
     };
   },
 };

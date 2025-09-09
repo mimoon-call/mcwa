@@ -7,6 +7,7 @@ export type ChatContact = {
   name: string | null;
   lastMessage: string;
   lastMessageAt: string;
+  profilePictureUrl: string | null;
 };
 
 export type ChatMessage = {
@@ -22,7 +23,8 @@ export type SearchConversationsReq = {
   searchValue?: string;
 };
 
-export type SearchConversationsRes = EntityList<ChatContact, { isConnected: boolean; statusCode: number | null; errorMessage: string | null }>;
+export type InstanceChat = { isConnected: boolean; statusCode: number | null; errorMessage: string | null; profilePictureUrl: string | null };
+export type SearchConversationsRes = EntityList<ChatContact, InstanceChat>;
 
 export type GetConversationReq = {
   phoneNumber: string;

@@ -742,20 +742,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  public async read(messageKey: IMessageKey | IMessageKey[]): Promise<void> {
-    if (!this.connected || !this.socket) return;
-
-    const bulk = Array.isArray(messageKey) ? messageKey : [messageKey];
-    const ids = bulk.map(({ id }) => id).join(', ');
-
-    try {
-      await this.socket.readMessages(bulk);
-      this.log('debug', `📖 Read receipt sent for message ${ids}`);
-    } catch (error) {
-      this.log('warn', `⚠️ Failed to send read receipt for message ${ids}:`, error);
-    }
-  }
-
   private setupEventHandlers(sock: WASocket): void {
     const connectionUpdateHandler = async (update: any): Promise<void> => {
       const { connection, lastDisconnect } = update;
@@ -1156,11 +1142,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  // Public method to check message delivery status
-  public getMessageDeliveryStatus(messageId: string): WAMessageDelivery | null {
-    return this.messageDeliveries.get(messageId) || null;
-  }
-
   // Wait for message to reach specific status
   private async waitForMessageStatus(messageId: string, options: WASendOptions): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -1339,7 +1320,208 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.healthCheckInterval = undefined;
   }
 
-  async register(): Promise<string> {
+  private async handleIncompleteSession(): Promise<void> {
+    try {
+      this.log('info', '🧹 Cleaning up incomplete session files...');
+
+      // Reset instance state
+      this.connected = false;
+      this.socket = null;
+      this.saveCreds = null;
+      this.appState = null;
+
+      this.log('info', '✅ Incomplete session cleanup completed');
+
+      // Trigger removal callback to notify parent service
+      await this.onRemove();
+    } catch (cleanupError) {
+      this.log('warn', 'Error during incomplete session cleanup:', cleanupError);
+      // Even if cleanup fails, we still want to reset the instance state
+      this.connected = false;
+      this.socket = null;
+      this.saveCreds = null;
+      this.appState = null;
+    }
+  }
+
+  private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
+    if (!ms) return;
+    if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+
+    try {
+      await this.socket.presenceSubscribe(jid);
+      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
+      await this.delay(ms);
+      clearInterval(keepAlive);
+      await this.socket.sendPresenceUpdate('paused', jid);
+      await this.delay(250);
+    } finally {
+      await this.socket.sendPresenceUpdate('available');
+    }
+  }
+
+  // Handle MAC/decryption errors by attempting to refresh the session, called when we encounter "Bad MAC" or decryption failures
+  private async handleDecryptionError(error: any): Promise<boolean> {
+    const errorMessage = error?.message || '';
+    const isMacError = errorMessage.includes('Bad MAC') || errorMessage.includes('decrypt') || errorMessage.includes('MAC');
+    const isUnsupportedStateError = errorMessage.includes('Unsupported state') || errorMessage.includes('unable to authenticate data');
+    const isDecryptError = errorMessage.includes('Failed to decrypt message') || errorMessage.includes('decrypt message');
+    if (!isMacError && !isUnsupportedStateError && !isDecryptError) return false;
+
+    this.log(
+      'warn',
+      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error, attempting session refresh...`
+    );
+
+    try {
+      if (isUnsupportedStateError) {
+        this.log('info', '🔄 Unsupported state error detected, attempting aggressive session reset...');
+
+        try {
+          await this.cleanupAndRemoveTempDir(true);
+          this.log('info', '🧹 Temporary files cleared for unsupported state recovery');
+        } catch (cleanupError) {
+          this.log('warn', '⚠️ Could not clear temp files, continuing with recovery:', cleanupError);
+        }
+      }
+
+      this.log('info', '🔄 Attempting simple session refresh...');
+      const refreshSuccess = await this.refresh();
+
+      if (refreshSuccess) {
+        this.log(
+          'info',
+          `✅ Session refresh successful, ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error resolved`
+        );
+        return true;
+      }
+
+      // If simple refresh fails, try a more aggressive approach, Try to reconnect without logging out first
+      this.log('warn', '🔄 Simple refresh failed, attempting session reconnection...');
+      this.log('info', '🔄 Attempting to reconnect without logout...');
+
+      try {
+        // Clear socket reference but keep credentials
+        this.socket = null;
+        this.connected = false;
+
+        // Wait a bit before attempting restore
+        this.log('debug', 'Waiting 2 seconds before restore attempt...');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        this.log('info', '🔄 Attempting session restore...');
+        await this.connect();
+        this.log(
+          'info',
+          `✅ Session reconnection successful after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error`
+        );
+        return true;
+      } catch (restoreError) {
+        this.log(
+          'error',
+          `❌ Session reconnection failed after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
+          restoreError
+        );
+
+        // If restore fails, try one more time with a fresh socket
+        this.log('info', '🔄 First restore failed, trying with fresh socket...');
+        try {
+          this.socket = null;
+          this.connected = false;
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+
+          await this.connect();
+          this.log('info', `✅ Session reconnection successful on second attempt`);
+          return true;
+        } catch (secondRestoreError) {
+          this.log('error', '❌ Second restore attempt also failed:', secondRestoreError);
+
+          // For unsupported state or decrypt errors, try to clear credentials and re-register
+          if (isUnsupportedStateError || isDecryptError) {
+            this.log('warn', `🔄 ${isDecryptError ? 'Decrypt' : 'Unsupported state'} error persists, attempting credential reset...`);
+            try {
+              // Clear credentials and force re-registration
+              await this.deleteAppAuth();
+              await this.cleanupAndRemoveTempDir(false);
+
+              this.log('info', '🧹 Credentials cleared, instance will need re-registration');
+
+              // Update status to indicate need for re-authentication
+              const errorType = isDecryptError ? 'decrypt' : 'unsupported state';
+              await this.update({
+                statusCode: 401,
+                errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
+              } as Partial<WAAppAuth<T>>);
+
+              // Disable the instance
+              await this.disable();
+
+              return false;
+            } catch (resetError) {
+              this.log('error', '❌ Failed to reset credentials:', resetError);
+            }
+          }
+
+          // Clear everything and try to register again
+          this.socket = null;
+          this.connected = false;
+
+          await this.update({
+            statusCode: 500,
+            errorMessage: `Recovery failed: ${(secondRestoreError as any)?.message || 'Unknown error'}`,
+          } as Partial<WAAppAuth<T>>);
+
+          await this.disable();
+
+          return false;
+        }
+      }
+    } catch (refreshError) {
+      this.log(
+        'error',
+        `❌ Failed to handle ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
+        refreshError
+      );
+
+      // Update status to indicate recovery failure
+      const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
+      await this.update({
+        statusCode: 500,
+        errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
+      } as Partial<WAAppAuth<T>>);
+
+      return false;
+    }
+  }
+
+  // Public method to check message delivery status
+  public getMessageDeliveryStatus(messageId: string): WAMessageDelivery | null {
+    return this.messageDeliveries.get(messageId) || null;
+  }
+
+  public async getProfilePicture(phoneNumber: string) {
+    try {
+      return await this.socket?.profilePictureUrl(this.numberToJid(phoneNumber), 'image');
+    } catch {
+      return null;
+    }
+  }
+
+  public async read(messageKey: IMessageKey | IMessageKey[]): Promise<void> {
+    if (!this.connected || !this.socket) return;
+
+    const bulk = Array.isArray(messageKey) ? messageKey : [messageKey];
+    const ids = bulk.map(({ id }) => id).join(', ');
+
+    try {
+      await this.socket.readMessages(bulk);
+      this.log('debug', `📖 Read receipt sent for message ${ids}`);
+    } catch (error) {
+      this.log('warn', `⚠️ Failed to send read receipt for message ${ids}:`, error);
+    }
+  }
+
+  public async register(): Promise<string> {
     if (this.connected) throw new Error(`Number [${this.phoneNumber}] is already registered and connected.`);
 
     this.log('info', 'Starting registration process...');
@@ -1427,7 +1609,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     });
   }
 
-  async connect(): Promise<void> {
+  public async connect(): Promise<void> {
     this.appState ??= await this.getAppAuth();
 
     if (this.connected) throw new Error('Already connected, skipping restore');
@@ -1520,47 +1702,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  private async handleIncompleteSession(): Promise<void> {
-    try {
-      this.log('info', '🧹 Cleaning up incomplete session files...');
-
-      // Reset instance state
-      this.connected = false;
-      this.socket = null;
-      this.saveCreds = null;
-      this.appState = null;
-
-      this.log('info', '✅ Incomplete session cleanup completed');
-
-      // Trigger removal callback to notify parent service
-      await this.onRemove();
-    } catch (cleanupError) {
-      this.log('warn', 'Error during incomplete session cleanup:', cleanupError);
-      // Even if cleanup fails, we still want to reset the instance state
-      this.connected = false;
-      this.socket = null;
-      this.saveCreds = null;
-      this.appState = null;
-    }
-  }
-
-  private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
-    if (!ms) return;
-    if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
-
-    try {
-      await this.socket.presenceSubscribe(jid);
-      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
-      await this.delay(ms);
-      clearInterval(keepAlive);
-      await this.socket.sendPresenceUpdate('paused', jid);
-      await this.delay(250);
-    } finally {
-      await this.socket.sendPresenceUpdate('available');
-    }
-  }
-
-  async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<WebMessageInfo & Partial<WAMessageDelivery>> {
+  public async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<WebMessageInfo & Partial<WAMessageDelivery>> {
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
     if (this.appState?.isActive === false) throw new Error('Instance is not active');
 
@@ -1708,141 +1850,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     throw lastError;
   }
 
-  // Handle MAC/decryption errors by attempting to refresh the session, called when we encounter "Bad MAC" or decryption failures
-  private async handleDecryptionError(error: any): Promise<boolean> {
-    const errorMessage = error?.message || '';
-    const isMacError = errorMessage.includes('Bad MAC') || errorMessage.includes('decrypt') || errorMessage.includes('MAC');
-    const isUnsupportedStateError = errorMessage.includes('Unsupported state') || errorMessage.includes('unable to authenticate data');
-    const isDecryptError = errorMessage.includes('Failed to decrypt message') || errorMessage.includes('decrypt message');
-    if (!isMacError && !isUnsupportedStateError && !isDecryptError) return false;
-
-    this.log(
-      'warn',
-      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error, attempting session refresh...`
-    );
-
-    try {
-      if (isUnsupportedStateError) {
-        this.log('info', '🔄 Unsupported state error detected, attempting aggressive session reset...');
-
-        try {
-          await this.cleanupAndRemoveTempDir(true);
-          this.log('info', '🧹 Temporary files cleared for unsupported state recovery');
-        } catch (cleanupError) {
-          this.log('warn', '⚠️ Could not clear temp files, continuing with recovery:', cleanupError);
-        }
-      }
-
-      this.log('info', '🔄 Attempting simple session refresh...');
-      const refreshSuccess = await this.refresh();
-
-      if (refreshSuccess) {
-        this.log(
-          'info',
-          `✅ Session refresh successful, ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error resolved`
-        );
-        return true;
-      }
-
-      // If simple refresh fails, try a more aggressive approach, Try to reconnect without logging out first
-      this.log('warn', '🔄 Simple refresh failed, attempting session reconnection...');
-      this.log('info', '🔄 Attempting to reconnect without logout...');
-
-      try {
-        // Clear socket reference but keep credentials
-        this.socket = null;
-        this.connected = false;
-
-        // Wait a bit before attempting restore
-        this.log('debug', 'Waiting 2 seconds before restore attempt...');
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        this.log('info', '🔄 Attempting session restore...');
-        await this.connect();
-        this.log(
-          'info',
-          `✅ Session reconnection successful after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error`
-        );
-        return true;
-      } catch (restoreError) {
-        this.log(
-          'error',
-          `❌ Session reconnection failed after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
-          restoreError
-        );
-
-        // If restore fails, try one more time with a fresh socket
-        this.log('info', '🔄 First restore failed, trying with fresh socket...');
-        try {
-          this.socket = null;
-          this.connected = false;
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-
-          await this.connect();
-          this.log('info', `✅ Session reconnection successful on second attempt`);
-          return true;
-        } catch (secondRestoreError) {
-          this.log('error', '❌ Second restore attempt also failed:', secondRestoreError);
-
-          // For unsupported state or decrypt errors, try to clear credentials and re-register
-          if (isUnsupportedStateError || isDecryptError) {
-            this.log('warn', `🔄 ${isDecryptError ? 'Decrypt' : 'Unsupported state'} error persists, attempting credential reset...`);
-            try {
-              // Clear credentials and force re-registration
-              await this.deleteAppAuth();
-              await this.cleanupAndRemoveTempDir(false);
-
-              this.log('info', '🧹 Credentials cleared, instance will need re-registration');
-
-              // Update status to indicate need for re-authentication
-              const errorType = isDecryptError ? 'decrypt' : 'unsupported state';
-              await this.update({
-                statusCode: 401,
-                errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
-              } as Partial<WAAppAuth<T>>);
-
-              // Disable the instance
-              await this.disable();
-
-              return false;
-            } catch (resetError) {
-              this.log('error', '❌ Failed to reset credentials:', resetError);
-            }
-          }
-
-          // Clear everything and try to register again
-          this.socket = null;
-          this.connected = false;
-
-          await this.update({
-            statusCode: 500,
-            errorMessage: `Recovery failed: ${(secondRestoreError as any)?.message || 'Unknown error'}`,
-          } as Partial<WAAppAuth<T>>);
-
-          await this.disable();
-
-          return false;
-        }
-      }
-    } catch (refreshError) {
-      this.log(
-        'error',
-        `❌ Failed to handle ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
-        refreshError
-      );
-
-      // Update status to indicate recovery failure
-      const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
-      await this.update({
-        statusCode: 500,
-        errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
-      } as Partial<WAAppAuth<T>>);
-
-      return false;
-    }
-  }
-
-  async refresh(): Promise<boolean> {
+  public async refresh(): Promise<boolean> {
     try {
       if (this.socket?.user?.id) {
         // Try to send a presence update to check if connection is alive
@@ -1863,7 +1871,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  async remove(clearData: boolean = false, delay: number = 5000): Promise<void> {
+  public async remove(clearData: boolean = false, delay: number = 5000): Promise<void> {
     try {
       // Check if this was an incomplete registration that should be cleaned up
       try {
@@ -1915,7 +1923,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  async disconnect(logout: boolean = true, clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
+  public async disconnect(logout: boolean = true, clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
     try {
       this.log('info', '🔄 Initiating manual disconnect...');
 
@@ -1951,17 +1959,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  async enable(): Promise<void> {
+  public async enable(): Promise<void> {
     await this.update({ isActive: true } as WAAppAuth<T>);
     await this.connect();
   }
 
-  async disable(): Promise<void> {
+  public async disable(): Promise<void> {
     await this.update({ isActive: false } as WAAppAuth<T>);
     await this.disconnect(false);
   }
 
-  async update(data: Partial<WAAppAuth<T>>): Promise<void> {
+  public async update(data: Partial<WAAppAuth<T>>): Promise<void> {
     const hasChanges = Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value);
 
     if (hasChanges) {

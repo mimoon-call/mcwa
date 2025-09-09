@@ -12,14 +12,16 @@ import Icon from '@components/Icon/Icon';
 
 type TextFieldProps = InputWrapperProps & {
   className?: ClassValue;
+  containerClass?: ClassValue;
   clearable?: boolean;
   beforeChange?: (value: string) => string;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'>;
 
 type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
-  Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'> & {
+  Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern' | 'className'> & {
     clearable?: boolean;
     beforeChange?: (value: string) => string;
+    className?: ClassValue;
   };
 
 const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, ...rest }) => {
@@ -73,13 +75,21 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
 
 const TextField: FC<TextFieldProps> = (props) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, ...rest } = props;
+  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, containerClass, ...rest } = props;
 
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
-      <Input {...rest} value={value} placeholder={placeholder} clearable={clearable} beforeChange={beforeChange} onChange={(ev) => onChange?.(ev.target.value)} />
+      <Input
+        {...rest}
+        className={containerClass}
+        value={value}
+        placeholder={placeholder}
+        clearable={clearable}
+        beforeChange={beforeChange}
+        onChange={(ev) => onChange?.(ev.target.value)}
+      />
     </InputWrapper>
   );
 };

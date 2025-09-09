@@ -4,17 +4,14 @@ import Icon from '@client/shared/components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client/shared/constants';
-import type { ChatContact } from '../store/chat.types';
+import type { ChatContact, InstanceChat } from '../store/chat.types';
 import { TextField } from '@components/Fields';
 import { useInfiniteScrollConversations } from '../hooks';
+import Avatar from '@components/Avatar/Avatar';
 
 type LeftPanelProps = {
   phoneNumber?: string;
-  searchMetadata?: {
-    isConnected: boolean;
-    errorMessage?: string | null;
-    statusCode?: number | null;
-  } | null;
+  searchMetadata?: InstanceChat | null;
   conversations?: ChatContact[];
   selectedPhoneNumber?: string;
   loading: boolean;
@@ -76,21 +73,20 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   const formatTime = (dateString: string) => {
     const date = dayjs(dateString);
     const now = dayjs();
-    
+
     // If the date is today, show only time
     if (date.isSame(now, 'day')) {
       return date.format(DateFormat.TIME_FORMAT);
     }
-    
+
     // If the date is yesterday, show "Yesterday" with time
     if (date.isSame(now.subtract(1, 'day'), 'day')) {
       return `${t('GENERAL.YESTERDAY')} ${date.format(DateFormat.TIME_FORMAT)}`;
     }
-    
+
     // For all other dates (not today or yesterday), show full date and time
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
-
 
   return (
     <div className={cn('w-1/3 bg-white border-r border-gray-200 flex flex-col', className)}>
@@ -98,21 +94,29 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
       <div className={`${searchMetadata?.isConnected ? 'bg-green-600' : 'bg-red-600'} text-white p-4 flex items-center justify-between`}>
         <div className="flex items-center space-x-3">
           <div className="flex flex-col gap-1">
-            <div className="font-semibold">{phoneNumber || 'Instance'}</div>
-            <div className="text-xs opacity-90">
-              {searchMetadata?.isConnected ? t('INSTANCE.STATUS.CONNECTED') : t('INSTANCE.STATUS.DISCONNECTED')}
+            <div className="flex gap-2 items-center">
+              {/*<Avatar size="48px" src={searchMetadata?.profilePictureUrl} alt="GENERAL.PROFILE_PICTURE" />*/}
+
+              <div>
+                <div className="text-xl font-semibold">{phoneNumber || 'Instance'}</div>
+                <div className="text-sm opacity-90">
+                  {searchMetadata?.isConnected ? t('INSTANCE.STATUS.CONNECTED') : t('INSTANCE.STATUS.DISCONNECTED')}
+                </div>
+              </div>
             </div>
+
             {searchMetadata?.errorMessage && (
-              <div className="text-xs opacity-75 mt-1">
-                {searchMetadata.statusCode && `${t('INSTANCE.STATUS_CODE')}: ${searchMetadata.statusCode}`}
-                {searchMetadata.statusCode && ' | '}
-                {t('INSTANCE.ERROR_MESSAGE')}: {searchMetadata.errorMessage}
+              <div className="flex gap-0.5 items-center">
+                <Icon className="inline text-yellow-300 me-1 mt-1" name="svg:warning" size="0.875rem" />
+
+                <div className="text-sm opacity-75 mt-1">
+                  {searchMetadata.statusCode && `${t('INSTANCE.STATUS_CODE')}: ${searchMetadata.statusCode}`}
+                  {searchMetadata.statusCode && ' | '}
+                  {t('INSTANCE.ERROR_MESSAGE')}: {searchMetadata.errorMessage}
+                </div>
               </div>
             )}
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Icon name="svg:cog" size="1rem" className="cursor-pointer" />
         </div>
       </div>
 
@@ -141,16 +145,12 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
               <div
                 key={contact.phoneNumber}
                 className={cn(
-                  'p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 flex items-center space-x-3',
+                  'p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 flex items-center space-x-3 gap-2',
                   selectedPhoneNumber === contact.phoneNumber && 'bg-green-50 border-l-4 border-l-green-500'
                 )}
                 onClick={() => onChatSelect(contact.phoneNumber)}
               >
-                <div className="relative">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                    <Icon name="svg:user" size="1.25rem" className="text-gray-600" />
-                  </div>
-                </div>
+                <Avatar size="48px" src={contact.profilePictureUrl} alt={contact.name} />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">

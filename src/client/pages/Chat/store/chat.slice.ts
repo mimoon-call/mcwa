@@ -13,16 +13,18 @@ import {
   CHAT_MESSAGES_DATA,
   CHAT_MESSAGES_PAGINATION,
   CHAT_LOADING,
+  SEARCH_LOADING,
   CHAT_ERROR,
   CHAT_SELECTED_PHONE_NUMBER,
 } from './chat.constants';
-import type { 
-  SearchConversationsReq, 
-  SearchConversationsRes, 
-  GetConversationReq, 
+import type {
+  SearchConversationsReq,
+  SearchConversationsRes,
+  GetConversationReq,
   GetConversationRes,
   ChatContact,
-  ChatMessage 
+  ChatMessage,
+  InstanceChat,
 } from './chat.types';
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
@@ -30,12 +32,13 @@ import isEqual from 'lodash/isEqual';
 export interface ChatState {
   [CHAT_SEARCH_DATA]: ChatContact[] | null;
   [CHAT_SEARCH_PAGINATION]: Partial<Omit<SearchConversationsRes, 'data' | 'isConnected' | 'statusCode' | 'errorMessage'>>;
-  [CHAT_SEARCH_METADATA]: { isConnected: boolean; statusCode: number | null; errorMessage: string | null } | null;
+  [CHAT_SEARCH_METADATA]: InstanceChat | null;
   [CHAT_SEARCH_VALUE]: string;
   [CHAT_MESSAGES_DATA]: ChatMessage[] | null;
   [CHAT_MESSAGES_PAGINATION]: Partial<Omit<GetConversationRes, 'data'>>;
   [CHAT_SELECTED_PHONE_NUMBER]: string | null;
   [CHAT_LOADING]: boolean;
+  [SEARCH_LOADING]: boolean;
   [CHAT_ERROR]: ErrorResponse | null;
   lastSearchParams: { phoneNumber: string; searchValue: string } | null;
 }
@@ -49,6 +52,7 @@ const initialState: ChatState = {
   [CHAT_MESSAGES_PAGINATION]: { pageSize: 50 },
   [CHAT_SELECTED_PHONE_NUMBER]: null,
   [CHAT_LOADING]: false,
+  [SEARCH_LOADING]: false,
   [CHAT_ERROR]: null,
   lastSearchParams: null,
 };
@@ -61,18 +65,18 @@ const searchConversations = createAsyncThunk(
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.chat]?.[CHAT_SEARCH_PAGINATION] || initialState[CHAT_SEARCH_PAGINATION];
       const currentSearchValue = state[StoreEnum.chat]?.[CHAT_SEARCH_VALUE] || '';
-      const data = { 
+      const data = {
         page: { ...currentPagination, ...(page || {}) },
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue
+        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
       };
 
       const result = await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
-      
+
       // Add metadata to track if this is a new search
       return {
         ...result,
         isNewSearch: searchValue !== currentSearchValue,
-        phoneNumber
+        phoneNumber,
       };
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
@@ -120,9 +124,9 @@ const loadMoreConversations = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const currentSearchValue = state[StoreEnum.chat]?.[CHAT_SEARCH_VALUE] || '';
-      const data = { 
+      const data = {
         page,
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue
+        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
       };
 
       return await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
@@ -169,7 +173,7 @@ const chatSlice = createSlice({
     },
     updateSearchPagination: (state, action) => {
       const newPagination = { ...state[CHAT_SEARCH_PAGINATION], ...action.payload };
-      
+
       if (isEqual(newPagination, state[CHAT_SEARCH_PAGINATION])) {
         return;
       }
@@ -178,7 +182,7 @@ const chatSlice = createSlice({
     },
     updateMessagesPagination: (state, action) => {
       const newPagination = { ...state[CHAT_MESSAGES_PAGINATION], ...action.payload };
-      
+
       if (isEqual(newPagination, state[CHAT_MESSAGES_PAGINATION])) {
         return;
       }
@@ -190,21 +194,21 @@ const chatSlice = createSlice({
     builder
       // Search conversations
       .addCase(searchConversations.pending, (state) => {
-        state[CHAT_LOADING] = true;
+        state[SEARCH_LOADING] = true;
         state[CHAT_ERROR] = null;
       })
       .addCase(searchConversations.fulfilled, (state, action) => {
         const { phoneNumber } = action.payload as SearchConversationsRes & { isNewSearch: boolean; phoneNumber: string };
         const currentSearchValue = state[CHAT_SEARCH_VALUE] || '';
         const searchValue = action.meta.arg.searchValue || currentSearchValue;
-        
+
         // Check if this is a new search (different phone number or search value)
         const isNewPhoneNumber = !state.lastSearchParams || state.lastSearchParams.phoneNumber !== phoneNumber;
         const isNewSearchValue = !state.lastSearchParams || state.lastSearchParams.searchValue !== searchValue;
         const shouldResetPagination = isNewPhoneNumber || isNewSearchValue;
-        
+
         state[CHAT_SEARCH_DATA] = action.payload.data;
-        
+
         // Only update pagination if it's a new search
         if (shouldResetPagination) {
           state[CHAT_SEARCH_PAGINATION] = {
@@ -219,26 +223,27 @@ const chatSlice = createSlice({
           // Keep existing pagination but update data
           state[CHAT_SEARCH_DATA] = action.payload.data;
         }
-        
+
         state[CHAT_SEARCH_METADATA] = {
           isConnected: action.payload.isConnected,
           statusCode: action.payload.statusCode,
           errorMessage: action.payload.errorMessage,
+          profilePictureUrl: action.payload.profilePictureUrl,
         };
-        
+
         // Update search value in state
         state[CHAT_SEARCH_VALUE] = searchValue;
-        
+
         // Update last search params
         state.lastSearchParams = {
           phoneNumber,
-          searchValue
+          searchValue,
         };
-        
-        state[CHAT_LOADING] = false;
+
+        state[SEARCH_LOADING] = false;
       })
       .addCase(searchConversations.rejected, (state, action) => {
-        state[CHAT_LOADING] = false;
+        state[SEARCH_LOADING] = false;
         state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       // Get conversation messages
@@ -287,7 +292,7 @@ const chatSlice = createSlice({
       })
       // Load more conversations
       .addCase(loadMoreConversations.pending, (state) => {
-        state[CHAT_LOADING] = true;
+        state[SEARCH_LOADING] = true;
         state[CHAT_ERROR] = null;
       })
       .addCase(loadMoreConversations.fulfilled, (state, action) => {
@@ -302,10 +307,10 @@ const chatSlice = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state[CHAT_LOADING] = false;
+        state[SEARCH_LOADING] = false;
       })
       .addCase(loadMoreConversations.rejected, (state, action) => {
-        state[CHAT_LOADING] = false;
+        state[SEARCH_LOADING] = false;
         state[CHAT_ERROR] = action.payload as ErrorResponse;
       });
   },

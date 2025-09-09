@@ -8,9 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { useTooltip } from '@hooks';
 
 type AvatarProps = {
-  src: string | undefined;
+  src: string | undefined | null;
   loading?: boolean;
-  alt: string;
+  alt: string | null;
   tooltip?: string | true;
   size?: SizeUnit;
   className?: string;
@@ -33,7 +33,7 @@ const Avatar: FC<AvatarProps> = ({
 
   const tooltipText = (() => {
     if (tooltip === true) {
-      return t(alt);
+      return alt ? t(alt) : undefined;
     }
 
     return tooltip;
@@ -47,7 +47,7 @@ const Avatar: FC<AvatarProps> = ({
       {localSrc && (
         <img
           src={localSrc}
-          alt={alt ? t(alt) : alt}
+          alt={alt ? t(alt) : undefined}
           className={cn(styles['avatar__image'], localSrc && !isReady && 'hidden')}
           onLoad={() => setIsReady(true)}
           onError={() => setLocalSrc(undefined)}

@@ -92,6 +92,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
           <div className="flex justify-between gap-2 items-center space-x-3">
             <TextField
               className="flex-grow"
+              containerClass="!rounded-full !p-4"
               hideDetails
               type="text"
               name="messageInput"

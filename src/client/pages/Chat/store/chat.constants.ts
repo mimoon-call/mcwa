@@ -8,5 +8,6 @@ export const CHAT_SEARCH_VALUE = 'searchValue';
 export const CHAT_MESSAGES_DATA = 'messagesData';
 export const CHAT_MESSAGES_PAGINATION = 'messagesPagination';
 export const CHAT_LOADING = 'loading';
+export const SEARCH_LOADING = 'searchLoading';
 export const CHAT_ERROR = 'error';
 export const CHAT_SELECTED_PHONE_NUMBER = 'selectedPhoneNumber';
