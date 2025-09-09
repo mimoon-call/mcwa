@@ -134,7 +134,7 @@ const InstanceTable = () => {
   };
 
   const onRowClick = (item: InstanceItem) => {
-    navigate(`/instance/${item?.phoneNumber}`);
+    navigate(`/chat/${item?.phoneNumber}`);
   };
 
   useEffect(() => {
