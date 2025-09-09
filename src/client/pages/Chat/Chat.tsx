@@ -76,14 +76,15 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   const handleSearch = useCallback((value: string) => {
     if (phoneNumber) {
-      // Reset pagination only if search value actually changed
+      // Only search if the value actually changed
       if (value !== searchValue) {
+        // Reset pagination only if search value actually changed
         dispatch(chatSlice.resetPagination());
+        
+        // Clear current data and search with new value
+        dispatch(chatSlice.clearSearchData());
+        dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
       }
-      
-      // Clear current data and search with new value
-      dispatch(chatSlice.clearSearchData());
-      dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
     }
   }, [phoneNumber, searchValue, dispatch]);
 

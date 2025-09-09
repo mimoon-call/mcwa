@@ -91,6 +91,7 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
 
+
   return (
     <div className={cn('w-1/3 bg-white border-r border-gray-200 flex flex-col', className)}>
       {/* Header */}

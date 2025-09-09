@@ -226,6 +226,9 @@ const chatSlice = createSlice({
           errorMessage: action.payload.errorMessage,
         };
         
+        // Update search value in state
+        state[CHAT_SEARCH_VALUE] = searchValue;
+        
         // Update last search params
         state.lastSearchParams = {
           phoneNumber,

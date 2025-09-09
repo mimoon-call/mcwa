@@ -91,7 +91,12 @@ export const useInfiniteScrollConversations = ({
       return;
     }
     
-    if (phoneNumber && !loading && hasMore) {
+    // Don't auto-load if we're still loading the initial search
+    if (loading) {
+      return;
+    }
+    
+    if (phoneNumber && hasMore && conversations.length > 0) {
       const currentCount = conversations.length;
       
       if (currentCount < minimumItems) {
