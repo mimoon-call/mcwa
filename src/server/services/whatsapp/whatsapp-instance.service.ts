@@ -742,14 +742,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  public async read(messageKey: IMessageKey): Promise<void> {
+  public async read(messageKey: IMessageKey | IMessageKey[]): Promise<void> {
     if (!this.connected || !this.socket) return;
 
+    const bulk = Array.isArray(messageKey) ? messageKey : [messageKey];
+    const ids = bulk.map(({ id }) => id).join(', ');
+
     try {
-      await this.socket.readMessages([messageKey]);
-      this.log('debug', `📖 Read receipt sent for message ${messageKey.id}`);
+      await this.socket.readMessages(bulk);
+      this.log('debug', `📖 Read receipt sent for message ${ids}`);
     } catch (error) {
-      this.log('warn', `⚠️ Failed to send read receipt for message ${messageKey.id}:`, error);
+      this.log('warn', `⚠️ Failed to send read receipt for message ${ids}:`, error);
     }
   }
 

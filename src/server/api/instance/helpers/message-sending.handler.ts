@@ -11,7 +11,5 @@ export const messageSendingHandler: WASendingMessageCallback<WAAppAuth<WAPersona
     { $replaceRoot: { newRoot: '$raw.key' } },
   ]);
 
-  for (const key of messageKeys) {
-    await instance.read(key);
-  }
+  await instance.read(messageKeys);
 };
