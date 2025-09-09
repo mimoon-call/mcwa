@@ -96,6 +96,7 @@
     "REAUTHENTICATE_NOTICE": "Are you sure you want to re-authenticate?\nNote: This action will cancel the existing authentication.",
     "IP_ADDRESS": "IP Address",
     "SEARCH_BY_PHONE_NUMBER": "Search by phone number",
+    "CONVERSATIONS": "Conversations",
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     },

@@ -229,7 +229,7 @@ const InstanceTable = () => {
       onClick: onRefresh,
     },
     {
-      label: 'INSTANCE.CHATS',
+      label: 'INSTANCE.CONVERSATIONS',
       iconName: 'svg:chat',
       onClick: ({ phoneNumber }) => navigate(`/chat/${phoneNumber}`),
     },
