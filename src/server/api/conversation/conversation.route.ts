@@ -9,6 +9,6 @@ conversationRoute.post(
   `/${SEARCH_CONVERSATIONS}/:phoneNumber`,
   routeMiddleware({ isAuthRequired: true }, conversationController[SEARCH_CONVERSATIONS])
 );
-conversationRoute.post(`/${GET_CONVERSATION}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, conversationController[GET_CONVERSATION]));
+conversationRoute.post(`/${GET_CONVERSATION}/:phoneNumber/:withPhoneNumber?`, routeMiddleware({ isAuthRequired: true }, conversationController[GET_CONVERSATION]));
 
 export default conversationRoute;

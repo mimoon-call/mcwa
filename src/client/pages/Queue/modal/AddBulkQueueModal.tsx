@@ -1,6 +1,6 @@
 import type { ModalRef } from '@components/Modal/Modal.types';
 import type { StepperModalProps } from '@components/StepperModal/StepperModal.types';
-import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/Queue/store/message-queue.types';
 import type { TableHeaders } from '@components/Table/Table.type';
 import type { AppDispatch } from '@client/store';
 import { OverlayEnum } from '@components/Overlay/Overlay.enum';
@@ -8,8 +8,8 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import StepperModal from '@components/StepperModal/StepperModal';
 import Table from '@components/Table/Table';
 import { Checkbox } from '@components/Checkbox/Checkbox';
-import { ADD_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
-import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
+import { ADD_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/Queue/store/message-queue.constants';
+import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
 import { useDispatch } from 'react-redux';
 import TextAreaField, { type TextAreaFieldRef } from '@components/Fields/TextAreaField/TextAreaField';
 import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';

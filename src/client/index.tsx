@@ -24,20 +24,18 @@ export let store: ReturnType<typeof createStore>;
 
   root.render(
     <Provider store={store}>
-      <AppHeader />
-
-      <main>
-        <BrowserRouter>
+      <BrowserRouter>
+        <AppHeader />
+        <main>
           <App data={getSsrData()} />
-        </BrowserRouter>
-      </main>
-
-      <AppFooter>
-        <div className="flex align-middle text-sm w-full justify-end">
-          <NextWarmCountdown className="border-s" />
-          <MessageQueueCounter className="border-s" />
-        </div>
-      </AppFooter>
+        </main>
+        <AppFooter>
+          <div className="flex align-middle text-sm w-full justify-end">
+            <NextWarmCountdown className="border-s" />
+            <MessageQueueCounter className="border-s" />
+          </div>
+        </AppFooter>
+      </BrowserRouter>
     </Provider>
   );
 })();

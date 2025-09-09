@@ -3,4 +3,5 @@ export enum StoreEnum {
   instance = 'instance',
   queue = 'queue',
   global = 'global',
+  chat = 'chat',
 }

@@ -1,7 +1,7 @@
 import type { TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { AppDispatch, RootState } from '@client/store';
 import type { Pagination } from '@models';
-import type { MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { MessageQueueItem } from '@client/pages/Queue/store/message-queue.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import React, { useEffect, useRef } from 'react';
 import Table from '@components/Table/Table';
@@ -17,19 +17,19 @@ import {
   SEARCH_MESSAGE_QUEUE,
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
-} from '@client/pages/MessageQueue/store/message-queue.constants';
-import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
-import AddEditQueueModal, { type AddQueueModalRef } from '@client/pages/MessageQueue/modal/AddEditQueueModal';
+} from '@client/pages/Queue/store/message-queue.constants';
+import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
+import AddEditQueueModal, { type AddQueueModalRef } from '@client/pages/Queue/modal/AddEditQueueModal';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { useToast } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
-import { MessageQueueEventEnum } from '@client/pages/MessageQueue/constants/message-queue-event.enum';
+import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
 import FileService from '@services/file.service';
 import loadCsvFromFile from '@helpers/load-csv-from-file.helper';
-import AddBulkQueueModal from '@client/pages/MessageQueue/modal/AddBulkQueueModal';
+import AddBulkQueueModal from '@client/pages/Queue/modal/AddBulkQueueModal';
 
-const MessageQueue = () => {
+const Queue = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast({ y: 'bottom' });
@@ -182,4 +182,4 @@ const MessageQueue = () => {
   );
 };
 
-export default MessageQueue;
+export default Queue;

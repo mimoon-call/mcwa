@@ -78,12 +78,24 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return now.toISOString().split('T')[0];
   }
 
+  private setWarmUpActive(value: boolean) {
+    this.isWarming = value;
+
+    if (!value) {
+      this.nextWarmUp = null;
+      this.nextCheckUpdate?.(null);
+      clearTimeout(this.nextStartWarming);
+    }
+  }
+
   private getNextWarmingTime(): Date {
     const now = getLocalTime();
     let nextWarmingTime: Date;
 
-    if (now.getHours() < this.dailyScheduleTimeHour || 
-        (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)) {
+    if (
+      now.getHours() < this.dailyScheduleTimeHour ||
+      (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)
+    ) {
       // Today
       this.randomNextTimeWindow();
       nextWarmingTime = new Date(now);
@@ -531,12 +543,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       if (warmUpTodayInstances.length === 0) {
         this.log('debug', 'No instances need warming up, stopping warm-up process');
-        clearTimeout(this.nextStartWarming);
-        this.nextCheckUpdate?.(null);
+        this.setWarmUpActive(false);
 
         const nextWarmingTime = this.getNextWarmingTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
+        this.setWarmUpActive(false);
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
         this.nextWarmUp = getLocalTime(nextWarmingTime);
         this.nextCheckUpdate?.(this.nextWarmUp);
@@ -546,7 +558,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       this.log('debug', warmUpTodayInstances.map(({ phoneNumber }) => phoneNumber).join(','), `Start Warming Up ${warmUpTodayInstances.length}`);
       const instancesPairs = this.getAllUniquePairs('phoneNumber', warmUpTodayInstances, this.getFallbackInstance(allActiveInstances));
-      this.isWarming = true;
+      this.setWarmUpActive(true);
 
       // Process conversations sequentially with delays to prevent simultaneous creation
       for (const pair of instancesPairs) {
@@ -571,10 +583,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   public stopWarmingUp() {
-    this.isWarming = false;
+    this.setWarmUpActive(false);
 
     Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
-    this.nextCheckUpdate?.(null);
     this.timeoutConversation.clear();
     this.activeConversation.clear();
     this.creatingConversation.clear(); // Clear conversations being created

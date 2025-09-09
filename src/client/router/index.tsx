@@ -3,12 +3,14 @@ import React from 'react';
 import type { RouteObject } from 'react-router-dom';
 import Instance from '@client/pages/Instance/Instance';
 import Home from '@client/pages/Home/Home';
-import MessageQueue from '@client/pages/MessageQueue/MessageQueue';
+import Queue from '@client/pages/Queue/Queue';
+import Chat from '@client/pages/Chat/Chat';
 
 const router: RouteObject[] = [
   { path: '/', element: <Home /> },
-  { path: '/queue', element: <MessageQueue /> },
+  { path: '/queue', element: <Queue /> },
   { path: '/instance/:phoneNumber?', element: <Instance /> },
+  { path: '/chat/:phoneNumber/:withPhoneNumber?', element: <Chat /> },
 ];
 
 export default router;

@@ -2,6 +2,8 @@ import type { Pagination } from '@models';
 import type { GetConversationRes, SearchConversationRes } from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { GET_CONVERSATION, SEARCH_CONVERSATIONS } from '@server/api/conversation/conversation.map';
+import { wa } from '@server/index';
+import type { PipelineStage } from 'mongoose';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -26,8 +28,8 @@ export const conversationService = {
     ]);
   },
 
-  [SEARCH_CONVERSATIONS]: async (phoneNumber: string, page: Pagination): Promise<SearchConversationRes> => {
-    return await WhatsAppMessage.pagination<SearchConversationRes['data'][0]>({ page }, [
+  [SEARCH_CONVERSATIONS]: async (phoneNumber: string, page: Pagination, searchValue?: string): Promise<SearchConversationRes> => {
+    const pipeline: PipelineStage[] = [
       // only messages where myNumber is involved
       { $match: { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] } },
 
@@ -45,7 +47,22 @@ export const conversationService = {
 
       // filter out group chats (phone numbers containing '@')
       { $match: { otherNumber: { $not: { $regex: '@' } } } },
+    ];
 
+    // Add search filter if searchValue is provided
+    if (searchValue) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { otherNumber: { $regex: searchValue, $options: 'i' } },
+            { pushName: { $regex: searchValue, $options: 'i' } },
+            { text: { $regex: searchValue, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
       // sort by otherNumber and createdAt to get the most recent message per conversation
       { $sort: { otherNumber: 1, createdAt: -1 } },
 
@@ -56,6 +73,7 @@ export const conversationService = {
           name: { $push: { $cond: [{ $ne: ['$fromNumber', phoneNumber] }, '$pushName', null] } },
           lastMessage: { $first: '$text' },
           lastMessageAt: { $first: '$createdAt' },
+          internalFlag: { $first: '$internalFlag' }, // in case we want to use it later
         },
       },
 
@@ -66,7 +84,18 @@ export const conversationService = {
       { $sort: { lastMessageAt: -1 } },
 
       // project to final format
-      { $project: { _id: 0, phoneNumber: '$_id', name: 1, lastMessage: 1, lastMessageAt: 1 } },
-    ]);
+      { $project: { _id: 0, phoneNumber: '$_id', name: 1, lastMessage: 1, lastMessageAt: 1, internalFlag: 1 } }
+    );
+
+    const data = await WhatsAppMessage.pagination<SearchConversationRes['data'][0]>({ page }, pipeline);
+
+    const instance = wa.getInstance(phoneNumber);
+
+    return {
+      ...data,
+      isConnected: instance?.connected || false,
+      statusCode: instance?.get('statusCode') || null,
+      errorMessage: instance?.get('errorMessage') || null,
+    };
   },
 };

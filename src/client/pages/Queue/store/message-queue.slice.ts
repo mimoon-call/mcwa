@@ -5,7 +5,7 @@ import type {
   EditMessageQueueReq,
   SearchMessageQueueReq,
   SearchMessageQueueRes,
-} from '@client/pages/MessageQueue/store/message-queue.types';
+} from '@client/pages/Queue/store/message-queue.types';
 import type { RootState } from '@client/store';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { StoreEnum } from '@client/store/store.enum';
@@ -26,7 +26,7 @@ import {
   UPDATE_MESSAGE_COUNT,
   CLEAR_MESSAGE_QUEUE,
   EDIT_MESSAGE_QUEUE,
-} from '@client/pages/MessageQueue/store/message-queue.constants';
+} from '@client/pages/Queue/store/message-queue.constants';
 import { Http } from '@services/http';
 
 export interface MessageQueueState {

@@ -26,6 +26,7 @@
     "FIRST": "ראשון",
     "LAST": "אחרון",
     "LOADING": "טוען...",
+    "LOADING_MORE": "טוען עוד...",
     "CLOSE": "סגור",
     "MORE_INFORMATION": "מידע נוסף",
     "ACTIONS": "פעולות",
@@ -43,7 +44,15 @@
     "SELECT_AN_OPTION": "בחר אפשרות",
     "SEARCH_PLACEHOLDER": "חפש...",
     "NO_OPTIONS_FOUND": "לא נמצאו אפשרויות",
-    "TOTAL_ITEMS": "{{total}} פריטים"
+    "TOTAL_ITEMS": "{{total}} פריטים",
+    "LOAD_MORE_MESSAGES": "טען עוד הודעות",
+    "TODAY": "היום",
+    "YOU": "אתה",
+    "READ_MORE": "קרא עוד",
+    "ENTER_MESSAGE": "הקלד הודעה",
+    "SELECT_CHAT_TO_START": "בחר צ'אט כדי להתחיל",
+    "YESTERDAY": "אתמול",
+    "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
   },
   "QUEUE": {
     "PHONE_NUMBER": "מספר טלפון",
@@ -92,6 +101,7 @@
     },
     "STATUS": {
       "CONNECTED": "מחובר",
+      "DISCONNECTED": "מנותק",
       "LOGGED_OUT": "התנתק",
       "BLOCKED": "חסום",
       "REGISTRATION_INCOMPLETED": "הרשמה לא הושלמה"

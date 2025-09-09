@@ -1,12 +1,12 @@
 import type { ModalRef } from '@components/Modal/Modal.types';
 import type { AppDispatch } from '@client/store';
-import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/MessageQueue/store/message-queue.types';
+import type { AddMessageQueueReq, MessageQueueItem } from '@client/pages/Queue/store/message-queue.types';
 import { OverlayEnum } from '@components/Overlay/Overlay.enum';
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import Modal from '@components/Modal/Modal';
-import messageQueueSlice from '@client/pages/MessageQueue/store/message-queue.slice';
-import { ADD_MESSAGE_QUEUE, EDIT_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/MessageQueue/store/message-queue.constants';
+import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
+import { ADD_MESSAGE_QUEUE, EDIT_MESSAGE_QUEUE, SEARCH_MESSAGE_QUEUE } from '@client/pages/Queue/store/message-queue.constants';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import TextAreaField, { type TextAreaFieldRef } from '@components/Fields/TextAreaField/TextAreaField';

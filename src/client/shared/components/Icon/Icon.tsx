@@ -24,7 +24,7 @@ const SvgWrapper: FC<{ content: string }> = ({ content }) => {
 };
 
 const IconSvg: FC<Props> = (props) => {
-  const { name, type = 'solid', size = '1.25rem', loading = false, clickable = false, fallback, ariaLabel, ...attrs } = props;
+  const { name, type = 'solid', size = '1.25rem', loading = false, fallback, ariaLabel, ...attrs } = props;
 
   const [hover, setHover] = useState(false);
 

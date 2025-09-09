@@ -26,6 +26,7 @@
     "FIRST": "First",
     "LAST": "Last",
     "LOADING": "Loading...",
+    "LOADING_MORE": "Loading more...",
     "CLOSE": "Close",
     "MORE_INFORMATION": "More information",
     "ACTIONS": "Actions",
@@ -43,7 +44,15 @@
     "SELECT_AN_OPTION": "Select an option",
     "SEARCH_PLACEHOLDER": "Search...",
     "NO_OPTIONS_FOUND": "No options found",
-    "TOTAL_ITEMS": "{{total}} items"
+    "TOTAL_ITEMS": "{{total}} items",
+    "LOAD_MORE_MESSAGES": "Load more messages",
+    "TODAY": "TODAY",
+    "YOU": "You",
+    "READ_MORE": "Read more",
+    "ENTER_MESSAGE": "Enter your message",
+    "SELECT_CHAT_TO_START": "Select a chat to start messaging",
+    "YESTERDAY": "YESTERDAY",
+    "PHONE_NUMBER_REQUIRED": "Phone number is required"
   },
   "QUEUE": {
     "PHONE_NUMBER": "Phone number",
@@ -92,6 +101,7 @@
     },
     "STATUS": {
       "CONNECTED": "Connected",
+      "DISCONNECTED": "Disconnected",
       "LOGGED_OUT": "Logged out",
       "BLOCKED": "Blocked",
       "REGISTRATION_INCOMPLETED": "Registration incomplete"

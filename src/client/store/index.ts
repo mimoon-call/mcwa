@@ -5,13 +5,15 @@ import { configureStore } from '@reduxjs/toolkit';
 import { SET_AUTH_STATE } from '@client/store/auth.constants';
 import instanceSlice, { type InstanceState } from '@client/pages/Instance/store/instance.slice';
 import globalSlice, { type GlobalState } from '@client/store/global.slice';
-import messageQueueSlice, { type MessageQueueState } from '@client/pages/MessageQueue/store/message-queue.slice';
+import messageQueueSlice, { type MessageQueueState } from '@client/pages/Queue/store/message-queue.slice';
+import chatSlice, { type ChatState } from '@client/pages/Chat/store/chat.slice';
 
 export type RootState = {
   [StoreEnum.auth]: AuthState;
   [StoreEnum.instance]: InstanceState;
   [StoreEnum.queue]: MessageQueueState;
   [StoreEnum.global]: GlobalState;
+  [StoreEnum.chat]: ChatState;
 };
 
 export const createStore = (authState?: Partial<RootState[StoreEnum.auth]>) => {
@@ -21,6 +23,7 @@ export const createStore = (authState?: Partial<RootState[StoreEnum.auth]>) => {
       [StoreEnum.instance]: instanceSlice.reducer,
       [StoreEnum.queue]: messageQueueSlice.reducer,
       [StoreEnum.global]: globalSlice.reducer,
+      [StoreEnum.chat]: chatSlice.reducer,
     },
   });
 
