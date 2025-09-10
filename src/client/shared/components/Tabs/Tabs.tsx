@@ -5,11 +5,14 @@ import { useTabs } from '@components/Tabs/hooks/useTabs';
 import Icon from '@components/Icon/Icon';
 import type { TabProps } from '@components/Tabs/Tabs.type';
 import { cn } from '@client/plugins';
+import { useTranslation } from 'react-i18next';
 
 export default function Tabs({ className, panelClassName, fitHeight, ...props }: TabProps) {
   if (!props.items?.length) {
     return null;
   }
+
+  const { t } = useTranslation();
 
   const { tabs, tabPanelRef, setTabItemRefs, activeTab, onTabClick, onTabFocus, showBackButton, onTabBackClick, showNextButton, onTabNextClick } =
     useTabs(props);
@@ -18,7 +21,7 @@ export default function Tabs({ className, panelClassName, fitHeight, ...props }:
 
   return (
     <div className={cn(styles['tabs'], className, !fitHeight && 'h-full')}>
-      <div className={cn(styles['tab-panel'], panelClassName)}>
+      <div className={cn(styles['tab-panel'], 'border-b', panelClassName)}>
         <button
           className={cn(styles['tab-back-button'], showBackButton && styles['tab-back-button--shown'])}
           disabled={!showBackButton}
@@ -39,7 +42,7 @@ export default function Tabs({ className, panelClassName, fitHeight, ...props }:
                     tabIndex={props.tabFocus ? i + 1 : -1}
                     onFocus={onTabFocus(tab, i)}
                   >
-                    {tab.label}
+                    {t(tab.label)}
                   </span>
                 </div>
               </div>

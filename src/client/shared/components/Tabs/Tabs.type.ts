@@ -3,11 +3,13 @@ import type { ClassValue } from 'clsx';
 
 export type TabItem = {
   label: string;
-  component: ReactNode;
   hidden?: boolean;
   validateCallback?: () => boolean | Promise<boolean>;
-  onClick?: (activeTab: string, tabIndex: number) => void | Promise<void>;
-};
+} & (
+  | { component: ReactNode; onClick?: never }
+  | { component?: never; onClick: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
+  | { component?: ReactNode; onClick: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
+);
 
 export type TabProps = {
   items: TabItem[];
@@ -15,7 +17,7 @@ export type TabProps = {
   className?: ClassValue;
   panelClassName?: ClassValue;
   validateCallback?: () => boolean | Promise<boolean>;
-  onTabChange?: (activeTab: string, tabIndex: number) => void | Promise<void>;
+  onTabChange?: (activeTab: string, tabIndex: number) => unknown | Promise<unknown>;
   tabFocus?: boolean;
   fitHeight?: boolean;
 };

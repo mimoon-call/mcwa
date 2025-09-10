@@ -176,7 +176,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   }
 
   return (
-    <div className={cn('flex h-[calc(100vh-4rem)] bg-gray-100', className)}>
+    <div className={cn('flex h-full bg-gray-100', className)}>
       <ChatLeftPanel
         items={conversations}
         selectedItem={selectedContact}

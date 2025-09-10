@@ -59,6 +59,7 @@
     "PHONE_NUMBER_REQUIRED": "Phone number is required"
   },
   "CHAT": {
+    "TITLE": "Chat",
     "DEPARTMENT": {
       "GENERAL": "General Purpose Loan",
       "CAR": "Car",
@@ -67,6 +68,7 @@
     "SENDING_MESSAGE_FAILED": "Sending message failed, please try again"
   },
   "QUEUE": {
+    "TITLE": "Send Messages",
     "PHONE_NUMBER": "Phone number",
     "FULL_NAME": "Full name",
     "TEXT_MESSAGE": "Message",
@@ -89,6 +91,7 @@
     "DYNAMIC_FIELDS": "Dynamic fields"
   },
   "INSTANCE": {
+    "TITLE": "Instances",
     "ADD_NEW_INSTANCE": "Add new instance",
     "PHONE_NUMBER": "Phone number",
     "WARM_DAY": "Warm day",

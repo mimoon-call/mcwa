@@ -44,7 +44,7 @@
             @apply px-0.5 inline-block duration-300;
 
             span {
-                @apply font-medium px-2 text-primary text-opacity-80 relative hover:text-opacity-100 hover:font-bold duration-200;
+                @apply font-medium px-2 text-primary text-opacity-80 relative hover:text-opacity-100 duration-200;
             }
 
             span::after {

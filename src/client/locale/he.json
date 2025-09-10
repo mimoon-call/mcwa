@@ -59,6 +59,7 @@
     "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
   },
   "CHAT": {
+    "TITLE": "צ'אט",
     "DEPARTMENT": {
       "GENERAL": "הלוואה לכל מטרה",
       "CAR": "רכב",
@@ -67,6 +68,7 @@
     "SENDING_MESSAGE_FAILED": "שליחת ההודעה נכשלה, נסה שוב"
   },
   "QUEUE": {
+    "TITLE": "שליחת הודעות",
     "PHONE_NUMBER": "מספר טלפון",
     "FULL_NAME": "שם",
     "TEXT_MESSAGE": "הודעה",
@@ -89,6 +91,7 @@
     "DYNAMIC_FIELDS": "שדות דינמיים"
   },
   "INSTANCE": {
+    "TITLE": "קווים",
     "ADD_NEW_INSTANCE": "הוסף מספר חדש",
     "PHONE_NUMBER": "מספר טלפון",
     "WARM_DAY": "יום חימום",
