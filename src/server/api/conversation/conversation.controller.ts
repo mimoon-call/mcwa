@@ -6,14 +6,19 @@ import type {
   SearchConversationRes,
   GetAllConversationPairsReq,
   GetAllConversationPairsRes,
+  SendMessageReq,
 } from '@server/api/conversation/conversation.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS } from '@server/api/conversation/conversation.map';
+import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE } from '@server/api/conversation/conversation.map';
 import { conversationService } from '@server/api/conversation/conversation.service';
+import { BaseResponse } from '@server/models';
 
 export const conversationController = {
-  [GET_CONVERSATION]: async (req: Request<{ phoneNumber: string; withPhoneNumber?: string }, never, GetConversationReq>, res: Response<GetConversationRes>) => {
+  [GET_CONVERSATION]: async (
+    req: Request<{ phoneNumber: string; withPhoneNumber?: string }, never, GetConversationReq>,
+    res: Response<GetConversationRes>
+  ) => {
     const { phoneNumber, withPhoneNumber, page } = await new RecordValidator({ ...req.params, ...req.body }, [
       ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
       ['withPhoneNumber', { required: [true], type: ['String'], regex: [RegexPattern.PHONE_IL] }],
@@ -46,5 +51,15 @@ export const conversationController = {
     ]).validate();
 
     res.send(await conversationService[SEARCH_CONVERSATIONS](phoneNumber, page, searchValue));
+  },
+
+  [SEND_MESSAGE]: async (req: Request<{ fromNumber: string; toNumber: string }, never, SendMessageReq>, res: Response<BaseResponse>) => {
+    const { fromNumber, toNumber, textMessage } = await new RecordValidator({ ...req.params, ...req.body }, [
+      ['fromNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+      ['toNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+      ['textMessage', { type: ['String'], minLength: [1] }],
+    ]).validate();
+
+    res.send(await conversationService[SEND_MESSAGE](fromNumber, toNumber, textMessage));
   },
 };

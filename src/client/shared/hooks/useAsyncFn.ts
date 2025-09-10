@@ -11,13 +11,13 @@ export type UseAsyncOptions<T> = Partial<{
   errorState: ReturnType<typeof useState<ErrorResponse | null>>;
 }>;
 
-export type UseAsyncFn<T> = { call: (...args: unknown[]) => Promise<T | undefined> | T; reset: () => void } & Partial<{
+export type UseAsyncFn<T> = { call: (...args: any[]) => Promise<T | undefined> | T; reset: () => void } & Partial<{
   results: T | null;
   loading: boolean;
   error: ErrorResponse | null;
 }>;
 
-export function useAsyncFn<T>(fn?: (...args: unknown[]) => Promise<T> | T, options: UseAsyncOptions<T> = {}): UseAsyncFn<T> {
+export function useAsyncFn<T>(fn?: (...args: any[]) => Promise<T> | T, options: UseAsyncOptions<T> = {}): UseAsyncFn<T> {
   const {
     throwError,
     successCallback,
@@ -32,7 +32,7 @@ export function useAsyncFn<T>(fn?: (...args: unknown[]) => Promise<T> | T, optio
   const [error, setError] = errorState;
 
   const call = useCallback(
-    async function wrappedAsyncFn(...args: unknown[]): Promise<T | undefined> {
+    async function wrappedAsyncFn(...args: any[]): Promise<T | undefined> {
       setLoading(true);
       setError(null);
       setResults(null);

@@ -5,6 +5,8 @@ import { cn } from '@client/plugins';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState, AppDispatch } from '@client/store';
 import globalChatSlice from './store/chat.slice';
+import getClientSocket from '@helpers/get-client-socket.helper';
+import { ConversationEventEnum } from './store/chat-event.enum';
 import {
   CHAT_SEARCH_ALL_CONVERSATIONS,
   CHAT_GET_CONVERSATION,
@@ -19,7 +21,8 @@ import {
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
-import type { GlobalChatContact } from './store/chat.types';
+import type { GlobalChatContact, ChatMessage } from './store/chat.types';
+import { useAsyncFn } from '@hooks';
 
 type ChatProps = {
   className?: string;
@@ -29,6 +32,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const { instanceNumber, phoneNumber } = useParams<{ instanceNumber?: string; phoneNumber?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
+  const { call: sendMessage } = useAsyncFn(globalChatSlice.sendMessage);
 
   // Get data from store
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -69,8 +74,37 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     }
   }, [selectedContact, dispatch]);
 
-  const handleSendMessage = (instanceNumber: string, phoneNumber: string, text: string) => {
-    console.log('Send message:', { instanceNumber, phoneNumber, text });
+  // Listen for new message events
+  useEffect(() => {
+    const socket = getClientSocket();
+
+    const handleNewMessage = (messageData: ChatMessage) => {
+      // The Redux slice will handle checking if it's the active chat and deduplication
+      dispatch(globalChatSlice.addIncomingMessage(messageData));
+    };
+
+    const handleNewConversation = (conversationData: GlobalChatContact) => {
+      // Add new conversation to the list
+      dispatch(globalChatSlice.addNewConversation(conversationData));
+    };
+
+    socket?.on(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
+    socket?.on(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+
+    return () => {
+      socket?.off(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
+      socket?.off(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+    };
+  }, [dispatch]);
+
+  const handleSendMessage = async (instanceNumber: string, phoneNumber: string, text: string) => {
+    if (!text.trim()) return;
+
+    await sendMessage({
+      fromNumber: instanceNumber,
+      toNumber: phoneNumber,
+      textMessage: text.trim(),
+    });
   };
 
   const handleChatSelect = (contact: GlobalChatContact) => {
@@ -103,12 +137,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         onItemSelect={handleChatSelect}
         onSearch={handleSearch}
         itemComponent={(contact, isSelected, onClick) => (
-          <ChatListItem
-            contact={contact as GlobalChatContact}
-            isSelected={isSelected}
-            onClick={(contact) => onClick(contact as GlobalChatContact)}
-            isGlobalMode={true}
-          />
+          <ChatListItem contact={contact as GlobalChatContact} isSelected={isSelected} onClick={(contact) => onClick(contact as GlobalChatContact)} />
         )}
         getItemKey={(contact) => `${contact.instanceNumber}-${contact.phoneNumber}`}
         isItemSelected={(contact, selectedContact) =>

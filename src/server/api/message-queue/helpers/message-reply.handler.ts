@@ -3,9 +3,11 @@ import { ObjectId } from 'mongodb';
 import { WhatsAppMessage, WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
-import { wa } from '@server/index';
+import { wa, app } from '@server/index';
 import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
+import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
+import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 
@@ -54,6 +56,39 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
   const { fromNumber, toNumber, messageId, text, sentAt } = await (async () => {
     const message = await WhatsAppMessage.findOne({ _id: id });
     if (!message) return {};
+
+    // Broadcast new message event
+    const messageData = {
+      fromNumber: message.fromNumber,
+      toNumber: message.toNumber,
+      text: message.text,
+      createdAt: message.createdAt,
+      status: message.status,
+      sentAt: message.sentAt,
+      deliveredAt: message.deliveredAt,
+      playedAt: message.playedAt,
+      messageId: message.messageId,
+    };
+
+    app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
+
+    // Broadcast new conversation event with conversation details
+    const conversationData = {
+      name: message.raw?.pushName || message.toNumber, // Use pushName if available, fallback to phone number
+      phoneNumber: message.toNumber,
+      instanceNumber: message.fromNumber,
+      lastMessage: message.text || '',
+      lastMessageAt: message.createdAt,
+      messageCount: 1, // This would need to be calculated from actual conversation count
+      action: message.action || '',
+      confidence: message.confidence || 0,
+      department: message.department || '',
+      interested: message.interested || false,
+      reason: message.reason || '',
+      instanceConnected: true, // This would need to be checked against actual instance status
+    };
+
+    app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
 
     const startMessage = await MessageQueueDb.findOne(
       { phoneNumber: message.fromNumber, instanceNumber: message.toNumber, sentAt: { $exists: true } },
@@ -147,7 +182,25 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
 
           if (ai.suggestedReply) {
             try {
-              await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply);
+              const sendResult = await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply, {
+                trackDelivery: true,
+                waitForDelivery: true,
+                onUpdate: (messageId, deliveryStatus) =>
+                  app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, { messageId, status: deliveryStatus.status }),
+              });
+
+              // Broadcast the sent message with actual messageId from WhatsApp
+              const sentMessageData = {
+                fromNumber: yourNumber,
+                toNumber: leadNumber,
+                text: ai.suggestedReply,
+                createdAt: new Date().toISOString(),
+                status: MessageStatusEnum.PENDING,
+                sentAt: new Date().toISOString(),
+                messageId: sendResult.key!.id,
+              };
+
+              app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, sentMessageData);
             } catch (error) {
               console.error('sendMessage:error', error);
             }

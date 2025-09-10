@@ -6,9 +6,11 @@ import {
   ConversationPairItem,
 } from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS } from '@server/api/conversation/conversation.map';
-import { wa } from '@server/index';
+import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE } from '@server/api/conversation/conversation.map';
+import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
+import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
+import { BaseResponse } from '@server/models';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -29,7 +31,7 @@ export const conversationService = {
         },
       },
       { $sort: { createdAt: 1 } },
-      { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, createdAt: 1, sentAt: 1, deliveredAt: 1, playedAt: 1, status: 1 } },
+      { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, createdAt: 1, sentAt: 1, deliveredAt: 1, playedAt: 1, status: 1, messageId: 1 } },
     ]);
   },
 
@@ -338,11 +340,80 @@ export const conversationService = {
     const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline, afterPipeline);
 
     return {
-      data: data.map((value) => ({
-        ...value,
-        instanceConnected: value.instanceNumber ? wa.getInstance(value.instanceNumber)?.connected || false : false,
-      })),
+      data: data.map((value) => {
+        const instance = value.instanceNumber ? wa.getInstance(value.instanceNumber) : null;
+
+        return {
+          ...value,
+          instanceConnected: instance?.connected || false,
+        };
+      }),
       ...rest,
     };
+  },
+
+  [SEND_MESSAGE]: async (fromNumber: string, toNumber: string, textMessage: string): Promise<BaseResponse> => {
+    try {
+      const instance = wa.getInstance(fromNumber);
+
+      if (!instance) {
+        return { returnCode: 1 };
+      }
+
+      if (!instance.connected) {
+        return { returnCode: 1 };
+      }
+
+      if (instance.get('isActive') === false) {
+        return { returnCode: 1 };
+      }
+
+      const { messageId } = await instance.send(
+        toNumber,
+        { type: 'text', text: textMessage },
+        { trackDelivery: true, waitForDelivery: true, waitTimeout: 60000, throwOnDeliveryError: true }
+      );
+
+      const msg = await WhatsAppMessage.findOne({ fromNumber, toNumber, messageId });
+
+      if (msg) {
+        // Broadcast new message event
+        const messageData = {
+          fromNumber: msg.fromNumber,
+          toNumber: msg.toNumber,
+          text: msg.text,
+          createdAt: msg.createdAt,
+          status: msg.status,
+          sentAt: msg.sentAt,
+          deliveredAt: msg.deliveredAt,
+          playedAt: msg.playedAt,
+          messageId: msg.messageId,
+        };
+
+        app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
+
+        // Broadcast new conversation event
+        const conversationData = {
+          name: msg.raw?.pushName || toNumber,
+          phoneNumber: toNumber,
+          instanceNumber: fromNumber,
+          lastMessage: msg.text || '',
+          lastMessageAt: msg.createdAt,
+          messageCount: 1,
+          action: msg.action || '',
+          confidence: msg.confidence || 0,
+          department: msg.department || '',
+          interested: msg.interested || false,
+          reason: msg.reason || '',
+          instanceConnected: true,
+        };
+
+        app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
+      }
+
+      return { returnCode: 0 };
+    } catch (_error) {
+      return { returnCode: 1 };
+    }
   },
 };

@@ -35,6 +35,7 @@ export type ChatMessage = {
   deliveredAt?: string;
   playedAt?: string;
   status?: string;
+  messageId?: string;
 };
 
 export type SearchAllConversationsReq = {
@@ -51,3 +52,5 @@ export type GetConversationReq = {
 };
 
 export type GetConversationRes = EntityList<ChatMessage>;
+
+export type SendMessageReq = { fromNumber: string; toNumber: string; textMessage: string };

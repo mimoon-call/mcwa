@@ -10,3 +10,4 @@ export const CHAT_LOADING = 'loading';
 export const SEARCH_LOADING = 'searchLoading';
 export const CHAT_ERROR = 'error';
 export const CHAT_SELECTED_CONTACT = 'selectedContact';
+export const CHAT_SEND_MESSAGE = 'send-message';
