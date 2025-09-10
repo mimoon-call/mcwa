@@ -179,12 +179,7 @@ export const conversationService = {
             },
           },
           instanceNumber: {
-            $let: {
-              vars: {
-                firstRegistered: { $first: '$registeredParticipants' },
-              },
-              in: { $ifNull: ['$$firstRegistered.phoneNumber', null] },
-            },
+            $let: { vars: { firstRegistered: { $first: '$registeredParticipants' } }, in: { $ifNull: ['$$firstRegistered.phoneNumber', null] } },
           },
         },
       },
@@ -196,16 +191,17 @@ export const conversationService = {
       {
         $group: {
           _id: '$conversationKey',
-          participant1: { $first: '$participant1' },
-          participant2: { $first: '$participant2' },
           name: { $push: { $ifNull: ['$pushName', null] } },
           unregisteredParticipant: { $first: '$unregisteredParticipant' },
+          phoneNumber: { $first: '$unregisteredParticipant' },
           instanceNumber: { $first: '$instanceNumber' },
           lastMessage: { $first: '$text' },
           lastMessageAt: { $first: '$createdAt' },
           messageCount: { $sum: 1 },
         },
       },
+
+      { $match: { instanceNumber: { $exists: true } } },
 
       // Pick the first non-null name from the array, or use unregistered participant phone number as fallback
       {
@@ -239,17 +235,109 @@ export const conversationService = {
       {
         $project: {
           _id: 0,
-          participant1: 1,
-          participant2: 1,
           name: 1,
           lastMessage: 1,
           lastMessageAt: 1,
           messageCount: 1,
           instanceNumber: 1,
+          phoneNumber: 1,
         },
       }
     );
 
-    return WhatsAppMessage.pagination<GetAllConversationPairsRes['data'][0]>({ page }, pipeline);
+    const afterPipeline: PipelineStage[] = [
+      // Lookup the last messageId from whatsappqueues collection for this conversation
+      {
+        $lookup: {
+          from: 'whatsappqueues',
+          let: { 
+            phoneNumber: '$phoneNumber',
+            instanceNumber: '$instanceNumber'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$phoneNumber', '$$phoneNumber'] },
+                    { $eq: ['$instanceNumber', '$$instanceNumber'] },
+                    { $ne: ['$messageId', null] },
+                    { $ne: ['$messageId', ''] }
+                  ]
+                }
+              }
+            },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            { $project: { messageId: 1 } }
+          ],
+          as: 'lastQueueMessage'
+        }
+      },
+      
+      // Lookup the corresponding message from whatsappmessages collection
+      {
+        $lookup: {
+          from: 'whatsappmessages',
+          let: { 
+            phoneNumber: '$phoneNumber',
+            instanceNumber: '$instanceNumber',
+            lastMessageId: { $arrayElemAt: ['$lastQueueMessage.messageId', 0] }
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$fromNumber', '$$instanceNumber'] },
+                    { $eq: ['$toNumber', '$$phoneNumber'] },
+                    { $eq: ['$messageId', '$$lastMessageId'] }
+                  ]
+                }
+              }
+            },
+            { 
+              $project: { 
+                action: 1, 
+                confidence: 1, 
+                department: 1, 
+                interested: 1, 
+                reason: 1 
+              } 
+            }
+          ],
+          as: 'messageDetails'
+        }
+      },
+      
+      // Merge the fields from the message details
+      {
+        $addFields: {
+          action: { $arrayElemAt: ['$messageDetails.action', 0] },
+          confidence: { $arrayElemAt: ['$messageDetails.confidence', 0] },
+          department: { $arrayElemAt: ['$messageDetails.department', 0] },
+          interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
+          reason: { $arrayElemAt: ['$messageDetails.reason', 0] }
+        }
+      },
+      
+      // Remove the temporary arrays
+      {
+        $project: {
+          lastQueueMessage: 0,
+          messageDetails: 0
+        }
+      }
+    ];
+
+    const { data, ...rest } = await WhatsAppMessage.pagination<GetAllConversationPairsRes['data'][0]>({ page }, pipeline, afterPipeline);
+
+    return {
+      data: data.map((value) => ({
+        ...value,
+        isConnected: value.instanceNumber ? wa.getInstance(value.instanceNumber)?.connected || false : false,
+      })),
+      ...rest,
+    };
   },
 };

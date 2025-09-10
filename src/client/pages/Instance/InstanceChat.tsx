@@ -2,7 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import Icon from '@client/shared/components/Icon/Icon';
+import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState, AppDispatch } from '@client/store';
@@ -20,13 +20,13 @@ import {
   SEARCH_LOADING,
   CHAT_ERROR,
 } from './store/chat.constants';
-import { LeftPanel, RightPanel } from './components';
+import { ChatLeftPanel, ChatRightPanel } from './components';
 
 type ChatProps = {
   className?: string;
 };
 
-const Chat: React.FC<ChatProps> = ({ className }) => {
+const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const { t } = useTranslation();
   const { phoneNumber, withPhoneNumber } = useParams<{ phoneNumber: string; withPhoneNumber?: string }>();
   const navigate = useNavigate();
@@ -72,23 +72,26 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   const handleChatSelect = (contactPhoneNumber: string) => {
     if (phoneNumber) {
-      navigate(`/chat/${phoneNumber}/${contactPhoneNumber}`);
+      navigate(`/instance/${phoneNumber}/${contactPhoneNumber}`);
     }
   };
 
-  const handleSearch = useCallback((value: string) => {
-    if (phoneNumber) {
-      // Only search if the value actually changed
-      if (value !== searchValue) {
-        // Reset pagination only if search value actually changed
-        dispatch(chatSlice.resetPagination());
-        
-        // Clear current data and search with new value
-        dispatch(chatSlice.clearSearchData());
-        dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
+  const handleSearch = useCallback(
+    (value: string) => {
+      if (phoneNumber) {
+        // Only search if the value actually changed
+        if (value !== searchValue) {
+          // Reset pagination only if search value actually changed
+          dispatch(chatSlice.resetPagination());
+
+          // Clear current data and search with new value
+          dispatch(chatSlice.clearSearchData());
+          dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
+        }
       }
-    }
-  }, [phoneNumber, searchValue, dispatch]);
+    },
+    [phoneNumber, searchValue, dispatch]
+  );
 
   // Show error if phoneNumber is not provided
   if (!phoneNumber) {
@@ -105,7 +108,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   return (
     <div className={cn('flex h-[calc(100vh-4rem)] bg-gray-100', className)}>
-      <LeftPanel
+      <ChatLeftPanel
         phoneNumber={phoneNumber}
         searchMetadata={searchMetadata}
         conversations={conversations}
@@ -117,7 +120,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         onChatSelect={handleChatSelect}
         onSearch={handleSearch}
       />
-      <RightPanel
+      <ChatRightPanel
         selectedContact={selectedContact}
         messages={selectedMessages}
         disabled={!searchMetadata?.isConnected}
@@ -132,4 +135,4 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   );
 };
 
-export default Chat;
+export default InstanceChat;

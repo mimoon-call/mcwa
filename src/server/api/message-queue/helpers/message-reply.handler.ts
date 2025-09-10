@@ -5,6 +5,7 @@ import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { wa } from '@server/index';
 import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
+import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 
@@ -50,20 +51,30 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
 };
 
 export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
-  const { fromNumber, toNumber, startId, text } = await (async () => {
+  const { fromNumber, toNumber, messageId, text, sentAt } = await (async () => {
     const message = await WhatsAppMessage.findOne({ _id: id });
     if (!message) return {};
 
-    const startMessage = await WhatsAppMessage.findOne({ toNumber: message.fromNumber, fromNumber: message.toNumber }, null, {
-      sort: { createdAt: -1 },
-    });
+    const startMessage = await MessageQueueDb.findOne(
+      { phoneNumber: message.fromNumber, instanceNumber: message.toNumber, sentAt: { $exists: true } },
+      null,
+      { sort: { sentAt: -1 } }
+    );
 
-    if (!startMessage) return {};
+    if (!startMessage?.messageId) return {};
 
-    return { startId: startMessage._id, text: startMessage.text, fromNumber: message.fromNumber, toNumber: message.toNumber };
+    return {
+      messageId: startMessage.messageId,
+      text: startMessage.textMessage,
+      fromNumber: message.fromNumber,
+      toNumber: message.toNumber,
+      sentAt: startMessage.sentAt,
+    };
   })();
 
-  if (!startId) return;
+  if (!messageId || !sentAt) {
+    return;
+  }
 
   const conversationKey = [fromNumber, toNumber].sort().join(':');
 
@@ -78,16 +89,25 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
   const handle = setTimeout(
     async () => {
       try {
+        console.log('handler started for', conversationKey);
         const leadNumber = fromNumber; // LEAD
         const yourNumber = toNumber; // YOU
 
-        // === NEW: collect a full 12h window, both directions, between the same pair ===
-        const WINDOW_HOURS = 12;
-        const windowStart = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000);
+        const originalMessage = await WhatsAppMessage.findOne({
+          messageId,
+          $or: [
+            { fromNumber: leadNumber, toNumber: yourNumber },
+            { fromNumber: yourNumber, toNumber: leadNumber },
+          ],
+        });
+
+        if (!originalMessage?.createdAt) {
+          return;
+        }
 
         const allPreviousMessages = await WhatsAppMessage.find(
           {
-            createdAt: { $gte: windowStart },
+            createdAt: { $gte: new Date(originalMessage.createdAt) },
             $or: [
               { fromNumber: leadNumber, toNumber: yourNumber },
               { fromNumber: yourNumber, toNumber: leadNumber },
@@ -122,15 +142,14 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
           if (!ai) return;
 
           // persist classification on the outreach message
-          await WhatsAppMessage.updateOne({ _id: startId }, { $set: ai });
-
+          await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
           await handleAiInterest(leadNumber, text, ai);
 
           if (ai.suggestedReply) {
             try {
               await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply);
-            } catch (sendErr) {
-              console.error('sendMessage:error', sendErr);
+            } catch (error) {
+              console.error('sendMessage:error', error);
             }
           }
         } catch (e) {
@@ -140,7 +159,7 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
         replyTimeout.delete(conversationKey);
       }
     },
-    30 * 1000 // 30 seconds debounce
+    30 * 1000 // 30 seconds debounce per conversation
   );
 
   replyTimeout.set(conversationKey, handle);

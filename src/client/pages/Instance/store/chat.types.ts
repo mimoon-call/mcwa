@@ -1,6 +1,6 @@
 // src/client/pages/Chat/store/chat.types.ts
-import type { EntityList } from '@client/shared/models/entity-list';
-import type { Pagination } from '@client/shared/models/pagination';
+import type { EntityList } from '@models/entity-list';
+import type { Pagination } from '@models/pagination';
 
 export type ChatContact = {
   phoneNumber: string;

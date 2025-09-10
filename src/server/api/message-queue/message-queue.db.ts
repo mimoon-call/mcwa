@@ -2,7 +2,7 @@ import type { MessageQueueItem } from '@server/api/message-queue/message-queue.t
 import { MongoService } from '@server/services/database/mongo.service';
 
 export const MessageQueueDb = new MongoService<MessageQueueItem>(
-  'MessageQueue',
+  'WhatsappQueue',
   {
     fullName: { type: String, required: true },
     phoneNumber: { type: String, required: true },

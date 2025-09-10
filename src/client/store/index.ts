@@ -6,7 +6,7 @@ import { SET_AUTH_STATE } from '@client/store/auth.constants';
 import instanceSlice, { type InstanceState } from '@client/pages/Instance/store/instance.slice';
 import globalSlice, { type GlobalState } from '@client/store/global.slice';
 import messageQueueSlice, { type MessageQueueState } from '@client/pages/Queue/store/message-queue.slice';
-import chatSlice, { type ChatState } from '@client/pages/Chat/store/chat.slice';
+import chatSlice, { type ChatState } from '@client/pages/Instance/store/chat.slice';
 
 export type RootState = {
   [StoreEnum.auth]: AuthState;

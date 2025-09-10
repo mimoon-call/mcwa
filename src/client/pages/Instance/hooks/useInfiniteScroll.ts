@@ -13,13 +13,7 @@ type UseInfiniteScrollProps = {
   threshold?: number; // Distance from top to trigger load more (in pixels)
 };
 
-export const useInfiniteScroll = ({
-  phoneNumber,
-  withPhoneNumber,
-  hasMore,
-  loading,
-  threshold = 100,
-}: UseInfiniteScrollProps) => {
+export const useInfiniteScroll = ({ phoneNumber, withPhoneNumber, hasMore, loading, threshold = 100 }: UseInfiniteScrollProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
@@ -27,7 +21,7 @@ export const useInfiniteScroll = ({
   const previousScrollTopRef = useRef(0);
   const isInitialLoadRef = useRef(true);
   const isScrollableRef = useRef(false);
-  
+
   // Get current messages to detect when new ones are added
   const messages = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_DATA]) || [];
 
@@ -44,10 +38,9 @@ export const useInfiniteScroll = ({
     }
 
     isLoadingMoreRef.current = true;
-    dispatch(chatSlice.loadMoreMessages({ phoneNumber, withPhoneNumber }))
-      .finally(() => {
-        isLoadingMoreRef.current = false;
-      });
+    dispatch(chatSlice.loadMoreMessages({ phoneNumber, withPhoneNumber })).finally(() => {
+      isLoadingMoreRef.current = false;
+    });
   }, [dispatch, phoneNumber, withPhoneNumber, loading, hasMore]);
 
   const handleScroll = useCallback(() => {
@@ -55,7 +48,7 @@ export const useInfiniteScroll = ({
     if (!container) return;
 
     const { scrollTop } = container;
-    
+
     // Check if user is near the top (for reversed infinite scroll)
     if (scrollTop <= threshold && hasMore && !loading && !isLoadingMoreRef.current) {
       loadMoreMessages();
@@ -96,7 +89,7 @@ export const useInfiniteScroll = ({
     const timeoutId = setTimeout(() => {
       // Check if container is scrollable (content height > container height)
       const isScrollable = container.scrollHeight > container.clientHeight;
-      
+
       if (isInitialLoadRef.current) {
         // On initial load, always scroll to bottom until we have scrollable content
         if (messages.length > 0) {
@@ -121,10 +114,10 @@ export const useInfiniteScroll = ({
       if (isScrollableRef.current && previousScrollHeightRef.current > 0 && previousScrollTopRef.current > 0) {
         const newScrollHeight = container.scrollHeight;
         const heightDifference = newScrollHeight - previousScrollHeightRef.current;
-        
+
         // Restore scroll position by adjusting for the new content height
         container.scrollTop = previousScrollTopRef.current + heightDifference;
-        
+
         // Reset saved positions
         previousScrollHeightRef.current = 0;
         previousScrollTopRef.current = 0;

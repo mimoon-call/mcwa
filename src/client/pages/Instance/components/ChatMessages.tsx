@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import type { ChatMessage } from '../store/chat.types';
-import { useInfiniteScroll } from '@client/pages/Chat/hooks';
-import MessageItem from './MessageItem';
-import StickyDateSeparator from './StickyDateSeparator';
+import { useInfiniteScroll } from '@client/pages/Instance/hooks';
+import ChatMessageItem from './ChatMessageItem';
+import ChatStickyDate from './ChatStickyDate';
 
 type ChatMessagesProps = {
   messages: ChatMessage[];
@@ -50,7 +50,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, p
   return (
     <div ref={scrollContainerRef} className={cn('h-full bg-gray-50 overflow-y-auto p-4 relative z-10', className)}>
       {/* Sticky Date Separator */}
-      <StickyDateSeparator messages={messages} scrollContainerRef={scrollContainerRef} />
+      <ChatStickyDate messages={messages} scrollContainerRef={scrollContainerRef} />
 
       {/* Load More Button - Only show if hasMore is true */}
       {hasMore && (
@@ -78,7 +78,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, p
 
           return (
             <div key={`${message.createdAt}-${index}`} data-message-index={index}>
-              <MessageItem message={message} isFromUser={isFromUser} showDate={true} showFullDateTime={true} />
+              <ChatMessageItem message={message} isFromUser={isFromUser} showDate={true} showFullDateTime={true} />
             </div>
           );
         })

@@ -47,7 +47,12 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
     const messageSent = messageResult && messageResult.key && messageResult.key.id;
 
     if (messageSent) {
-      await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), instanceNumber: messageResult.key.id } });
+      await MessageQueueDb.updateOne(
+        { _id: doc._id },
+        { $set: { sentAt: getLocalTime(), instanceNumber: messageResult.instanceNumber, messageId: messageResult.key.id } }
+      );
+
+      console.log('message sent to', doc.phoneNumber, messageResult.instanceNumber, 'messageId:', messageResult.key.id);
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
     } else {
       throw new Error('Message was not sent successfully - no message ID returned');

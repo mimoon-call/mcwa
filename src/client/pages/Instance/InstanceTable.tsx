@@ -134,7 +134,7 @@ const InstanceTable = () => {
   };
 
   const onRowClick = (item: InstanceItem) => {
-    navigate(`/chat/${item?.phoneNumber}`);
+    navigate(`/instance/${item?.phoneNumber}`);
   };
 
   useEffect(() => {
@@ -231,7 +231,7 @@ const InstanceTable = () => {
     {
       label: 'INSTANCE.CONVERSATIONS',
       iconName: 'svg:chat',
-      onClick: ({ phoneNumber }) => navigate(`/chat/${phoneNumber}`),
+      onClick: ({ phoneNumber }) => navigate(`/instance/${phoneNumber}`),
     },
   ];
 

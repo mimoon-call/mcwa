@@ -17,13 +17,17 @@ export type GetConversationReq = { page: Pagination };
 export type GetConversationRes = EntityList<GetConversationItem>;
 
 export type ConversationPairItem = {
-  participant1: string;
-  participant2: string;
   name: string | null;
   lastMessage: string;
   lastMessageAt: string;
   messageCount: number;
   instanceNumber: string | null;
+  phoneNumber: string;
+  action?: string;
+  confidence?: number;
+  department?: string;
+  interested?: boolean;
+  reason?: string;
 };
 
 export type GetAllConversationPairsReq = { page: Pagination; searchValue?: string };

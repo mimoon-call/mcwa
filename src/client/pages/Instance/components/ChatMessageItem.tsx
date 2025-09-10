@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import Icon from '@client/shared/components/Icon/Icon';
+import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
-import { DateFormat } from '@client/shared/constants';
+import { DateFormat } from '@client-constants';
 import type { ChatMessage } from '../store/chat.types';
 
 type MessageItemProps = {
@@ -14,7 +14,7 @@ type MessageItemProps = {
   className?: string;
 };
 
-const MessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className }) => {
+const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className }) => {
   const { t } = useTranslation();
 
   const formatTime = (dateString: string) => {
@@ -81,4 +81,4 @@ const MessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFull
   );
 };
 
-export default MessageItem;
+export default ChatMessageItem;

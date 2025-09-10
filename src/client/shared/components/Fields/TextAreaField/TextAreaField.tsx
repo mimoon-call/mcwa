@@ -100,11 +100,35 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
     onChange?.(textValue);
   };
 
-  // Handle paste events to prevent breaking non-editable spans
+  // Handle paste events to insert regular editable text
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
-    insertDynamicField(text, text);
+    
+    const div = divRef.current;
+    if (!div) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    
+    // Insert as regular text node (editable)
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    
+    // Set cursor after the inserted text
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Update the form state
+    setTimeout(() => {
+      const newTextValue = extractTextFromDiv(div);
+      onChange?.(newTextValue);
+    }, 0);
   };
 
   // Handle keydown events

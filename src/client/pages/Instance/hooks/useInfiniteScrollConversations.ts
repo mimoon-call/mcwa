@@ -28,7 +28,7 @@ export const useInfiniteScrollConversations = ({
   const lastPhoneNumberRef = useRef<string | undefined>(phoneNumber);
   const requestCountRef = useRef(0);
   const maxRequestsRef = useRef(10); // Circuit breaker - max 10 requests per session
-  
+
   // Get current conversations to detect when new ones are added
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
   const pagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_PAGINATION]);
@@ -36,12 +36,12 @@ export const useInfiniteScrollConversations = ({
   const loadMoreConversations = useCallback(() => {
     const now = Date.now();
     const timeSinceLastLoad = now - lastLoadTimeRef.current;
-    
+
     // Circuit breaker - stop if we've made too many requests
     if (requestCountRef.current >= maxRequestsRef.current) {
       return;
     }
-    
+
     if (!phoneNumber || loading || isLoadingMoreRef.current || !hasMore || timeSinceLastLoad < 1000) {
       return;
     }
@@ -50,17 +50,18 @@ export const useInfiniteScrollConversations = ({
     isLoadingMoreRef.current = true;
     lastLoadTimeRef.current = now;
     const nextPageIndex = (pagination.pageIndex || 0) + 1;
-    
-    dispatch(chatSlice.loadMoreConversations({ 
-      phoneNumber, 
-      page: { 
-        ...pagination, 
-        pageIndex: nextPageIndex 
-      } 
-    }))
-      .finally(() => {
-        isLoadingMoreRef.current = false;
-      });
+
+    dispatch(
+      chatSlice.loadMoreConversations({
+        phoneNumber,
+        page: {
+          ...pagination,
+          pageIndex: nextPageIndex,
+        },
+      })
+    ).finally(() => {
+      isLoadingMoreRef.current = false;
+    });
   }, [dispatch, phoneNumber, loading, hasMore, pagination]);
 
   const handleScroll = useCallback(() => {
@@ -69,7 +70,7 @@ export const useInfiniteScrollConversations = ({
 
     const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
+
     // Check if user is near the bottom
     if (distanceFromBottom <= threshold && hasMore && !loading && !isLoadingMoreRef.current) {
       loadMoreConversations();
@@ -90,15 +91,15 @@ export const useInfiniteScrollConversations = ({
     if (hasInitialLoadedRef.current) {
       return;
     }
-    
+
     // Don't auto-load if we're still loading the initial search
     if (loading) {
       return;
     }
-    
+
     if (phoneNumber && hasMore && conversations.length > 0) {
       const currentCount = conversations.length;
-      
+
       if (currentCount < minimumItems) {
         // Auto-load more if we don't have enough items
         loadMoreConversations();

@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import Icon from '@client/shared/components/Icon/Icon';
+import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
-import { DateFormat } from '@client/shared/constants';
+import { DateFormat } from '@client-constants';
 import type { ChatContact } from '../store/chat.types';
 
 type ChatListProps = {
@@ -15,14 +15,7 @@ type ChatListProps = {
   className?: string;
 };
 
-const ChatList: React.FC<ChatListProps> = ({
-  conversations,
-  selectedPhoneNumber,
-  loading,
-  error,
-  onChatSelect,
-  className,
-}) => {
+const ChatList: React.FC<ChatListProps> = ({ conversations, selectedPhoneNumber, loading, error, onChatSelect, className }) => {
   const { t } = useTranslation();
 
   const getDisplayName = (contact: ChatContact) => {
@@ -32,17 +25,17 @@ const ChatList: React.FC<ChatListProps> = ({
   const formatTime = (dateString: string) => {
     const date = dayjs(dateString);
     const now = dayjs();
-    
+
     // If the date is today, show only time
     if (date.isSame(now, 'day')) {
       return date.format(DateFormat.TIME_FORMAT);
     }
-    
+
     // If the date is yesterday, show "Yesterday" with time
     if (date.isSame(now.subtract(1, 'day'), 'day')) {
       return `${t('GENERAL.YESTERDAY')} ${date.format(DateFormat.TIME_FORMAT)}`;
     }
-    
+
     // For all other dates (not today or yesterday), show full date and time
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };

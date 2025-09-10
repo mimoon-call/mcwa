@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Icon from '@client/shared/components/Icon/Icon';
+import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
-import { DateFormat } from '@client/shared/constants';
+import { DateFormat } from '@client-constants';
 import type { ChatContact, InstanceChat } from '../store/chat.types';
 import { TextField } from '@components/Fields';
 import { useInfiniteScrollConversations } from '../hooks';
@@ -23,7 +23,7 @@ type LeftPanelProps = {
   className?: string;
 };
 
-const LeftPanel: React.FC<LeftPanelProps> = ({
+const ChatLeftPanel: React.FC<LeftPanelProps> = ({
   phoneNumber,
   searchMetadata,
   conversations,
@@ -177,4 +177,4 @@ const LeftPanel: React.FC<LeftPanelProps> = ({
   );
 };
 
-export default LeftPanel;
+export default ChatLeftPanel;

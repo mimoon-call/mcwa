@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
-import { DateFormat } from '@client/shared/constants/date-format';
+import { DateFormat } from '@client-constants/date-format';
 import type { ChatMessage } from '../store/chat.types';
 
 type StickyDateSeparatorProps = {
@@ -11,7 +11,7 @@ type StickyDateSeparatorProps = {
   className?: string;
 };
 
-const StickyDateSeparator: React.FC<StickyDateSeparatorProps> = ({ messages, scrollContainerRef, className }) => {
+const ChatStickyDate: React.FC<StickyDateSeparatorProps> = ({ messages, scrollContainerRef, className }) => {
   const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState<string>('');
   const [isVisible, setIsVisible] = useState<boolean>(false);
@@ -131,4 +131,4 @@ const StickyDateSeparator: React.FC<StickyDateSeparatorProps> = ({ messages, scr
   );
 };
 
-export default StickyDateSeparator;
+export default ChatStickyDate;

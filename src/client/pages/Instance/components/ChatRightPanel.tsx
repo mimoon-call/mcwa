@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import Icon from '@client/shared/components/Icon/Icon';
+import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import type { ChatContact, ChatMessage } from '../store/chat.types';
 import ChatMessages from './ChatMessages';
@@ -19,7 +19,7 @@ type RightPanelProps = {
   onSendMessage: (phoneNumber: string, withPhoneNumber: string, text: string) => void;
 };
 
-const RightPanel: React.FC<RightPanelProps> = ({
+const ChatRightPanel: React.FC<RightPanelProps> = ({
   selectedContact,
   messages = [],
   disabled = false,
@@ -113,4 +113,4 @@ const RightPanel: React.FC<RightPanelProps> = ({
   );
 };
 
-export default RightPanel;
+export default ChatRightPanel;

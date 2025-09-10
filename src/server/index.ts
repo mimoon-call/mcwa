@@ -74,7 +74,7 @@ export const wa = new WhatsappWarmService({
   });
 
   wa.onReady(() => {
-    wa.startWarmingUp();
+    // wa.startWarmingUp();
     const totalCount = wa.listInstanceNumbers({ activeFlag: false }).length;
     const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
     app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, { readyCount, totalCount });
