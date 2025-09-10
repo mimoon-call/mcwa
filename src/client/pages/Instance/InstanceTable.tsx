@@ -80,7 +80,7 @@ const InstanceTable = () => {
             />
             <div className="flex flex-col">
               <span className="text-xs text-gray-600">{item?.name}</span>
-              <span dir="ltr">{internationalPhonePrettier(item.phoneNumber, '-', true)}</span>
+              <span dir="ltr" className="whitespace-nowrap">{internationalPhonePrettier(item.phoneNumber, '-', true)}</span>
             </div>
             <div className="flex justify-center items-center ps-2 h-full">
               <Icon className={iconColorClass} name="svg:warm" />
