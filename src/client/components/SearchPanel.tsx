@@ -15,6 +15,7 @@ export const SearchPanel = ({ onSearch, onClear, debounce = 500, children, paylo
 
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
   const formRef = useRef<FormRef>(null);
+  const isInitialMount = useRef(true);
 
   const search = () => {
     clearTimeout(timeoutRef.current);
@@ -29,10 +30,16 @@ export const SearchPanel = ({ onSearch, onClear, debounce = 500, children, paylo
 
   // Watch payload changes and trigger search automatically
   useEffect(() => {
+    // Skip auto-search on initial mount to prevent duplicate calls
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    
     if (payload !== undefined) {
       search();
     }
-  }, [payload, debounce]);
+  }, [payload]); // Remove debounce from dependencies
 
   return (
     <Form ref={formRef} className="p-4 bg-gray-50 m-2 rounded shadow">

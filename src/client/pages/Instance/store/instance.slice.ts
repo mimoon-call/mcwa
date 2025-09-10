@@ -46,7 +46,7 @@ const searchInstance = createAsyncThunk(
       const currentPagination = state[StoreEnum.instance]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
       const data = { ...currentFilter, ...payload, page: { ...currentPagination, ...(page || {}) } };
 
-      return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data);
+      return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data, { allowOnceAtTime: true });
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -117,12 +117,12 @@ const instanceSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(searchInstance.pending, (state, action) => {
+      .addCase(searchInstance.pending, (state, _action) => {
         state[INSTANCE_LOADING] = true;
         state[INSTANCE_ERROR] = null;
 
-        const { page: _page, ...filterParams } = action.meta.arg;
-        state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...filterParams };
+        // Don't update filter here to prevent feedback loops
+        // The filter should only be updated when explicitly set by the user
       })
       .addCase(searchInstance.fulfilled, (state, action) => {
         state[INSTANCE_SEARCH_DATA] = action.payload.data;

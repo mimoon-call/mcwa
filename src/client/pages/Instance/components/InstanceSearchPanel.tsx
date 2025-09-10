@@ -4,7 +4,7 @@ import TextField from '../../../shared/components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import { SelectField } from '@components/Fields';
 import { Checkbox } from '@components/Checkbox/Checkbox';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
 import { useTranslation } from 'react-i18next';
 import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
@@ -17,32 +17,49 @@ import { SearchPanel } from '@client/components/SearchPanel';
 export const InstanceSearchPanel = () => {
   const { t } = useTranslation();
 
-  const { [SEARCH_INSTANCE]: searchInstance, resetInstance } = instanceStore;
+  const { [SEARCH_INSTANCE]: searchInstance, resetInstance, updateFilter } = instanceStore;
   const { [INSTANCE_SEARCH_FILTER]: instanceFilter } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const dispatch = useDispatch<AppDispatch>();
-  const [payload, setPayload] = useState<SearchInstanceReq>(instanceFilter);
+  const [payload, setPayload] = useState<SearchInstanceReq>({});
 
-  const statusCode: Options<number> = [200, 401, 403, 408].map((value) => {
+  // Sync payload with Redux filter state only on mount
+  useEffect(() => {
+    setPayload(instanceFilter);
+  }, []); // Empty dependency array - only run on mount
+
+  const statusCode: Options<number> = useMemo(() => [200, 401, 403, 408].map((value) => {
     const translation = statusCodeMap.get(value);
     const title = translation ? `${value} - ${t(translation)}` : String(value);
     return { title, value };
-  });
+  }), [t]);
 
-  const onChange = (data: Omit<SearchInstanceReq, 'page'>) => {
-    const newPayload = { ...payload, ...data };
-    setPayload(newPayload);
-  };
+  const onChange = useCallback((data: Omit<SearchInstanceReq, 'page'>) => {
+    // Update Redux filter state
+    dispatch(updateFilter(data));
+    
+    // Update local payload for form display
+    setPayload(prevPayload => {
+      // Only update if the data actually changed
+      const hasChanges = Object.keys(data).some(key => {
+        const typedKey = key as keyof typeof data;
+        return prevPayload[typedKey] !== data[typedKey];
+      });
+      if (!hasChanges) return prevPayload;
+      
+      return { ...prevPayload, ...data };
+    });
+  }, [dispatch, updateFilter]);
 
-  const onSearch = () => dispatch(searchInstance(payload));
+  const onSearch = useCallback(() => dispatch(searchInstance({})), [dispatch]);
 
-  const onClear = () => {
+  const onClear = useCallback(() => {
     setPayload({});
     dispatch(resetInstance());
-  };
+  }, [dispatch]);
 
   return (
-    <SearchPanel onSearch={onSearch} onClear={onClear} payload={payload} debounce={500}>
+    <SearchPanel onSearch={onSearch} onClear={onClear} payload={instanceFilter} debounce={500}>
       <TextField
         clearable
         hideDetails
