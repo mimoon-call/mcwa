@@ -101,7 +101,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
             />
 
             <div className="flex items-center">
-              <Icon name="svg:paper-plane" size="1.75rem" onClick={disabled ? send : undefined} />
+              <Icon name="svg:paper-plane" size="1.75rem" onClick={disabled || isSending ? send : undefined} />
             </div>
           </div>
         </div>
