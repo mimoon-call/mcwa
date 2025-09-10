@@ -2,6 +2,15 @@
 import type { EntityList } from '@models/entity-list';
 import type { Pagination } from '@models/pagination';
 
+export enum MessageStatusEnum {
+  RECEIVED = 'RECEIVED',
+  PENDING = 'PENDING',
+  DELIVERED = 'DELIVERED',
+  READ = 'READ',
+  PLAYED = 'PLAYED',
+  ERROR = 'ERROR',
+}
+
 export type GlobalChatContact = {
   name: string;
   phoneNumber: string;
@@ -22,6 +31,10 @@ export type ChatMessage = {
   toNumber: string;
   text: string | null;
   createdAt: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  playedAt?: string;
+  status?: string;
 };
 
 export type SearchAllConversationsReq = {
