@@ -1,6 +1,6 @@
 import type { ChatMessage, ChatContact, ConversationPairItem } from './store/chat.types';
 import type { RootState, AppDispatch } from '@client/store';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -34,11 +34,16 @@ type ChatProps = {
   className?: string;
 };
 
+// Global flag to prevent multiple simultaneous calls
+let isSearchingGlobally = false;
+
 const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const { t } = useTranslation();
   const { phoneNumber, withPhoneNumber } = useParams<{ phoneNumber: string; withPhoneNumber?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const lastPhoneNumberRef = useRef<string>('');
+  const lastSearchValueRef = useRef<string>('');
 
   // Get data from store
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
@@ -50,13 +55,22 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.chat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_ERROR]) !== null;
 
-  // Load conversations on component mount
+  // Load conversations on component mount (only when no specific chat is selected)
   useEffect(() => {
-    if (phoneNumber) {
-      dispatch(chatSlice[CHAT_RESET_PAGINATION]());
-      dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber }));
+    if (phoneNumber && !withPhoneNumber) {
+      // Only search if the phone number actually changed from the last search and we're not already searching globally
+      if (phoneNumber !== lastPhoneNumberRef.current && !isSearchingGlobally) {
+        // Update the ref to track the last searched phone number
+        lastPhoneNumberRef.current = phoneNumber;
+        isSearchingGlobally = true;
+        
+        dispatch(chatSlice[CHAT_RESET_PAGINATION]());
+        dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber })).finally(() => {
+          isSearchingGlobally = false;
+        });
+      }
     }
-  }, [phoneNumber, dispatch]);
+  }, [phoneNumber, withPhoneNumber, dispatch]);
 
   // Load messages when a chat is selected
   useEffect(() => {
@@ -148,18 +162,24 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const handleSearch = useCallback(
     (value: string) => {
       if (phoneNumber) {
-        // Only search if the value actually changed
-        if (value !== searchValue) {
+        // Only search if the value actually changed from the last search and we're not already searching globally
+        if (value !== lastSearchValueRef.current && !isSearchingGlobally) {
+          // Update the ref to track the last searched value
+          lastSearchValueRef.current = value;
+          isSearchingGlobally = true;
+          
           // Reset pagination only if search value actually changed
           dispatch(chatSlice[CHAT_RESET_PAGINATION]());
 
           // Clear current data and search with new value
           dispatch(chatSlice[CHAT_CLEAR_SEARCH_DATA]());
-          dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
+          dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value })).finally(() => {
+            isSearchingGlobally = false;
+          });
         }
       }
     },
-    [phoneNumber, searchValue, dispatch]
+    [phoneNumber, dispatch]
   );
 
   // Show error if phoneNumber is not provided
