@@ -32,6 +32,7 @@ import { useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
 import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceSearchPanel';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -79,7 +80,7 @@ const InstanceTable = () => {
             />
             <div className="flex flex-col">
               <span className="text-xs text-gray-600">{item?.name}</span>
-              <span>{item?.phoneNumber}</span>
+              <span dir="ltr">{internationalPhonePrettier(item.phoneNumber, '-', true)}</span>
             </div>
             <div className="flex justify-center items-center ps-2 h-full">
               <Icon className={iconColorClass} name="svg:warm" />

@@ -20,7 +20,7 @@ export const instanceService = {
     const pipeline = [];
 
     if (payload.phoneNumber) {
-      pipeline.push({ $match: { phoneNumber: { $regex: payload.phoneNumber, $options: 'i' } } });
+      pipeline.push({ $match: { phoneNumber: { $regex: String(+payload.phoneNumber), $options: 'i' } } });
     }
 
     if (payload.statusCode) {
