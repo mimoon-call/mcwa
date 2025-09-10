@@ -58,6 +58,13 @@
     "YESTERDAY": "אתמול",
     "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
   },
+  "CHAT": {
+    "DEPARTMENT": {
+      "GENERAL": "הלוואה לכל מטרה",
+      "CAR": "רכב",
+      "MORTGAGE": "משכנתא"
+    }
+  },
   "QUEUE": {
     "PHONE_NUMBER": "מספר טלפון",
     "FULL_NAME": "שם",

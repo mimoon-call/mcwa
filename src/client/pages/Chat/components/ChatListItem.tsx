@@ -3,15 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
-import type { ChatContact } from '../../Instance/store/chat.types';
 import type { GlobalChatContact } from '../store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
 
 type ChatListItemProps = {
-  contact: ChatContact | GlobalChatContact;
+  contact: GlobalChatContact;
   isSelected: boolean;
-  onClick: (contact: ChatContact | GlobalChatContact) => void;
-  isGlobalMode?: boolean;
+  onClick: (contact: GlobalChatContact) => void;
   className?: string;
 };
 
@@ -19,11 +17,10 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   contact,
   isSelected,
   onClick,
-  isGlobalMode = false,
 }) => {
   const { t } = useTranslation();
 
-  const getDisplayName = (contact: ChatContact | GlobalChatContact) => {
+  const getDisplayName = (contact: GlobalChatContact) => {
     return contact.name || contact.phoneNumber;
   };
 
@@ -46,9 +43,6 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   };
 
 
-  const isGlobalContact = (contact: ChatContact | GlobalChatContact): contact is GlobalChatContact => {
-    return 'instanceNumber' in contact;
-  };
 
   return (
     <div
@@ -70,16 +64,14 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
           </div>
         </div>
         
-        {/* Instance Number > Phone Number (only for global mode) */}
-        {isGlobalMode && isGlobalContact(contact) && (
-          <div className="flex items-center justify-between mt-1">
-            <div className="text-sm text-gray-600 truncate flex-1">
-              <span className="font-medium">{contact.instanceNumber}</span>
-              <span className="text-gray-400 mx-1">&gt;</span>
-              <span>{contact.phoneNumber}</span>
-            </div>
+        {/* Instance Number > Phone Number */}
+        <div className="flex items-center justify-between mt-1">
+          <div className="text-sm text-gray-600 truncate flex-1">
+            <span className="font-medium">{contact.instanceNumber}</span>
+            <span className="text-gray-400 mx-1">&gt;</span>
+            <span>{contact.phoneNumber}</span>
           </div>
-        )}
+        </div>
 
         {/* Last Message */}
         <div className="flex items-center justify-between mt-1">
@@ -88,24 +80,27 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
           </div>
         </div>
 
-        {/* Additional Info (only for global mode) */}
-        {isGlobalMode && isGlobalContact(contact) && (
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-2">
-              {contact.messageCount > 0 && (
-                <div className="text-xs text-gray-500">
-                  {contact.messageCount} {t('GENERAL.MESSAGES')}
-                </div>
-              )}
-            </div>
-            
-            {contact.interested && (
-              <div className="text-xs text-green-600 font-medium">
-                {t('GENERAL.INTERESTED')}
+        {/* Additional Info */}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-2">
+            {contact.department && (
+              <div className="text-xs text-blue-600 font-medium">
+                {t(`CHAT.DEPARTMENT.${contact.department}`)}
+              </div>
+            )}
+            {contact.messageCount > 0 && (
+              <div className="text-xs text-gray-500">
+                {contact.messageCount} {t('GENERAL.MESSAGES')}
               </div>
             )}
           </div>
-        )}
+          
+          {contact.interested && (
+            <div className="text-xs text-green-600 font-medium">
+              {t('GENERAL.INTERESTED')}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

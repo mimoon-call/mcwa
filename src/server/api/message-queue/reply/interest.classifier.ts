@@ -38,8 +38,8 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-- Consider ONLY messages where from == "YOU" (ignore LEAD for this decision).
-- CAR: If ANY of those messages clearly refer to automotive context (any language/emoji/synonyms: "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set department="CAR".
+- Consider ALL messages in the conversation (both YOU and LEAD messages).
+- CAR: If ANY message clearly refers to automotive context (any language/emoji/synonyms: "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set department="CAR".
 - MORTGAGE: Set department="MORTGAGE" ONLY if the message explicitly refers to a home-loan/mortgage context. This requires:
   (A) a mortgage/home-loan keyword (e.g., "mortgage", "mortage", "משכנתא", "ипотека", "hipoteca", "hypothèque", "رهن عقاري", "房屋贷款", "home loan"),
   OR a home/real-estate token ("בית", "דירה", "נכס", "🏠", "home", "house", "property", "real estate"),
@@ -47,15 +47,16 @@ DEPARTMENT CLASSIFICATION (DETERMINISTIC):
   (B) a loan/finance term (e.g., "loan", "הלוואה", "credit", "financing") IN THE SAME MESSAGE.
   Examples mapping to MORTGAGE: "הלוואת משכנתא", "home loan", "mortgage refinancing", "הלוואה לדירה".
 - IMPORTANT: Generic loans without explicit home context ("הלוואה", "personal loan", "business loan") are GENERAL.
-- If both CAR and MORTGAGE appear, choose the department from the most recent "YOU" message.
+- If both CAR and MORTGAGE appear, choose the department from the most recent message.
 - If neither CAR nor MORTGAGE is matched, department="GENERAL".
 
 EXAMPLES:
 - YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
 - YOU: "הלוואת משכנתא לרכישת דירה" → department="MORTGAGE"
+- LEAD: "הלוואה לרכב" → department="CAR"
 
 YOUR TASK:
-- Consider the whole CONVERSATION for interest/intent, but department must use only "YOU" messages.
+- Consider the whole CONVERSATION for interest/intent and department classification.
 - If LEAD suggests timing, set action=SCHEDULE_FOLLOW_UP and compute followUpAt.
 
 STYLE FOR suggestedReply:
@@ -79,7 +80,7 @@ Return only valid JSON matching the schema.
 /* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */
 /**
  * We still hard-guard the department locally to avoid LLM drift.
- * Rule: scan ONLY YOU messages from newest to oldest.
+ * Rule: scan ALL messages from newest to oldest (both YOU and LEAD).
  * - If a message is CAR → CAR
  * - Else if a message matches MORTGAGE rule → MORTGAGE
  * - Else GENERAL
@@ -121,12 +122,12 @@ function isMortgage(text: string): boolean {
   return HOME_TOKENS.some((r) => r.test(text)) && LOAN_TOKENS.test(text);
 }
 
-function inferDepartmentFromYouMessages(conversation: LeadReplyItem[]): LeadDepartmentEnum {
-  const youMessages = conversation.filter((m) => m.from === 'YOU');
-  if (youMessages.length === 0) return LeadDepartmentEnum.GENERAL;
+function inferDepartmentFromAllMessages(conversation: LeadReplyItem[]): LeadDepartmentEnum {
+  if (conversation.length === 0) return LeadDepartmentEnum.GENERAL;
 
-  for (let i = youMessages.length - 1; i >= 0; i--) {
-    const t = youMessages[i]?.text ?? '';
+  // Scan all messages from newest to oldest
+  for (let i = conversation.length - 1; i >= 0; i--) {
+    const t = conversation[i]?.text ?? '';
     if (isCar(t)) return LeadDepartmentEnum.CAR;
     if (isMortgage(t)) return LeadDepartmentEnum.MORTGAGE;
   }
@@ -164,7 +165,7 @@ export async function classifyInterest(
 
   if (!ai) return null;
 
-  // Hard-guard department using ONLY YOU messages (latest precedence)
-  const safeDept = inferDepartmentFromYouMessages(userPayload.CONVERSATION);
+  // Hard-guard department using ALL messages (latest precedence)
+  const safeDept = inferDepartmentFromAllMessages(userPayload.CONVERSATION);
   return { ...ai, department: safeDept };
 }

@@ -58,6 +58,13 @@
     "YESTERDAY": "YESTERDAY",
     "PHONE_NUMBER_REQUIRED": "Phone number is required"
   },
+  "CHAT": {
+    "DEPARTMENT": {
+      "GENERAL": "General Purpose Loan",
+      "CAR": "Car",
+      "MORTGAGE": "Mortgage"
+    }
+  },
   "QUEUE": {
     "PHONE_NUMBER": "Phone number",
     "FULL_NAME": "Full name",
