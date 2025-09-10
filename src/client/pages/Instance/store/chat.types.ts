@@ -13,7 +13,7 @@ export type ChatContact = {
 export type ChatMessage = {
   fromNumber: string;
   toNumber: string;
-  text: string;
+  text: string | null;
   createdAt: string;
 };
 

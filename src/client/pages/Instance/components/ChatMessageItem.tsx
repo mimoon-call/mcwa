@@ -40,7 +40,12 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
 
-  const formatMessageText = (text: string) => {
+  const formatMessageText = (text: string | null | undefined) => {
+    // Handle null, undefined, or empty text
+    if (!text) {
+      return '';
+    }
+
     // URL regex pattern to match http/https URLs
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
@@ -58,7 +63,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     });
   };
 
-  return (
+  return !message.text ? null : (
     <div className={cn('', className)}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
         <div className="max-w-xs lg:max-w-md">
