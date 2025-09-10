@@ -22,7 +22,6 @@ import {
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
 import type { GlobalChatContact, ChatMessage } from './store/chat.types';
-import { useAsyncFn } from '@hooks';
 
 type ChatProps = {
   className?: string;
@@ -32,8 +31,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const { instanceNumber, phoneNumber } = useParams<{ instanceNumber?: string; phoneNumber?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-
-  const { call: sendMessage } = useAsyncFn(globalChatSlice.sendMessage);
 
   // Get data from store
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -100,11 +97,14 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const handleSendMessage = async (instanceNumber: string, phoneNumber: string, text: string) => {
     if (!text.trim()) return;
 
-    await sendMessage({
+    await globalChatSlice.sendMessage({
       fromNumber: instanceNumber,
       toNumber: phoneNumber,
       textMessage: text.trim(),
     });
+
+    // Refetch messages after sending
+    dispatch(globalChatSlice[CHAT_GET_CONVERSATION]({ phoneNumber: instanceNumber, withPhoneNumber: phoneNumber }));
   };
 
   const handleChatSelect = (contact: GlobalChatContact) => {

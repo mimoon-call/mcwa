@@ -5,6 +5,7 @@ import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
 import type { GlobalChatContact } from '../store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
+import Icon from '@components/Icon/Icon';
 
 type ChatListItemProps = {
   contact: GlobalChatContact;
@@ -13,11 +14,7 @@ type ChatListItemProps = {
   className?: string;
 };
 
-const ChatListItem: React.FC<ChatListItemProps> = ({
-  contact,
-  isSelected,
-  onClick,
-}) => {
+const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClick }) => {
   const { t } = useTranslation();
 
   const getDisplayName = (contact: GlobalChatContact) => {
@@ -42,8 +39,6 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
 
-
-
   return (
     <div
       className={cn(
@@ -56,50 +51,36 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900 truncate">
-            {getDisplayName(contact)}
-          </div>
-          <div className="text-xs text-gray-500">
-            {formatTime(contact.lastMessageAt)}
-          </div>
+          <div className="font-semibold text-gray-900 truncate">{getDisplayName(contact)}</div>
+          <div className="text-xs text-gray-500">{formatTime(contact.lastMessageAt)}</div>
         </div>
-        
+
         {/* Instance Number > Phone Number */}
         <div className="flex items-center justify-between mt-1">
-          <div className="text-sm text-gray-600 truncate flex-1">
-            <span className="font-medium">{contact.instanceNumber}</span>
-            <span className="text-gray-400 mx-1">&gt;</span>
+          <div className="font-medium text-sm text-gray-600 truncate flex gap-1">
+            <span>{contact.instanceNumber}</span>
+            <Icon name="svg:arrow-two-way" size="1rem" />
             <span>{contact.phoneNumber}</span>
           </div>
         </div>
 
         {/* Last Message */}
         <div className="flex items-center justify-between mt-1">
-          <div className="text-sm text-gray-600 truncate flex-1">
-            {contact.lastMessage}
-          </div>
+          <div className="text-sm text-gray-600 truncate flex-1">{contact.lastMessage}</div>
         </div>
 
         {/* Additional Info */}
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-2">
-            {contact.department && (
-              <div className="text-xs text-blue-600 font-medium">
-                {t(`CHAT.DEPARTMENT.${contact.department}`)}
-              </div>
-            )}
+            {contact.department && <div className="font-medium text-xs text-blue-600">{t(`CHAT.DEPARTMENT.${contact.department}`)}</div>}
             {contact.messageCount > 0 && (
               <div className="text-xs text-gray-500">
                 {contact.messageCount} {t('GENERAL.MESSAGES')}
               </div>
             )}
           </div>
-          
-          {contact.interested && (
-            <div className="text-xs text-green-600 font-medium">
-              {t('GENERAL.INTERESTED')}
-            </div>
-          )}
+
+          {contact.interested && <div className="font-semibold text-xs text-green-600">{t('GENERAL.INTERESTED')}</div>}
         </div>
       </div>
     </div>

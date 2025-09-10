@@ -6,6 +6,7 @@ import type { ChatMessage, GlobalChatContact } from '../store/chat.types';
 import type { ChatContact } from '../../Instance/store/chat.types';
 import ChatMessages from './ChatMessages';
 import { TextField } from '@components/Fields';
+import { useAsyncFn, useToast } from '@hooks';
 
 type RightPanelProps = {
   selectedContact?: ChatContact | GlobalChatContact | null;
@@ -34,17 +35,23 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   onSendMessage,
   className,
 }) => {
+  const toast = useToast({ y: 'top' });
   const { t } = useTranslation();
   const [message, setMessage] = React.useState('');
 
+  const { call: send, loading: isSending } = useAsyncFn(() => onSendMessage(phoneNumber!, withPhoneNumber!, message), {
+    successCallback: () => {
+      setMessage('');
+    },
+    errorCallback: () => {
+      toast.error('CHAT.SENDING_MESSAGE_FAILED');
+    },
+  });
 
-  const send = () => onSendMessage(phoneNumber!, withPhoneNumber!, message);
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const onKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
-      setMessage('');
     }
   };
 
@@ -85,7 +92,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
               hideDetails
               type="text"
               name="messageInput"
-              disabled={disabled}
+              disabled={disabled || isSending}
               value={message}
               onChange={setMessage}
               onKeyDown={onKeyDown}

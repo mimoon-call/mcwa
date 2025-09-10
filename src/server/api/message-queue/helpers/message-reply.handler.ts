@@ -74,18 +74,16 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
 
     // Broadcast new conversation event with conversation details
     const conversationData = {
-      name: message.raw?.pushName || message.toNumber, // Use pushName if available, fallback to phone number
+      name: message.raw?.pushName || message.toNumber,
       phoneNumber: message.toNumber,
       instanceNumber: message.fromNumber,
       lastMessage: message.text || '',
       lastMessageAt: message.createdAt,
-      messageCount: 1, // This would need to be calculated from actual conversation count
-      action: message.action || '',
-      confidence: message.confidence || 0,
-      department: message.department || '',
-      interested: message.interested || false,
-      reason: message.reason || '',
-      instanceConnected: true, // This would need to be checked against actual instance status
+      action: message.action,
+      confidence: message.confidence,
+      department: message.department,
+      interested: message.interested,
+      reason: message.reason,
     };
 
     app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
