@@ -10,10 +10,6 @@ self.addEventListener('activate', () => {
   console.log('Service Worker activated.');
 });
 
-self.addEventListener('install', () => {
-  console.log('Service Worker installing.');
-});
-
 self.addEventListener('fetch', function (event) {
   event.respondWith(
     caches.match(event.request).then(function (response) {
@@ -22,7 +18,12 @@ self.addEventListener('fetch', function (event) {
         return response;
       }
 
-      return fetch(event.request);
+      // Return fetch with proper error handling
+      return fetch(event.request).catch(function(error) {
+        console.log('Fetch failed for:', event.request.url, error);
+        // Return a fallback response or let the error propagate
+        throw error;
+      });
     })
   );
 });
