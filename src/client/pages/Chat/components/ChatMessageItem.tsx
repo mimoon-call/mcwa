@@ -5,6 +5,7 @@ import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
 import type { ChatMessage } from '../store/chat.types';
+import { MessageStatusEnum } from '../store/chat.types';
 
 type MessageItemProps = {
   message: ChatMessage;
@@ -63,6 +64,15 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     });
   };
 
+  const getCheckmarkStyle = (status?: string): [string, string | null] => {
+    if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
+    if (status === MessageStatusEnum.ERROR) return ['text-red-500', null];
+    if (status === MessageStatusEnum.DELIVERED) return ['text-gray-500', 'text-gray-500'];
+    if (status === MessageStatusEnum.READ || status === MessageStatusEnum.PLAYED) return ['text-green-500', 'text-green-500'];
+
+    return ['text-green-500', 'text-green-500'];
+  };
+
   return !message.text ? null : (
     <div className={cn('', className)}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
@@ -73,8 +83,15 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
               {isFromUser && (
                 <div className="flex space-x-1">
-                  <Icon name="svg:check" size="0.75rem" className="text-green-500" />
-                  <Icon name="svg:check" size="0.75rem" className="text-green-500" />
+                  {(() => {
+                    const checkStyle = getCheckmarkStyle(message.status);
+                    return (
+                      <div className="pe-1 flex">
+                        <Icon name="svg:check" size="0.625rem" className={checkStyle[0]} />
+                        {checkStyle[1] && <Icon name="svg:check" size="0.625rem" className={cn(checkStyle[1], 'ltr:-ml-1.5 rtl:-mr-1.5')} />}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
               <div className="text-xs text-gray-500">{formatTime(message.createdAt)}</div>

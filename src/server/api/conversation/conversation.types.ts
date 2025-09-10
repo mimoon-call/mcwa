@@ -10,7 +10,13 @@ export type SearchConversationRes = EntityList<
   { isConnected: boolean } & Pick<WAAppAuth<Record<never, never>>, 'statusCode' | 'errorMessage' | 'profilePictureUrl'>
 >;
 
-export type GetConversationItem = Pick<WAMessage, 'fromNumber' | 'toNumber' | 'text'> & { createdAt: Date };
+export type GetConversationItem = Pick<WAMessage, 'fromNumber' | 'toNumber' | 'text'> & { 
+  createdAt: Date;
+  sentAt?: Date;
+  deliveredAt?: Date;
+  playedAt?: Date;
+  status?: string;
+};
 
 export type GetConversationReq = { page: Pagination };
 

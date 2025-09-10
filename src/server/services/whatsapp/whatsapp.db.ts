@@ -113,6 +113,7 @@ export const WhatsAppMessage = new MongoService<
     sentAt: { type: Date },
     deliveredAt: { type: Date },
     readAt: { type: Date },
+    playedAt: { type: Date },
     errorCode: { type: Number },
     errorMessage: { type: String },
     messageId: { type: String }, // ID from WhatsApp system
@@ -139,6 +140,7 @@ export const WhatsAppMessage = new MongoService<
       { fields: { status: 1 }, options: { name: 'deliveryStatus_status_index' } },
       { fields: { deliveredAt: 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
       { fields: { readAt: 1 }, options: { name: 'deliveryStatus_readAt_index' } },
+      { fields: { playedAt: 1 }, options: { name: 'deliveryStatus_playedAt_index' } },
       { fields: { messageId: 1 }, options: { unique: true, sparse: true, name: 'messageId_unique' } },
       // Compound indexes for common query patterns
       { fields: { status: 1, deliveredAt: 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },

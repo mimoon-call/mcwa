@@ -12,7 +12,6 @@ import {
   CHAT_GET_CONVERSATION,
   CHAT_SEARCH_DATA,
   CHAT_SEARCH_METADATA,
-  CHAT_SEARCH_PAGINATION,
   CHAT_SEARCH_VALUE,
   CHAT_MESSAGES_DATA,
   CHAT_MESSAGES_PAGINATION,
@@ -35,7 +34,6 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   // Get data from store
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
   const searchMetadata = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_METADATA]);
-  const searchPagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_PAGINATION]);
   const searchValue = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_VALUE]);
   const messages = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_DATA]) || [];
   const messagesPagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_PAGINATION]);
@@ -113,18 +111,11 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         selectedItem={selectedContact}
         loading={searchLoading}
         error={error}
-        hasMore={searchPagination?.hasMore || false}
         searchValue={searchValue}
         onItemSelect={(contact) => handleChatSelect(contact.phoneNumber)}
         onSearch={handleSearch}
         headerComponent={<InstanceChatHeader phoneNumber={phoneNumber} searchMetadata={searchMetadata} />}
-        itemComponent={(contact, isSelected, onClick) => (
-          <InstanceChatListItem
-            contact={contact}
-            isSelected={isSelected}
-            onClick={onClick}
-          />
-        )}
+        itemComponent={(contact, isSelected, onClick) => <InstanceChatListItem contact={contact} isSelected={isSelected} onClick={onClick} />}
         getItemKey={(contact) => contact.phoneNumber}
         isItemSelected={(contact, selectedContact) => selectedContact?.phoneNumber === contact.phoneNumber}
       />
