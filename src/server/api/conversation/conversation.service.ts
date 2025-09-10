@@ -353,67 +353,58 @@ export const conversationService = {
   },
 
   [SEND_MESSAGE]: async (fromNumber: string, toNumber: string, textMessage: string): Promise<BaseResponse> => {
-    try {
-      const instance = wa.getInstance(fromNumber);
+    const instance = wa.getInstance(fromNumber);
 
-      if (!instance) {
-        return { returnCode: 1 };
-      }
-
-      if (!instance.connected) {
-        return { returnCode: 1 };
-      }
-
-      if (instance.get('isActive') === false) {
-        return { returnCode: 1 };
-      }
-
-      const { messageId } = await instance.send(
-        toNumber,
-        { type: 'text', text: textMessage },
-        { trackDelivery: true, waitForDelivery: true, waitTimeout: 60000, throwOnDeliveryError: true }
-      );
-
-      const msg = await WhatsAppMessage.findOne({ fromNumber, toNumber, messageId });
-
-      if (msg) {
-        // Broadcast new message event
-        const messageData = {
-          fromNumber: msg.fromNumber,
-          toNumber: msg.toNumber,
-          text: msg.text,
-          createdAt: msg.createdAt,
-          status: msg.status,
-          sentAt: msg.sentAt,
-          deliveredAt: msg.deliveredAt,
-          playedAt: msg.playedAt,
-          messageId: msg.messageId,
-        };
-
-        app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
-
-        // Broadcast new conversation event
-        const conversationData = {
-          name: msg.raw?.pushName || toNumber,
-          phoneNumber: toNumber,
-          instanceNumber: fromNumber,
-          lastMessage: msg.text || '',
-          lastMessageAt: msg.createdAt,
-          messageCount: 1,
-          action: msg.action || '',
-          confidence: msg.confidence || 0,
-          department: msg.department || '',
-          interested: msg.interested || false,
-          reason: msg.reason || '',
-          instanceConnected: true,
-        };
-
-        app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
-      }
-
-      return { returnCode: 0 };
-    } catch (_error) {
+    if (!instance) {
       return { returnCode: 1 };
     }
+
+    if (!instance.connected) {
+      return { returnCode: 1 };
+    }
+
+    if (instance.get('isActive') === false) {
+      return { returnCode: 1 };
+    }
+
+    const result = await instance.send(toNumber, { type: 'text', text: textMessage });
+
+    // Broadcast new message event
+    const messageData = {
+      fromNumber: result.fromNumber,
+      toNumber: result.toNumber,
+      text: textMessage,
+      createdAt: result.sentAt,
+      status: result.status,
+      sentAt: result.sentAt,
+      deliveredAt: result.deliveredAt,
+      playedAt: result.playedAt,
+      messageId: result.messageId,
+    };
+
+    app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
+    const message = await WhatsAppMessage.findOne({ fromNumber, toNumber, messageId: result.messageId });
+
+    if (message) {
+      // Broadcast new conversation event
+      const conversationData = {
+        name: message.raw?.pushName || toNumber,
+        phoneNumber: toNumber,
+        instanceNumber: fromNumber,
+        lastMessage: message.text || '',
+        lastMessageAt: message.createdAt,
+        messageCount: 1,
+        action: message.action || '',
+        confidence: message.confidence || 0,
+        department: message.department || '',
+        interested: message.interested || false,
+        reason: message.reason || '',
+        instanceConnected: true,
+      };
+
+      app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
+    }
+
+    return { returnCode: 0 };
   },
 };

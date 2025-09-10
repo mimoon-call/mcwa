@@ -184,7 +184,7 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
                 trackDelivery: true,
                 waitForDelivery: true,
                 onUpdate: (messageId, deliveryStatus) =>
-                  app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, { messageId, status: deliveryStatus.status }),
+                  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { messageId, status: deliveryStatus.status }),
               });
 
               // Broadcast the sent message with actual messageId from WhatsApp

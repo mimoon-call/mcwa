@@ -16,6 +16,21 @@ import {
   SEARCH_LOADING,
   CHAT_ERROR,
   CHAT_SELECTED_PHONE_NUMBER,
+  CHAT_SEND_MESSAGE,
+  CHAT_UPDATE_MESSAGE_STATUS,
+  CHAT_CLEAR_SEARCH,
+  CHAT_CLEAR_SEARCH_DATA,
+  CHAT_RESET_PAGINATION,
+  CHAT_CLEAR_MESSAGES,
+  CHAT_RESET,
+  CHAT_SET_SELECTED_PHONE_NUMBER,
+  CHAT_SET_SEARCH_VALUE,
+  CHAT_UPDATE_SEARCH_PAGINATION,
+  CHAT_UPDATE_MESSAGES_PAGINATION,
+  CHAT_ADD_INCOMING_MESSAGE,
+  CHAT_ADD_NEW_CONVERSATION,
+  CHAT_LOAD_MORE_MESSAGES,
+  CHAT_LOAD_MORE_CONVERSATIONS,
 } from './chat.constants';
 import type {
   SearchConversationsReq,
@@ -25,9 +40,40 @@ import type {
   ChatContact,
   ChatMessage,
   InstanceChat,
+  SendMessageReq,
 } from './chat.types';
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
+
+// Helper function to deduplicate messages by messageId, keeping the last occurrence
+const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
+  const seen = new Map<string, ChatMessage>();
+  
+  // Process messages in order, keeping the last occurrence of each messageId
+  messages.forEach((message) => {
+    if (message.messageId) {
+      seen.set(message.messageId, message);
+    }
+  });
+  
+  // Return messages without messageId first, then deduplicated messages
+  const messagesWithoutId = messages.filter(msg => !msg.messageId);
+  const deduplicatedMessages = Array.from(seen.values());
+  
+  return [...messagesWithoutId, ...deduplicatedMessages];
+};
+
+// Helper function to deduplicate conversations by phoneNumber, keeping the last occurrence
+const deduplicateConversations = (conversations: ChatContact[]): ChatContact[] => {
+  const seen = new Map<string, ChatContact>();
+  
+  // Process conversations in order, keeping the last occurrence of each phoneNumber
+  conversations.forEach((conversation) => {
+    seen.set(conversation.phoneNumber, conversation);
+  });
+  
+  return Array.from(seen.values());
+};
 
 export interface ChatState {
   [CHAT_SEARCH_DATA]: ChatContact[] | null;
@@ -136,6 +182,11 @@ const loadMoreConversations = createAsyncThunk(
   }
 );
 
+// Async function for send message
+const sendMessage = async ({ fromNumber, toNumber, ...data }: SendMessageReq): Promise<void> => {
+  return await Http.post<void, Omit<SendMessageReq, 'fromNumber' | 'toNumber'>>(`/conversation/${CHAT_SEND_MESSAGE}/${fromNumber}/${toNumber}`, data);
+};
+
 const chatSlice = createSlice({
   name: StoreEnum.chat,
   initialState,
@@ -189,6 +240,100 @@ const chatSlice = createSlice({
 
       state[CHAT_MESSAGES_PAGINATION] = newPagination;
     },
+    addIncomingMessage: (state, action) => {
+      const newMessage = action.payload as ChatMessage;
+      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+
+      // The filtering is already done in the component, so we can directly add the message
+
+      // Check if message already exists by messageId
+      if (newMessage.messageId) {
+        const existingMessageIndex = existingMessages.findIndex((msg) => msg.messageId === newMessage.messageId);
+
+        if (existingMessageIndex !== -1) {
+          // Update existing message with new data
+          state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === existingMessageIndex ? { ...msg, ...newMessage } : msg));
+        } else {
+          // Add new message to the end of the array
+          state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
+        }
+      } else {
+        // If no messageId, just add as new message
+        state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
+      }
+
+      // Update lastMessage and lastMessageAt in conversations list if message has createdAt and text
+      if (newMessage.createdAt && newMessage.text && newMessage.text.trim()) {
+        const conversations = state[CHAT_SEARCH_DATA] || [];
+        const conversationIndex = conversations.findIndex(
+          (conv) => conv.phoneNumber === newMessage.fromNumber || conv.phoneNumber === newMessage.toNumber
+        );
+
+        if (conversationIndex !== -1) {
+          // Update the conversation with new message data
+          const updatedConversation = {
+            ...conversations[conversationIndex],
+            lastMessage: newMessage.text!,
+            lastMessageAt: newMessage.createdAt,
+          };
+
+          // Remove the conversation from its current position and add it to the top
+          const remainingConversations = conversations.filter((_, index) => index !== conversationIndex);
+          state[CHAT_SEARCH_DATA] = [updatedConversation, ...remainingConversations];
+        }
+      }
+    },
+    addNewConversation: (state, action) => {
+      const newConversation = action.payload as Partial<ChatContact>;
+      const existingConversations = state[CHAT_SEARCH_DATA] || [];
+
+      // Check if conversation already exists
+      const conversationIndex = existingConversations.findIndex(
+        (conv) => conv.phoneNumber === newConversation.phoneNumber
+      );
+
+      if (conversationIndex !== -1) {
+        // Update existing conversation and move to top
+        const existingConversation = existingConversations[conversationIndex];
+        const updatedConversation = {
+          ...existingConversation,
+          ...newConversation,
+        };
+
+        // Remove the conversation from its current position and add it to the top
+        const remainingConversations = existingConversations.filter((_, index) => index !== conversationIndex);
+        state[CHAT_SEARCH_DATA] = [updatedConversation, ...remainingConversations];
+      } else {
+        // Add new conversation to the top of the list (only if phoneNumber exists)
+        if (newConversation.phoneNumber) {
+          state[CHAT_SEARCH_DATA] = [newConversation as ChatContact, ...existingConversations];
+        }
+      }
+    },
+    updateMessageStatus: (state, action) => {
+      const { messageId, status, sentAt, deliveredAt, readAt, playedAt, errorCode, errorMessage } = action.payload;
+      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+
+      // Find and update the message with the matching messageId
+      const messageIndex = existingMessages.findIndex((msg) => msg.messageId === messageId);
+
+      if (messageIndex !== -1) {
+        const updatedMessage = {
+          ...existingMessages[messageIndex],
+          ...(status && { status }),
+          ...(sentAt && { sentAt }),
+          ...(deliveredAt && { deliveredAt }),
+          ...(readAt && { readAt }),
+          ...(playedAt && { playedAt }),
+          ...(errorCode && { errorCode }),
+          ...(errorMessage && { errorMessage }),
+        };
+
+        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => 
+          index === messageIndex ? updatedMessage : msg
+        );
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -207,10 +352,9 @@ const chatSlice = createSlice({
         const isNewSearchValue = !state.lastSearchParams || state.lastSearchParams.searchValue !== searchValue;
         const shouldResetPagination = isNewPhoneNumber || isNewSearchValue;
 
-        state[CHAT_SEARCH_DATA] = action.payload.data;
-
         // Only update pagination if it's a new search
         if (shouldResetPagination) {
+          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
           state[CHAT_SEARCH_PAGINATION] = {
             totalItems: action.payload.totalItems,
             hasMore: action.payload.hasMore,
@@ -221,7 +365,7 @@ const chatSlice = createSlice({
           };
         } else {
           // Keep existing pagination but update data
-          state[CHAT_SEARCH_DATA] = action.payload.data;
+          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
         }
 
         state[CHAT_SEARCH_METADATA] = {
@@ -252,7 +396,7 @@ const chatSlice = createSlice({
         state[CHAT_ERROR] = null;
       })
       .addCase(getConversation.fulfilled, (state, action) => {
-        state[CHAT_MESSAGES_DATA] = action.payload.data;
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(action.payload.data);
         state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
@@ -275,7 +419,8 @@ const chatSlice = createSlice({
       .addCase(loadMoreMessages.fulfilled, (state, action) => {
         // Append new messages to existing ones (for infinite scroll)
         const existingMessages = state[CHAT_MESSAGES_DATA] || [];
-        state[CHAT_MESSAGES_DATA] = [...action.payload.data, ...existingMessages];
+        const combinedMessages = [...action.payload.data, ...existingMessages];
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(combinedMessages);
         state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
@@ -298,7 +443,8 @@ const chatSlice = createSlice({
       .addCase(loadMoreConversations.fulfilled, (state, action) => {
         // Append new conversations to existing ones (for infinite scroll)
         const existingConversations = state[CHAT_SEARCH_DATA] || [];
-        state[CHAT_SEARCH_DATA] = [...existingConversations, ...action.payload.data];
+        const combinedConversations = [...existingConversations, ...action.payload.data];
+        state[CHAT_SEARCH_DATA] = deduplicateConversations(combinedConversations);
         state[CHAT_SEARCH_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
@@ -320,15 +466,19 @@ export default {
   reducer: chatSlice.reducer,
   [CHAT_SEARCH_CONVERSATIONS]: searchConversations,
   [CHAT_GET_CONVERSATION]: getConversation,
-  loadMoreMessages,
-  loadMoreConversations,
-  clearSearch: chatSlice.actions.clearSearch,
-  clearSearchData: chatSlice.actions.clearSearchData,
-  resetPagination: chatSlice.actions.resetPagination,
-  clearMessages: chatSlice.actions.clearMessages,
-  reset: chatSlice.actions.reset,
-  setSelectedPhoneNumber: chatSlice.actions.setSelectedPhoneNumber,
-  setSearchValue: chatSlice.actions.setSearchValue,
-  updateSearchPagination: chatSlice.actions.updateSearchPagination,
-  updateMessagesPagination: chatSlice.actions.updateMessagesPagination,
+  [CHAT_SEND_MESSAGE]: sendMessage,
+  [CHAT_LOAD_MORE_MESSAGES]: loadMoreMessages,
+  [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
+  [CHAT_CLEAR_SEARCH]: chatSlice.actions.clearSearch,
+  [CHAT_CLEAR_SEARCH_DATA]: chatSlice.actions.clearSearchData,
+  [CHAT_RESET_PAGINATION]: chatSlice.actions.resetPagination,
+  [CHAT_CLEAR_MESSAGES]: chatSlice.actions.clearMessages,
+  [CHAT_RESET]: chatSlice.actions.reset,
+  [CHAT_SET_SELECTED_PHONE_NUMBER]: chatSlice.actions.setSelectedPhoneNumber,
+  [CHAT_SET_SEARCH_VALUE]: chatSlice.actions.setSearchValue,
+  [CHAT_UPDATE_SEARCH_PAGINATION]: chatSlice.actions.updateSearchPagination,
+  [CHAT_UPDATE_MESSAGES_PAGINATION]: chatSlice.actions.updateMessagesPagination,
+  [CHAT_ADD_INCOMING_MESSAGE]: chatSlice.actions.addIncomingMessage,
+  [CHAT_ADD_NEW_CONVERSATION]: chatSlice.actions.addNewConversation,
+  [CHAT_UPDATE_MESSAGE_STATUS]: chatSlice.actions.updateMessageStatus,
 };

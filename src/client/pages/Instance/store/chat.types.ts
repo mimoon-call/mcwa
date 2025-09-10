@@ -15,6 +15,7 @@ export type ChatMessage = {
   toNumber: string;
   text: string | null;
   createdAt: string;
+  messageId?: string;
 };
 
 export type SearchConversationsReq = {
@@ -33,3 +34,20 @@ export type GetConversationReq = {
 };
 
 export type GetConversationRes = EntityList<ChatMessage>;
+
+export type SendMessageReq = { fromNumber: string; toNumber: string; textMessage: string };
+
+export type ConversationPairItem = {
+  name: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  messageCount: number;
+  phoneNumber: string;
+  instanceNumber: string | null;
+  instanceConnected: boolean;
+  action?: string;
+  confidence?: number;
+  department?: string;
+  interested?: boolean;
+  reason?: string;
+};

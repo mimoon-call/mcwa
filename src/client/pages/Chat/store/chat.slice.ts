@@ -15,6 +15,20 @@ import {
   CHAT_SEARCH_VALUE,
   CHAT_SELECTED_CONTACT,
   CHAT_SEND_MESSAGE,
+  CHAT_UPDATE_MESSAGE_STATUS,
+  CHAT_CLEAR_SEARCH,
+  CHAT_CLEAR_SEARCH_DATA,
+  CHAT_RESET_PAGINATION,
+  CHAT_CLEAR_MESSAGES,
+  CHAT_RESET,
+  CHAT_SET_SELECTED_CONTACT,
+  CHAT_SET_SEARCH_VALUE,
+  CHAT_UPDATE_SEARCH_PAGINATION,
+  CHAT_UPDATE_MESSAGES_PAGINATION,
+  CHAT_ADD_INCOMING_MESSAGE,
+  CHAT_ADD_NEW_CONVERSATION,
+  CHAT_LOAD_MORE_MESSAGES,
+  CHAT_LOAD_MORE_CONVERSATIONS,
   SEARCH_LOADING,
 } from './chat.constants';
 import type {
@@ -29,20 +43,35 @@ import type {
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
 
-// Helper function to deduplicate messages by messageId
+// Helper function to deduplicate messages by messageId, keeping the last occurrence
 const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
-  const seen = new Set<string>();
-  return messages.filter((message) => {
-    // If messageId exists and we've seen it before, filter it out
-    if (message.messageId && seen.has(message.messageId)) {
-      return false;
-    }
-    // If messageId exists, add it to seen set
+  const seen = new Map<string, ChatMessage>();
+  
+  // Process messages in order, keeping the last occurrence of each messageId
+  messages.forEach((message) => {
     if (message.messageId) {
-      seen.add(message.messageId);
+      seen.set(message.messageId, message);
     }
-    return true;
   });
+  
+  // Return messages without messageId first, then deduplicated messages
+  const messagesWithoutId = messages.filter(msg => !msg.messageId);
+  const deduplicatedMessages = Array.from(seen.values());
+  
+  return [...messagesWithoutId, ...deduplicatedMessages];
+};
+
+// Helper function to deduplicate conversations by phoneNumber+instanceNumber, keeping the last occurrence
+const deduplicateConversations = (conversations: GlobalChatContact[]): GlobalChatContact[] => {
+  const seen = new Map<string, GlobalChatContact>();
+  
+  // Process conversations in order, keeping the last occurrence of each phoneNumber+instanceNumber combination
+  conversations.forEach((conversation) => {
+    const key = `${conversation.phoneNumber}+${conversation.instanceNumber}`;
+    seen.set(key, conversation);
+  });
+  
+  return Array.from(seen.values());
 };
 
 export interface GlobalChatState {
@@ -285,6 +314,30 @@ const globalChatSlice = createSlice({
         state[CHAT_SEARCH_DATA] = [newConversation, ...existingConversations];
       }
     },
+    updateMessageStatus: (state, action) => {
+      const { messageId, status, sentAt, deliveredAt, readAt, playedAt, errorCode, errorMessage } = action.payload;
+      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+
+      // Find and update the message with the matching messageId
+      const messageIndex = existingMessages.findIndex((msg) => msg.messageId === messageId);
+
+      if (messageIndex !== -1) {
+        const updatedMessage = {
+          ...existingMessages[messageIndex],
+          ...(status && { status }),
+          ...(sentAt && { sentAt }),
+          ...(deliveredAt && { deliveredAt }),
+          ...(readAt && { readAt }),
+          ...(playedAt && { playedAt }),
+          ...(errorCode && { errorCode }),
+          ...(errorMessage && { errorMessage }),
+        };
+
+        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => 
+          index === messageIndex ? updatedMessage : msg
+        );
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -300,10 +353,9 @@ const globalChatSlice = createSlice({
         // Check if this is a new search (different search value)
         const shouldResetPagination = !state.lastSearchParams || state.lastSearchParams.searchValue !== searchValue;
 
-        state[CHAT_SEARCH_DATA] = action.payload.data;
-
         // Only update pagination if it's a new search
         if (shouldResetPagination) {
+          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
           state[CHAT_SEARCH_PAGINATION] = {
             totalItems: action.payload.totalItems,
             hasMore: action.payload.hasMore,
@@ -314,7 +366,7 @@ const globalChatSlice = createSlice({
           };
         } else {
           // Keep existing pagination but update data
-          state[CHAT_SEARCH_DATA] = action.payload.data;
+          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
         }
 
         // Update search value in state
@@ -384,7 +436,8 @@ const globalChatSlice = createSlice({
       .addCase(loadMoreConversations.fulfilled, (state, action) => {
         // Append new conversations to existing ones (for infinite scroll)
         const existingConversations = state[CHAT_SEARCH_DATA] || [];
-        state[CHAT_SEARCH_DATA] = [...existingConversations, ...action.payload.data];
+        const combinedConversations = [...existingConversations, ...action.payload.data];
+        state[CHAT_SEARCH_DATA] = deduplicateConversations(combinedConversations);
         state[CHAT_SEARCH_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
@@ -406,18 +459,19 @@ export default {
   reducer: globalChatSlice.reducer,
   [CHAT_SEARCH_ALL_CONVERSATIONS]: searchAllConversations,
   [CHAT_GET_CONVERSATION]: getConversation,
-  sendMessage,
-  loadMoreMessages,
-  loadMoreConversations,
-  clearSearch: globalChatSlice.actions.clearSearch,
-  clearSearchData: globalChatSlice.actions.clearSearchData,
-  resetPagination: globalChatSlice.actions.resetPagination,
-  clearMessages: globalChatSlice.actions.clearMessages,
-  reset: globalChatSlice.actions.reset,
-  setSelectedContact: globalChatSlice.actions.setSelectedContact,
-  setSearchValue: globalChatSlice.actions.setSearchValue,
-  updateSearchPagination: globalChatSlice.actions.updateSearchPagination,
-  updateMessagesPagination: globalChatSlice.actions.updateMessagesPagination,
-  addIncomingMessage: globalChatSlice.actions.addIncomingMessage,
-  addNewConversation: globalChatSlice.actions.addNewConversation,
+  [CHAT_SEND_MESSAGE]: sendMessage,
+  [CHAT_LOAD_MORE_MESSAGES]: loadMoreMessages,
+  [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
+  [CHAT_CLEAR_SEARCH]: globalChatSlice.actions.clearSearch,
+  [CHAT_CLEAR_SEARCH_DATA]: globalChatSlice.actions.clearSearchData,
+  [CHAT_RESET_PAGINATION]: globalChatSlice.actions.resetPagination,
+  [CHAT_CLEAR_MESSAGES]: globalChatSlice.actions.clearMessages,
+  [CHAT_RESET]: globalChatSlice.actions.reset,
+  [CHAT_SET_SELECTED_CONTACT]: globalChatSlice.actions.setSelectedContact,
+  [CHAT_SET_SEARCH_VALUE]: globalChatSlice.actions.setSearchValue,
+  [CHAT_UPDATE_SEARCH_PAGINATION]: globalChatSlice.actions.updateSearchPagination,
+  [CHAT_UPDATE_MESSAGES_PAGINATION]: globalChatSlice.actions.updateMessagesPagination,
+  [CHAT_ADD_INCOMING_MESSAGE]: globalChatSlice.actions.addIncomingMessage,
+  [CHAT_ADD_NEW_CONVERSATION]: globalChatSlice.actions.addNewConversation,
+  [CHAT_UPDATE_MESSAGE_STATUS]: globalChatSlice.actions.updateMessageStatus,
 };

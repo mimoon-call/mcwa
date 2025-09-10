@@ -1,3 +1,5 @@
+import type { ChatMessage, ChatContact, ConversationPairItem } from './store/chat.types';
+import type { RootState, AppDispatch } from '@client/store';
 import React, { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -5,7 +7,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import { StoreEnum } from '@client/store/store.enum';
-import type { RootState, AppDispatch } from '@client/store';
 import chatSlice from './store/chat.slice';
 import {
   CHAT_SEARCH_CONVERSATIONS,
@@ -18,8 +19,16 @@ import {
   CHAT_LOADING,
   SEARCH_LOADING,
   CHAT_ERROR,
+  CHAT_UPDATE_MESSAGE_STATUS,
+  CHAT_RESET_PAGINATION,
+  CHAT_CLEAR_SEARCH_DATA,
+  CHAT_ADD_INCOMING_MESSAGE,
+  CHAT_ADD_NEW_CONVERSATION,
+  CHAT_SEND_MESSAGE,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
+import getClientSocket from '@helpers/get-client-socket.helper';
+import { ConversationEventEnum } from '../Chat/store/chat-event.enum';
 
 type ChatProps = {
   className?: string;
@@ -44,7 +53,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   // Load conversations on component mount
   useEffect(() => {
     if (phoneNumber) {
-      dispatch(chatSlice.resetPagination());
+      dispatch(chatSlice[CHAT_RESET_PAGINATION]());
       dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber }));
     }
   }, [phoneNumber, dispatch]);
@@ -61,11 +70,73 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     }
   }, [withPhoneNumber, phoneNumber, dispatch]);
 
+  // Listen for new message events
+  useEffect(() => {
+    const socket = getClientSocket();
+
+    const handleNewMessage = (messageData: ChatMessage) => {
+      // Check if this message belongs to the currently active chat
+      if (!phoneNumber || !withPhoneNumber) return;
+
+      const isActiveChat =
+        (messageData.fromNumber === phoneNumber && messageData.toNumber === withPhoneNumber) ||
+        (messageData.fromNumber === withPhoneNumber && messageData.toNumber === phoneNumber);
+
+      if (isActiveChat) {
+        // The Redux slice will handle deduplication
+        dispatch(chatSlice[CHAT_ADD_INCOMING_MESSAGE](messageData));
+      }
+    };
+
+    const handleNewConversation = (conversationData: Partial<ConversationPairItem>) => {
+      // Only add/update conversation if instanceNumber equals phoneNumber from params
+      if (conversationData.instanceNumber === phoneNumber) {
+        // Transform the received object to match ChatContact type, only including non-empty values
+        const chatContact: Partial<ChatContact> = {
+          phoneNumber: conversationData.phoneNumber,
+          ...(conversationData.lastMessage && { lastMessage: conversationData.lastMessage }),
+          ...(conversationData.lastMessageAt && { lastMessageAt: conversationData.lastMessageAt }),
+        };
+
+        dispatch(chatSlice[CHAT_ADD_NEW_CONVERSATION](chatContact));
+      }
+    };
+
+    const handleMessageStatusUpdate = (statusData: {
+      messageId: string;
+      status: string;
+      sentAt?: string;
+      deliveredAt?: string;
+      readAt?: string;
+      playedAt?: string;
+      errorCode?: number;
+      errorMessage?: string;
+    }) => {
+      dispatch(chatSlice[CHAT_UPDATE_MESSAGE_STATUS](statusData));
+    };
+
+    socket?.on(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
+    socket?.on(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+    socket?.on(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
+
+    return () => {
+      socket?.off(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
+      socket?.off(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+      socket?.off(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
+    };
+  }, [phoneNumber, withPhoneNumber, dispatch]);
+
   const selectedContact = conversations?.find((contact) => contact.phoneNumber === withPhoneNumber) || null;
   const selectedMessages = messages || [];
 
-  const handleSendMessage = (fromNumber: string, toNumber: string, text: string) => {
-    console.log('Send message:', { fromNumber, toNumber, text });
+  const handleSendMessage = async (fromNumber: string, toNumber: string, text: string) => {
+    if (!text.trim()) return;
+
+    await chatSlice[CHAT_SEND_MESSAGE]({
+      fromNumber: fromNumber,
+      toNumber: toNumber,
+      textMessage: text.trim(),
+    });
   };
 
   const handleChatSelect = (contactPhoneNumber: string) => {
@@ -80,10 +151,10 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         // Only search if the value actually changed
         if (value !== searchValue) {
           // Reset pagination only if search value actually changed
-          dispatch(chatSlice.resetPagination());
+          dispatch(chatSlice[CHAT_RESET_PAGINATION]());
 
           // Clear current data and search with new value
-          dispatch(chatSlice.clearSearchData());
+          dispatch(chatSlice[CHAT_CLEAR_SEARCH_DATA]());
           dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
         }
       }

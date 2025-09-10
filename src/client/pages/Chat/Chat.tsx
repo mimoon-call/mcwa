@@ -18,6 +18,13 @@ import {
   SEARCH_LOADING,
   CHAT_ERROR,
   CHAT_SELECTED_CONTACT,
+  CHAT_UPDATE_MESSAGE_STATUS,
+  CHAT_ADD_INCOMING_MESSAGE,
+  CHAT_ADD_NEW_CONVERSATION,
+  CHAT_RESET_PAGINATION,
+  CHAT_SET_SELECTED_CONTACT,
+  CHAT_SEND_MESSAGE,
+  CHAT_CLEAR_SEARCH_DATA,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -44,7 +51,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   // Load conversations on component mount
   useEffect(() => {
-    dispatch(globalChatSlice.resetPagination());
+    dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
     dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({}));
   }, [dispatch]);
 
@@ -55,7 +62,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   // Set selected contact if URL parameters match
   useEffect(() => {
     if (selectedContactFromUrl && selectedContact !== selectedContactFromUrl) {
-      dispatch(globalChatSlice.setSelectedContact(selectedContactFromUrl));
+      dispatch(globalChatSlice[CHAT_SET_SELECTED_CONTACT](selectedContactFromUrl));
     }
   }, [selectedContactFromUrl, selectedContact, dispatch]);
 
@@ -77,34 +84,46 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
     const handleNewMessage = (messageData: ChatMessage) => {
       // The Redux slice will handle checking if it's the active chat and deduplication
-      dispatch(globalChatSlice.addIncomingMessage(messageData));
+      dispatch(globalChatSlice[CHAT_ADD_INCOMING_MESSAGE](messageData));
     };
 
     const handleNewConversation = (conversationData: GlobalChatContact) => {
       // Add new conversation to the list
-      dispatch(globalChatSlice.addNewConversation(conversationData));
+      dispatch(globalChatSlice[CHAT_ADD_NEW_CONVERSATION](conversationData));
+    };
+
+    const handleMessageStatusUpdate = (statusData: {
+      messageId: string;
+      status: string;
+      sentAt?: string;
+      deliveredAt?: string;
+      readAt?: string;
+      playedAt?: string;
+      errorCode?: number;
+      errorMessage?: string;
+    }) => {
+      dispatch(globalChatSlice[CHAT_UPDATE_MESSAGE_STATUS](statusData));
     };
 
     socket?.on(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
     socket?.on(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+    socket?.on(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
 
     return () => {
       socket?.off(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
       socket?.off(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
+      socket?.off(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
     };
   }, [dispatch]);
 
   const handleSendMessage = async (instanceNumber: string, phoneNumber: string, text: string) => {
     if (!text.trim()) return;
 
-    await globalChatSlice.sendMessage({
+    await globalChatSlice[CHAT_SEND_MESSAGE]({
       fromNumber: instanceNumber,
       toNumber: phoneNumber,
       textMessage: text.trim(),
     });
-
-    // Refetch messages after sending
-    dispatch(globalChatSlice[CHAT_GET_CONVERSATION]({ phoneNumber: instanceNumber, withPhoneNumber: phoneNumber }));
   };
 
   const handleChatSelect = (contact: GlobalChatContact) => {
@@ -116,10 +135,10 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       // Only search if the value actually changed
       if (value !== searchValue) {
         // Reset pagination only if search value actually changed
-        dispatch(globalChatSlice.resetPagination());
+        dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
 
         // Clear current data and search with new value
-        dispatch(globalChatSlice.clearSearchData());
+        dispatch(globalChatSlice[CHAT_CLEAR_SEARCH_DATA]());
         dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({ searchValue: value }));
       }
     },

@@ -155,7 +155,7 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
 }>;
 
 export type WAMessageDelivery = {
-  messageId: string;
+  messageId: string | null;
   fromNumber: string;
   toNumber: string;
   status: keyof typeof MessageStatusEnum;

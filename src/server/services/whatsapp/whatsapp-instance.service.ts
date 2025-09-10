@@ -1801,9 +1801,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('error', 'Error in outgoing message callback:', error);
         }
 
-        onSuccess?.(raw);
+        onSuccess?.(record, raw, deliveryStatus || undefined);
 
-        return { ...raw, ...(deliveryStatus || {}) } as unknown as WebMessageInfo & Partial<WAMessageDelivery>;
+        return { fromNumber: this.phoneNumber, toNumber, messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 

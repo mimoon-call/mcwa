@@ -90,6 +90,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
               className="flex-grow"
               containerClass="!rounded-full !p-4"
               hideDetails
+              autoCapitalize="off"
               type="text"
               name="messageInput"
               disabled={disabled || isSending}
