@@ -9,12 +9,16 @@ export const errorsInterceptor: AxiosResponseInterceptor = {
     return response;
   },
   onRejected: async (error: AxiosError) => {
+    // Handle canceled requests - don't throw error for canceled requests
+    if (axios.isCancel(error)) {
+      // Return a rejected promise with a serializable error object
+      const cancelError = new Error('Request was canceled');
+      cancelError.name = 'CanceledError';
+      throw cancelError;
+    }
+
     const err: AxiosError<ErrorResponse> = error as AxiosError<ErrorResponse>;
     const serverError = new ServerError(err);
-
-    if (axios.isCancel(error)) {
-      throw serverError;
-    }
 
     throw serverError;
   },
