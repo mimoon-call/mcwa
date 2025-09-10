@@ -63,7 +63,8 @@
       "GENERAL": "General Purpose Loan",
       "CAR": "Car",
       "MORTGAGE": "Mortgage"
-    }
+    },
+    "SENDING_MESSAGE_FAILED": "Sending message failed, please try again"
   },
   "QUEUE": {
     "PHONE_NUMBER": "Phone number",

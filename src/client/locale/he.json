@@ -63,7 +63,8 @@
       "GENERAL": "הלוואה לכל מטרה",
       "CAR": "רכב",
       "MORTGAGE": "משכנתא"
-    }
+    },
+    "SENDING_MESSAGE_FAILED": "שליחת ההודעה נכשלה, נסה שוב"
   },
   "QUEUE": {
     "PHONE_NUMBER": "מספר טלפון",
