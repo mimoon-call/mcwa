@@ -338,10 +338,14 @@ export const conversationService = {
     const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline, afterPipeline);
 
     return {
-      data: data.map((value) => ({
-        ...value,
-        instanceConnected: value.instanceNumber ? wa.getInstance(value.instanceNumber)?.connected || false : false,
-      })),
+      data: data.map((value) => {
+        const instance = value.instanceNumber ? wa.getInstance(value.instanceNumber) : null;
+
+        return {
+          ...value,
+          instanceConnected: instance?.connected || false,
+        };
+      }),
       ...rest,
     };
   },
