@@ -1,10 +1,10 @@
+import type { ChatContact } from '@client/pages/Instance/store/chat.types';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
-import type { ChatContact } from '../store/chat.types';
 
 type ChatListProps = {
   conversations?: ChatContact[];

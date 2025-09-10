@@ -1,3 +1,5 @@
+import type { Options } from '@models';
+import type { AppDispatch, RootState } from '@client/store';
 import TextField from '../../../shared/components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import { SelectField } from '@components/Fields';
@@ -5,10 +7,8 @@ import { Checkbox } from '@components/Checkbox/Checkbox';
 import React, { useState } from 'react';
 import { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
 import { useTranslation } from 'react-i18next';
-import type { Options } from '@models';
 import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
 import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '@client/store';
 import { INSTANCE_SEARCH_FILTER, SEARCH_INSTANCE } from '@client/pages/Instance/store/instance.constants';
 import instanceStore from '@client/pages/Instance/store/instance.slice';
 import { StoreEnum } from '@client/store/store.enum';

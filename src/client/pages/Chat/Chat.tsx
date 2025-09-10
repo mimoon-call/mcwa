@@ -1,9 +1,10 @@
+import type { RootState, AppDispatch } from '@client/store';
+import type { GlobalChatContact, ChatMessage } from './store/chat.types';
 import React, { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import { cn } from '@client/plugins';
 import { StoreEnum } from '@client/store/store.enum';
-import type { RootState, AppDispatch } from '@client/store';
 import globalChatSlice from './store/chat.slice';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { ConversationEventEnum } from './store/chat-event.enum';
@@ -28,7 +29,6 @@ import {
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
-import type { GlobalChatContact, ChatMessage } from './store/chat.types';
 
 type ChatProps = {
   className?: string;

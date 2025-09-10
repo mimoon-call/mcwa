@@ -5,6 +5,7 @@ import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
 import type { ChatContact } from '../store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 type InstanceChatListItemProps = {
   contact: ChatContact;
@@ -13,16 +14,8 @@ type InstanceChatListItemProps = {
   className?: string;
 };
 
-const InstanceChatListItem: React.FC<InstanceChatListItemProps> = ({
-  contact,
-  isSelected,
-  onClick,
-}) => {
+const InstanceChatListItem: React.FC<InstanceChatListItemProps> = ({ contact, isSelected, onClick }) => {
   const { t } = useTranslation();
-
-  const getDisplayName = (contact: ChatContact) => {
-    return contact.name || contact.phoneNumber;
-  };
 
   const formatTime = (dateString: string) => {
     const date = dayjs(dateString);
@@ -42,6 +35,8 @@ const InstanceChatListItem: React.FC<InstanceChatListItemProps> = ({
     return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
   };
 
+  const title = contact.name || contact.phoneNumber;
+
   return (
     <div
       className={cn(
@@ -54,18 +49,14 @@ const InstanceChatListItem: React.FC<InstanceChatListItemProps> = ({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900 truncate">
-            {getDisplayName(contact)}
+          <div className="font-semibold text-gray-900 truncate" dir={isNaN(+title) ? undefined : 'ltr'}>
+            {internationalPhonePrettier(title, '-', true)}
           </div>
-          <div className="text-xs text-gray-500">
-            {formatTime(contact.lastMessageAt)}
-          </div>
+          <div className="text-xs text-gray-500">{formatTime(contact.lastMessageAt)}</div>
         </div>
-        
+
         <div className="flex items-center justify-between mt-1">
-          <div className="text-sm text-gray-600 truncate flex-1">
-            {contact.lastMessage}
-          </div>
+          <div className="text-sm text-gray-600 truncate flex-1">{contact.lastMessage}</div>
         </div>
       </div>
     </div>

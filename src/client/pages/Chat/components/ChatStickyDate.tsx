@@ -1,9 +1,9 @@
+import type { ChatMessage } from '../store/chat.types';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants/date-format';
-import type { ChatMessage } from '../store/chat.types';
 
 type StickyDateSeparatorProps = {
   messages: ChatMessage[];

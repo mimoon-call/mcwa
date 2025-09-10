@@ -1,11 +1,12 @@
+import type { GlobalChatContact } from '../store/chat.types';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
-import type { GlobalChatContact } from '../store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
 import Icon from '@components/Icon/Icon';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 type ChatListItemProps = {
   contact: GlobalChatContact;
@@ -16,10 +17,6 @@ type ChatListItemProps = {
 
 const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClick }) => {
   const { t } = useTranslation();
-
-  const getDisplayName = (contact: GlobalChatContact) => {
-    return contact.name || contact.phoneNumber;
-  };
 
   const formatTime = (dateString: string) => {
     const date = dayjs(dateString);
@@ -51,16 +48,19 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClic
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900 truncate">{getDisplayName(contact)}</div>
+          <div className="font-semibold text-gray-900 truncate" dir={isNaN(+contact.name) ? undefined : 'ltr'}>
+            {internationalPhonePrettier(contact.name, '-', true)}
+          </div>
+
           <div className="text-xs text-gray-500">{formatTime(contact.lastMessageAt)}</div>
         </div>
 
         {/* Instance Number > Phone Number */}
         <div className="flex items-center justify-between mt-1">
           <div className="font-medium text-sm text-gray-600 truncate flex gap-1">
-            <span>{contact.instanceNumber}</span>
+            <span dir="ltr">{internationalPhonePrettier(contact.instanceNumber, '-', true)}</span>
             <Icon name="svg:arrow-two-way" size="1rem" />
-            <span>{contact.phoneNumber}</span>
+            <span dir="ltr">{internationalPhonePrettier(contact.phoneNumber, '-', true)}</span>
           </div>
         </div>
 
@@ -72,7 +72,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClic
         {/* Additional Info */}
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-2">
-            {contact.department && <div className="font-medium text-xs text-blue-600">{t(`CHAT.DEPARTMENT.${contact.department}`)}</div>}
+            {contact.department && <div className="font-semibold text-xs text-blue-600">{t(`CHAT.DEPARTMENT.${contact.department}`)}</div>}
             {contact.messageCount > 0 && (
               <div className="text-xs text-gray-500">
                 {contact.messageCount} {t('GENERAL.MESSAGES')}
@@ -80,7 +80,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClic
             )}
           </div>
 
-          {contact.interested && <div className="font-semibold text-xs text-green-600">{t('GENERAL.INTERESTED')}</div>}
+          {contact.interested && <div className="font-bold text-xs text-green-600">{t('GENERAL.INTERESTED')}</div>}
         </div>
       </div>
     </div>

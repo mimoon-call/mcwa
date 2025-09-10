@@ -1,7 +1,7 @@
+import type { ChatMessage } from '../store/chat.types';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
-import type { ChatMessage } from '../store/chat.types';
 import { useInfiniteScroll } from '@client/pages/Instance/hooks';
 import ChatMessageItem from './ChatMessageItem';
 import ChatStickyDate from './ChatStickyDate';

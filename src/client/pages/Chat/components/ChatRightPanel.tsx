@@ -1,9 +1,9 @@
+import type { ChatMessage, GlobalChatContact } from '../store/chat.types';
+import type { ChatContact } from '../../Instance/store/chat.types';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
-import type { ChatMessage, GlobalChatContact } from '../store/chat.types';
-import type { ChatContact } from '../../Instance/store/chat.types';
 import ChatMessages from './ChatMessages';
 import { TextField } from '@components/Fields';
 import { useAsyncFn, useToast } from '@hooks';
@@ -101,7 +101,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
             />
 
             <div className="flex items-center">
-              <Icon name="svg:paper-plane" size="1.75rem" onClick={!disabled && !isSending ? send : undefined} />
+              <Icon className="hover:text-blue-500" name="svg:paper-plane" size="1.75rem" onClick={!disabled && !isSending ? send : undefined} />
             </div>
           </div>
         </div>

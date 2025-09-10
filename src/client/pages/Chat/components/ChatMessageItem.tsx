@@ -1,11 +1,12 @@
+import type { ChatMessage } from '../store/chat.types';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
-import type { ChatMessage } from '../store/chat.types';
 import { MessageStatusEnum } from '../store/chat.types';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 type MessageItemProps = {
   message: ChatMessage;
@@ -78,13 +79,19 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
         <div className="max-w-xs lg:max-w-md">
           <div className={cn('rounded-lg p-3 shadow-sm', isFromUser ? 'bg-green-100' : 'bg-white')}>
-            {isFromUser && <div className="text-xs font-medium text-gray-500 mb-1">{t('GENERAL.YOU')}</div>}
+            {isFromUser && (
+              <div className="flex gap-1 text-xs font-medium text-gray-500 mb-1">
+                <span>{t('GENERAL.YOU')}</span>
+                <span dir="ltr">({internationalPhonePrettier(message.fromNumber, '-', true)})</span>
+              </div>
+            )}
             <div className="text-sm text-gray-900 whitespace-pre-wrap">{formatMessageText(message.text)}</div>
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
               {isFromUser && (
                 <div className="flex space-x-1">
                   {(() => {
                     const checkStyle = getCheckmarkStyle(message.status);
+
                     return (
                       <div className="pe-1 flex">
                         <Icon name="svg:check" size="0.625rem" className={checkStyle[0]} />

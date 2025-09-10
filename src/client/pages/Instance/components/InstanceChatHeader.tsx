@@ -2,14 +2,17 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import type { InstanceChat } from '../store/chat.types';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 type InstanceChatHeaderProps = {
-  phoneNumber?: string;
+  phoneNumber: string;
   searchMetadata?: InstanceChat | null;
 };
 
 const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, searchMetadata }) => {
   const { t } = useTranslation();
+
+  const formattedNumber = internationalPhonePrettier(phoneNumber, '-');
 
   return (
     <div className={`${searchMetadata?.isConnected ? 'bg-green-600' : 'bg-red-600'} text-white p-4 flex items-center justify-between`}>
@@ -17,7 +20,10 @@ const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, se
         <div className="flex flex-col gap-1">
           <div className="flex gap-2 items-center">
             <div>
-              <div className="text-xl font-semibold">{phoneNumber || 'Instance'}</div>
+              <div className="text-xl font-semibold" dir="ltr">
+                {formattedNumber}
+              </div>
+
               <div className="text-sm opacity-90">
                 {searchMetadata?.isConnected ? t('INSTANCE.STATUS.CONNECTED') : t('INSTANCE.STATUS.DISCONNECTED')}
               </div>
