@@ -42,7 +42,6 @@ export const messageQueueService = {
       []
     );
 
-    messageCount = data.totalItems;
     app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
 
     return data;
@@ -121,7 +120,6 @@ export const messageQueueService = {
   [CLEAR_MESSAGE_QUEUE]: async (): Promise<BaseResponse> => {
     if (isSending) {
       isSending = false;
-      messageCount = messagePass;
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
     }
 
