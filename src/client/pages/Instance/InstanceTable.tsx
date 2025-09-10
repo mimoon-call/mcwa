@@ -233,6 +233,11 @@ const InstanceTable = () => {
       iconName: 'svg:chat',
       onClick: ({ phoneNumber }) => navigate(`/instance/${phoneNumber}`),
     },
+    {
+      label: 'GENERAL.GLOBAL_CHAT',
+      iconName: 'svg:users',
+      onClick: () => navigate('/chat'),
+    },
   ];
 
   return (

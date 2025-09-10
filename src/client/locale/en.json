@@ -51,6 +51,10 @@
     "READ_MORE": "Read more",
     "ENTER_MESSAGE": "Enter your message",
     "SELECT_CHAT_TO_START": "Select a chat to start messaging",
+    "GLOBAL_CHAT": "Global Chat",
+    "ALL_INSTANCES": "All Instances",
+    "MESSAGES": "messages",
+    "INTERESTED": "Interested",
     "YESTERDAY": "YESTERDAY",
     "PHONE_NUMBER_REQUIRED": "Phone number is required"
   },

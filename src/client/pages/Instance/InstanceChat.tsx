@@ -20,7 +20,7 @@ import {
   SEARCH_LOADING,
   CHAT_ERROR,
 } from './store/chat.constants';
-import { ChatLeftPanel, ChatRightPanel } from './components';
+import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 
 type ChatProps = {
   className?: string;
@@ -109,16 +109,24 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   return (
     <div className={cn('flex h-[calc(100vh-4rem)] bg-gray-100', className)}>
       <ChatLeftPanel
-        phoneNumber={phoneNumber}
-        searchMetadata={searchMetadata}
-        conversations={conversations}
-        selectedPhoneNumber={withPhoneNumber}
+        items={conversations}
+        selectedItem={selectedContact}
         loading={searchLoading}
         error={error}
         hasMore={searchPagination?.hasMore || false}
         searchValue={searchValue}
-        onChatSelect={handleChatSelect}
+        onItemSelect={(contact) => handleChatSelect(contact.phoneNumber)}
         onSearch={handleSearch}
+        headerComponent={<InstanceChatHeader phoneNumber={phoneNumber} searchMetadata={searchMetadata} />}
+        itemComponent={(contact, isSelected, onClick) => (
+          <InstanceChatListItem
+            contact={contact}
+            isSelected={isSelected}
+            onClick={onClick}
+          />
+        )}
+        getItemKey={(contact) => contact.phoneNumber}
+        isItemSelected={(contact, selectedContact) => selectedContact?.phoneNumber === contact.phoneNumber}
       />
       <ChatRightPanel
         selectedContact={selectedContact}
@@ -129,6 +137,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         phoneNumber={phoneNumber}
         withPhoneNumber={withPhoneNumber}
         hasMore={messagesPagination?.hasMore || false}
+        headerComponent={selectedContact ? <ChatHeader contact={selectedContact} /> : undefined}
         onSendMessage={handleSendMessage}
       />
     </div>

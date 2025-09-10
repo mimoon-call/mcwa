@@ -51,6 +51,10 @@
     "READ_MORE": "קרא עוד",
     "ENTER_MESSAGE": "הקלד הודעה",
     "SELECT_CHAT_TO_START": "בחר צ'אט כדי להתחיל",
+    "GLOBAL_CHAT": "צ'אט גלובלי",
+    "ALL_INSTANCES": "כל המופעים",
+    "MESSAGES": "הודעות",
+    "INTERESTED": "מעוניין",
     "YESTERDAY": "אתמול",
     "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
   },

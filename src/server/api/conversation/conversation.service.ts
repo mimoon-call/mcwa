@@ -1,5 +1,10 @@
 import type { Pagination } from '@models';
-import type { GetConversationRes, SearchConversationRes, GetAllConversationPairsRes } from '@server/api/conversation/conversation.types';
+import {
+  GetConversationRes,
+  SearchConversationRes,
+  GetAllConversationPairsRes,
+  ConversationPairItem,
+} from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS } from '@server/api/conversation/conversation.map';
 import { wa } from '@server/index';
@@ -250,9 +255,9 @@ export const conversationService = {
       {
         $lookup: {
           from: 'whatsappqueues',
-          let: { 
+          let: {
             phoneNumber: '$phoneNumber',
-            instanceNumber: '$instanceNumber'
+            instanceNumber: '$instanceNumber',
           },
           pipeline: [
             {
@@ -262,27 +267,27 @@ export const conversationService = {
                     { $eq: ['$phoneNumber', '$$phoneNumber'] },
                     { $eq: ['$instanceNumber', '$$instanceNumber'] },
                     { $ne: ['$messageId', null] },
-                    { $ne: ['$messageId', ''] }
-                  ]
-                }
-              }
+                    { $ne: ['$messageId', ''] },
+                  ],
+                },
+              },
             },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
-            { $project: { messageId: 1 } }
+            { $project: { messageId: 1 } },
           ],
-          as: 'lastQueueMessage'
-        }
+          as: 'lastQueueMessage',
+        },
       },
-      
+
       // Lookup the corresponding message from whatsappmessages collection
       {
         $lookup: {
           from: 'whatsappmessages',
-          let: { 
+          let: {
             phoneNumber: '$phoneNumber',
             instanceNumber: '$instanceNumber',
-            lastMessageId: { $arrayElemAt: ['$lastQueueMessage.messageId', 0] }
+            lastMessageId: { $arrayElemAt: ['$lastQueueMessage.messageId', 0] },
           },
           pipeline: [
             {
@@ -291,25 +296,25 @@ export const conversationService = {
                   $and: [
                     { $eq: ['$fromNumber', '$$instanceNumber'] },
                     { $eq: ['$toNumber', '$$phoneNumber'] },
-                    { $eq: ['$messageId', '$$lastMessageId'] }
-                  ]
-                }
-              }
+                    { $eq: ['$messageId', '$$lastMessageId'] },
+                  ],
+                },
+              },
             },
-            { 
-              $project: { 
-                action: 1, 
-                confidence: 1, 
-                department: 1, 
-                interested: 1, 
-                reason: 1 
-              } 
-            }
+            {
+              $project: {
+                action: 1,
+                confidence: 1,
+                department: 1,
+                interested: 1,
+                reason: 1,
+              },
+            },
           ],
-          as: 'messageDetails'
-        }
+          as: 'messageDetails',
+        },
       },
-      
+
       // Merge the fields from the message details
       {
         $addFields: {
@@ -317,25 +322,25 @@ export const conversationService = {
           confidence: { $arrayElemAt: ['$messageDetails.confidence', 0] },
           department: { $arrayElemAt: ['$messageDetails.department', 0] },
           interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
-          reason: { $arrayElemAt: ['$messageDetails.reason', 0] }
-        }
+          reason: { $arrayElemAt: ['$messageDetails.reason', 0] },
+        },
       },
-      
+
       // Remove the temporary arrays
       {
         $project: {
           lastQueueMessage: 0,
-          messageDetails: 0
-        }
-      }
+          messageDetails: 0,
+        },
+      },
     ];
 
-    const { data, ...rest } = await WhatsAppMessage.pagination<GetAllConversationPairsRes['data'][0]>({ page }, pipeline, afterPipeline);
+    const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline, afterPipeline);
 
     return {
       data: data.map((value) => ({
         ...value,
-        isConnected: value.instanceNumber ? wa.getInstance(value.instanceNumber)?.connected || false : false,
+        instanceConnected: value.instanceNumber ? wa.getInstance(value.instanceNumber)?.connected || false : false,
       })),
       ...rest,
     };

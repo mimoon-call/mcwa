@@ -21,8 +21,9 @@ export type ConversationPairItem = {
   lastMessage: string;
   lastMessageAt: string;
   messageCount: number;
-  instanceNumber: string | null;
   phoneNumber: string;
+  instanceNumber: string | null;
+  instanceConnected: boolean;
   action?: string;
   confidence?: number;
   department?: string;
