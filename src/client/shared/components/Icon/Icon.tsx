@@ -24,7 +24,7 @@ const SvgWrapper: FC<{ content: string }> = ({ content }) => {
 };
 
 const IconSvg: FC<Props> = (props) => {
-  const { name, type = 'solid', size = '1.25rem', loading = false, fallback, ariaLabel, ...attrs } = props;
+  const { name, type = 'solid', size = '1.25rem', loading = false, fallback, ariaLabel, clickable, ...attrs } = props;
 
   const [hover, setHover] = useState(false);
 
@@ -61,7 +61,7 @@ const IconSvg: FC<Props> = (props) => {
 
   return (
     <svg
-      className={cn(styles['icon-svg'], (props.onClick || props.clickable) && styles['icon-svg--clickable'], loading && styles['icon-svg--loading'])}
+      className={cn(styles['icon-svg'], (props.onClick || clickable) && styles['icon-svg--clickable'], loading && styles['icon-svg--loading'])}
       viewBox={viewBox}
       aria-label={ariaLabel}
       style={style}

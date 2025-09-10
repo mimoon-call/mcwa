@@ -1,6 +1,6 @@
 import type { RootState, AppDispatch } from '@client/store';
 import type { GlobalChatContact, ChatMessage } from './store/chat.types';
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import { cn } from '@client/plugins';
@@ -38,6 +38,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const { instanceNumber, phoneNumber } = useParams<{ instanceNumber?: string; phoneNumber?: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const lastSearchValueRef = useRef<string>('');
 
   // Get data from store
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -53,6 +54,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   useEffect(() => {
     dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
     dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({}));
+    // Initialize the ref with the current search value
+    lastSearchValueRef.current = searchValue;
   }, [dispatch]);
 
   // Find selected contact based on URL parameters
@@ -132,8 +135,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   const handleSearch = useCallback(
     (value: string) => {
-      // Only search if the value actually changed
-      if (value !== searchValue) {
+      // Only search if the value actually changed from the last search
+      if (value !== lastSearchValueRef.current) {
+        // Update the ref to track the last searched value
+        lastSearchValueRef.current = value;
+        
         // Reset pagination only if search value actually changed
         dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
 
@@ -142,7 +148,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({ searchValue: value }));
       }
     },
-    [searchValue, dispatch]
+    [dispatch]
   );
 
   return (

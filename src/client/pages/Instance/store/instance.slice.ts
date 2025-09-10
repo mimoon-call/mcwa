@@ -48,7 +48,18 @@ const searchInstance = createAsyncThunk(
 
       return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data, { allowOnceAtTime: true });
     } catch (error: unknown) {
-      return rejectWithValue(error as ErrorResponse);
+      // Handle canceled requests - don't store them as errors
+      if (error instanceof Error && error.name === 'CanceledError') {
+        // Return a rejected promise without storing in state
+        return Promise.reject(error);
+      }
+      
+      // For other errors, create a serializable error object
+      const serializableError = error instanceof Error 
+        ? { message: error.message, name: error.name }
+        : { message: 'Unknown error', name: 'UnknownError' };
+        
+      return rejectWithValue(serializableError);
     }
   }
 );

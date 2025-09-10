@@ -35,7 +35,12 @@ const ChatLeftPanel = <T,>({
   const { t } = useTranslation();
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
-  // Debounced search effect
+  // Initialize local search value only on mount
+  useEffect(() => {
+    setLocalSearchValue(searchValue);
+  }, []); // Empty dependency array - only run on mount
+
+  // Debounced search effect - only trigger when localSearchValue changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       onSearch(localSearchValue);
@@ -43,11 +48,6 @@ const ChatLeftPanel = <T,>({
 
     return () => clearTimeout(timeoutId);
   }, [localSearchValue, onSearch]);
-
-  // Initialize local search value only on mount
-  useEffect(() => {
-    setLocalSearchValue(searchValue);
-  }, []); // Empty dependency array - only run on mount
 
   const handleSearchChange = useCallback((value: string) => {
     setLocalSearchValue(value);
@@ -71,7 +71,14 @@ const ChatLeftPanel = <T,>({
 
       {/* Search Bar */}
       <div className="px-0.5 py-1 border-b border-gray-200">
-        <TextField hideDetails name="search" placeholder={t('GENERAL.SEARCH_PLACEHOLDER')} value={localSearchValue} onChange={handleSearchChange} />
+        <TextField
+          clearable
+          hideDetails
+          name="search"
+          placeholder={t('GENERAL.SEARCH_PLACEHOLDER')}
+          value={localSearchValue}
+          onChange={handleSearchChange}
+        />
       </div>
 
       {/* Items List */}
