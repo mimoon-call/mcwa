@@ -12,6 +12,7 @@ import { createStore } from '@client/store';
 import AppFooter from '@components/AppFooter';
 import { NextWarmCountdown } from '@client/components/NextWarmCountdown';
 import MessageQueueCounter from '@client/components/MessageQueueCounter';
+import InstanceCounter from '@client/components/InstanceCounter';
 
 export let store: ReturnType<typeof createStore>;
 
@@ -31,8 +32,9 @@ export let store: ReturnType<typeof createStore>;
         </main>
         <AppFooter>
           <div className="flex align-middle text-sm w-full justify-end">
-            <NextWarmCountdown className="border-s" />
             <MessageQueueCounter className="border-s" />
+            <NextWarmCountdown className="border-s" />
+            <InstanceCounter className="border-s" />
           </div>
         </AppFooter>
       </BrowserRouter>

@@ -117,6 +117,7 @@
     "IP_ADDRESS": "כתובת IP",
     "SEARCH_BY_PHONE_NUMBER": "חפש לפי מספר טלפון",
     "CONVERSATIONS": "שיחות",
+    "COUNTER": "קווים {{ready}} / {{total}}",
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     },

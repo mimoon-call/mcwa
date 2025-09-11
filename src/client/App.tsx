@@ -5,6 +5,7 @@ import router from '@client/router';
 import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
 import authSlice from '@client/store/auth.slice';
+import globalSlice from '@client/store/global.slice';
 import { REFRESH_TOKEN } from '@server/api/auth/auth.map';
 import { IS_AUTHENTICATED, SET_AUTH_STATE } from '@client/store/auth.constants';
 import { StoreEnum } from '@client/store/store.enum';
@@ -13,6 +14,9 @@ import { TinyEmitter } from 'tiny-emitter';
 import { EscapeService } from '@services/escape-service';
 import Tabs from '@components/Tabs/Tabs';
 import type { TabItem } from '@components/Tabs/Tabs.type';
+import getClientSocket from '@client/shared/helpers/get-client-socket.helper';
+import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
+import type { InstanceStateData } from '@client/store/global.types';
 
 export const emitter = new TinyEmitter();
 export const esc = new EscapeService();
@@ -31,6 +35,23 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
 
     dispatch(refreshToken());
   }, [data, dispatch]);
+
+  // Socket watcher for InstanceEventEnum.INSTANCE_READY and update global state (activeList, readyCount, totalCount)
+  useEffect(() => {
+    const socket = getClientSocket();
+    
+    if (!socket) return;
+
+    const handleInstanceReady = (data: InstanceStateData) => {
+      dispatch(globalSlice.updateInstanceState(data));
+    };
+
+    socket.on(InstanceEventEnum.INSTANCE_READY, handleInstanceReady);
+
+    return () => {
+      socket.off(InstanceEventEnum.INSTANCE_READY, handleInstanceReady);
+    };
+  }, [dispatch]);
 
   const tabs: TabItem[] = [
     { label: 'INSTANCE.TITLE', component, onClick: () => navigate('/instance') },

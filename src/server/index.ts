@@ -22,6 +22,7 @@ import { outgoingMessageHandler } from '@server/api/instance/helpers/outgoing-me
 import { updateMessageHandler } from '@server/api/instance/helpers/update-message.handler';
 import { messageSendingHandler } from '@server/api/instance/helpers/message-sending.handler';
 import { registerConversationSocketHandlers } from '@server/api/conversation/conversation-socket.handlers';
+import { getActiveInstanceState } from '@server/api/instance/helpers/get-active-instance-state';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -51,6 +52,7 @@ export const app = new ServerExpress({
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
   debugMode: true,
+  warmUpOnReady: true,
   onIncomingMessage: incomingMessageHandler,
   onOutgoingMessage: outgoingMessageHandler,
   onMessageUpdate: updateMessageHandler,
@@ -68,20 +70,13 @@ export const wa = new WhatsappWarmService({
   wa.onUpdate((state) => app.socket.broadcast<Partial<WAAppAuth<WAPersona>>>(InstanceEventEnum.INSTANCE_UPDATE, state));
   app.socket.onConnected<{ nextWarmAt: Date | null }>(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
 
-  app.socket.onConnected<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, () => {
-    const totalCount = wa.listInstanceNumbers({ activeFlag: false }).length;
-    const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
-    return { readyCount, totalCount };
-  });
+  app.socket.onConnected<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState);
 
   // Register conversation socket handlers
   registerConversationSocketHandlers(app.socket);
 
   wa.onReady(() => {
-    wa.startWarmingUp();
-    const totalCount = wa.listInstanceNumbers({ activeFlag: false }).length;
-    const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
-    app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, { readyCount, totalCount });
+    app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState());
   });
 
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));

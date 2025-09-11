@@ -1,4 +1,4 @@
-import type { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
+import { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
 import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type';
 import { WhatsappAiService } from './whatsapp.ai';
 import { WAInstance, WhatsappService } from './whatsapp.service';
@@ -8,10 +8,11 @@ import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
-type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean };
+type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean; warmUpOnReady?: boolean };
 
 export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly ai = new WhatsappAiService();
+  private readonly warmUpOnReady: boolean = false;
   private readonly isEmulation: boolean = false;
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
@@ -29,9 +30,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
+  private warmUpTimeout: NodeJS.Timeout | undefined;
   public nextWarmUp: Date | null = null;
 
-  constructor({ isEmulation, ...config }: Config<WAPersona>) {
+  constructor({ isEmulation, warmUpOnReady, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
     const onIncomingMessage: WAMessageIncomingCallback = (message, raw, messageId) => {
       const warmingFlag =
@@ -53,6 +55,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     super({ ...config, onIncomingMessage, onOutgoingMessage });
 
     this.isEmulation = !!isEmulation;
+    this.warmUpOnReady = !!warmUpOnReady;
   }
 
   private randomNextTimeWindow() {
@@ -578,7 +581,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
     } catch (error) {
       this.log('error', 'Error occurred', error);
-      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), 5 * 60 * 1000); // Retry in 5 minutes
+      // Don't retry automatically - let the scheduled warming handle it
     }
   }
 
@@ -589,6 +592,15 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.timeoutConversation.clear();
     this.activeConversation.clear();
     this.creatingConversation.clear(); // Clear conversations being created
+  }
+
+  onReady(callback: () => Promise<void> | void) {
+    super.onReady(() => {
+      clearTimeout(this.warmUpTimeout);
+      if (this.warmUpOnReady) this.warmUpTimeout = setTimeout(() => this.startWarmingUp(), 5 * 1000);
+
+      callback?.();
+    });
   }
 
   onSchedule(callback?: (nextWarmAt: Date | null) => unknown) {

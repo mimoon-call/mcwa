@@ -117,6 +117,7 @@
     "IP_ADDRESS": "IP Address",
     "SEARCH_BY_PHONE_NUMBER": "Search by phone number",
     "CONVERSATIONS": "Conversations",
+    "COUNTER": "Instances {{ready}} / {{total}}",
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     },

@@ -1,12 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-
-export interface GlobalState {
-  nextWarmAt: string | null;
-}
+import type { GlobalState, InstanceStateData } from './global.types';
 
 const initialState: GlobalState = {
   nextWarmAt: null,
+  activeList: [],
+  readyCount: 0,
+  totalCount: 0,
 };
 
 const globalSlice = createSlice({
@@ -22,10 +22,16 @@ const globalSlice = createSlice({
         state.nextWarmAt = action.payload;
       }
     },
+    updateInstanceState: (state, action: PayloadAction<InstanceStateData>) => {
+      state.activeList = action.payload.activeList;
+      state.readyCount = action.payload.readyCount;
+      state.totalCount = action.payload.totalCount;
+    },
   },
 });
 
 export default {
   reducer: globalSlice.reducer,
   setNextWarmAt: globalSlice.actions.setNextWarmAt,
+  updateInstanceState: globalSlice.actions.updateInstanceState,
 };

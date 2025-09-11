@@ -53,6 +53,9 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.chat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_ERROR]) !== null;
+  
+  // Get active instances from global store
+  const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
   // Load conversations on component mount
   useEffect(() => {
@@ -149,6 +152,9 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   }, [phoneNumber, withPhoneNumber, dispatch]);
 
   const selectedContact = conversations?.find((contact) => contact.phoneNumber === withPhoneNumber) || null;
+
+  // Check if current instance is connected
+  const isInstanceConnected = phoneNumber ? activeList.includes(phoneNumber) : false;
 
   const handleSendMessage = async (fromNumber: string, toNumber: string, text: string) => {
     if (!text.trim()) return;
@@ -257,7 +263,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       <ChatRightPanel
         selectedContact={selectedContact}
         messages={messages}
-        disabled={!searchMetadata?.isConnected}
+        disabled={!isInstanceConnected}
         loading={chatLoading}
         error={error}
         phoneNumber={phoneNumber}

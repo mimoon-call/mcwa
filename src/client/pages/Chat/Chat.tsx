@@ -55,6 +55,9 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_ERROR]) !== null;
   const selectedContact = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SELECTED_CONTACT]);
+  
+  // Get active instances from global store
+  const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
   // Load conversations on component mount
   useEffect(() => {
@@ -270,6 +273,9 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     },
   ];
 
+  // Check if selected contact's instance is connected
+  const isInstanceConnected = selectedContact ? activeList.includes(selectedContact.instanceNumber) : false;
+
   return (
     <div className={cn('flex h-full bg-gray-100', className)}>
       <ChatLeftPanel
@@ -292,7 +298,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         menuItems={actions}
         selectedContact={selectedContact}
         messages={messages}
-        disabled={false}
+        disabled={!isInstanceConnected}
         loading={chatLoading}
         error={error}
         phoneNumber={selectedContact?.instanceNumber}

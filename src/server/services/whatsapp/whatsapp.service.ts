@@ -10,7 +10,6 @@ import type {
 } from './whatsapp-instance.type';
 import type { WAServiceConfig } from './whatsapp.type';
 import { WhatsappInstance } from './whatsapp-instance.service';
-import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
 
 // Re-export types for convenience
@@ -46,9 +45,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
   private readonly updateCallback: WAServiceConfig<T>['onUpdate'][] = [];
   private registeredCallback?: WAServiceConfig<T>['onRegistered'];
   private readyCallback?: () => Promise<void> | void;
-
-  // Timeout
-  private readyTimeout: NodeJS.Timeout | undefined = undefined;
 
   // Constants
   private readonly MAX_DECRYPTION_RETRIES: number = 3;
@@ -358,17 +354,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
   }
 
   onReady(callback: () => Promise<void> | void) {
-    this.readyCallback = () => {
-      clearTimeout(this.readyTimeout);
-
-      this.readyTimeout = setTimeout(() => {
-        const allInstances = this.getAllInstances({ activeFlag: false });
-        const allActiveInstances = this.getAllInstances({ activeFlag: true });
-
-        this.log('debug', `Active instances: ${allActiveInstances.length}/${allInstances.length}`);
-        callback?.();
-      }, 5000);
-    };
+    this.readyCallback = () => callback?.();
   }
 
   onRegister(callback: (phoneNumber: string) => Promise<void> | void) {

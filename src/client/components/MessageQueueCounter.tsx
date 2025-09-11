@@ -32,7 +32,12 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     };
   }, [dispatch]);
 
-  return <div className={cn('px-2', className)}>{t('QUEUE.MESSAGE_QUEUE_PROGRESS', { current, total })}</div>;
+  return (
+    <div className={cn('px-2 flex gap-2', className)}>
+      <span>{t('QUEUE.TITLE')}</span>
+      <span dir="ltr">{[current, total].join(' / ')}</span>
+    </div>
+  );
 };
 
 export default MessageQueueCounter;
