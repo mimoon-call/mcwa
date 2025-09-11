@@ -1,6 +1,6 @@
 import type { AppDispatch, RootState } from './store';
-import React, { useEffect } from 'react';
-import { useNavigate, useRoutes } from 'react-router-dom';
+import React, { useEffect, useCallback } from 'react';
+import { useRoutes } from 'react-router-dom';
 import router from '@client/router';
 import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,8 +12,6 @@ import { StoreEnum } from '@client/store/store.enum';
 import '@client/shared/prototype';
 import { TinyEmitter } from 'tiny-emitter';
 import { EscapeService } from '@services/escape-service';
-import Tabs from '@components/Tabs/Tabs';
-import type { TabItem } from '@components/Tabs/Tabs.type';
 import getClientSocket from '@client/shared/helpers/get-client-socket.helper';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import type { InstanceStateData } from '@client/store/global.types';
@@ -26,9 +24,8 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   const dispatch = useDispatch<AppDispatch>();
   const { [REFRESH_TOKEN]: refreshToken } = authSlice;
   const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.auth]);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  const handleAuthAndRefresh = useCallback(() => {
     if (data?.[StoreEnum.auth]) {
       dispatch(authSlice[SET_AUTH_STATE](data[StoreEnum.auth]));
     }
@@ -36,10 +33,14 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
     dispatch(refreshToken());
   }, [data, dispatch]);
 
+  useEffect(() => {
+    handleAuthAndRefresh();
+  }, [handleAuthAndRefresh]);
+
   // Socket watcher for InstanceEventEnum.INSTANCE_READY and update global state (activeList, readyCount, totalCount)
   useEffect(() => {
     const socket = getClientSocket();
-    
+
     if (!socket) return;
 
     const handleInstanceReady = (data: InstanceStateData) => {
@@ -53,11 +54,5 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
     };
   }, [dispatch]);
 
-  const tabs: TabItem[] = [
-    { label: 'INSTANCE.TITLE', component, onClick: () => navigate('/instance') },
-    { label: 'QUEUE.TITLE', component, onClick: () => navigate('/queue') },
-    { label: 'CHAT.TITLE', component, onClick: () => navigate('/chat') },
-  ];
-
-  return !isAuthenticated ? <LoginForm /> : <Tabs items={tabs} />;
+  return !isAuthenticated ? <LoginForm /> : component;
 }

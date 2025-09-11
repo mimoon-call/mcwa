@@ -22,7 +22,6 @@ export let store: ReturnType<typeof createStore>;
 
   // Use createRoot instead of hydrateRoot to avoid hydration issues
   const root = createRoot(document.getElementById('root')!);
-
   root.render(
     <Provider store={store}>
       <BrowserRouter>

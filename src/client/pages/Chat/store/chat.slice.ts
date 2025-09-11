@@ -120,7 +120,6 @@ const searchAllConversations = createAsyncThunk(
         page: { ...currentPagination, ...(page || {}) },
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
       };
-
       const result = await Http.post<SearchAllConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
 
       return {

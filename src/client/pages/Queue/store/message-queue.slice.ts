@@ -56,7 +56,6 @@ const searchMessageQueue = createAsyncThunk(
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.queue]?.[MESSAGE_QUEUE_PAGINATION] || initialState[MESSAGE_QUEUE_PAGINATION];
       const data = { page: { ...currentPagination, ...(payload?.page || {}) } };
-
       return await Http.post<SearchMessageQueueRes, SearchMessageQueueReq>(`/${StoreEnum.queue}/${SEARCH_MESSAGE_QUEUE}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
