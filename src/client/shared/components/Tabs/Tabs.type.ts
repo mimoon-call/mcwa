@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import type { ClassValue } from 'clsx';
 
 export type TabItem = {
@@ -6,8 +6,7 @@ export type TabItem = {
   hidden?: boolean;
   validateCallback?: () => boolean | Promise<boolean>;
 } & (
-  | { component: ReactNode; onClick?: never }
-  | { component?: never; onClick: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
+  | { component: ReactNode; onClick?: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
   | { component?: ReactNode; onClick: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
 );
 
@@ -20,4 +19,5 @@ export type TabProps = {
   onTabChange?: (activeTab: string, tabIndex: number) => unknown | Promise<unknown>;
   tabFocus?: boolean;
   fitHeight?: boolean;
+  children?: React.ReactNode;
 };

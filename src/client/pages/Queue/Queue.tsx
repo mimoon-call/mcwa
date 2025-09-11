@@ -105,10 +105,8 @@ const Queue = () => {
   };
 
   useEffect(() => {
-    if (!queueList) {
-      dispatch(searchMessageQueue({ page: {} }));
-    }
-  }, [dispatch, queueList]);
+    dispatch(searchMessageQueue({ page: {} }));
+  }, [dispatch]);
 
   useEffect(() => {
     const socket = getClientSocket();

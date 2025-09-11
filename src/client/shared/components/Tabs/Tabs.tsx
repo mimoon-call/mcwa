@@ -7,7 +7,7 @@ import type { TabProps } from '@components/Tabs/Tabs.type';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
 
-export default function Tabs({ className, panelClassName, fitHeight, ...props }: TabProps) {
+export default function Tabs({ className, panelClassName, fitHeight, children, ...props }: TabProps) {
   if (!props.items?.length) {
     return null;
   }
@@ -60,18 +60,22 @@ export default function Tabs({ className, panelClassName, fitHeight, ...props }:
       </div>
 
       <div className="flex-1">
-        {tabs.map((tab, i) => (
-          <div
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            className={cn(!fitHeight && 'h-full')}
-            key={tab.label}
-            style={{ display: tab.label === activeTab?.label ? 'block' : 'none' }}
-          >
-            {tab.component}
-          </div>
-        ))}
+        {tabs
+          .filter(({ component }) => !!component)
+          .map((tab, i) => (
+            <div
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              className={cn(!fitHeight && 'h-full')}
+              key={tab.label}
+              style={{ display: tab.label === activeTab?.label ? 'block' : 'none' }}
+            >
+              {tab.component}
+            </div>
+          ))}
+
+        {children}
       </div>
     </div>
   );

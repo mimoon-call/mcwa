@@ -1,6 +1,6 @@
 import type { AppDispatch, RootState } from './store';
 import React, { useEffect, useCallback } from 'react';
-import { useRoutes } from 'react-router-dom';
+import { useNavigate, useRoutes } from 'react-router-dom';
 import router from '@client/router';
 import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,6 +15,8 @@ import { EscapeService } from '@services/escape-service';
 import getClientSocket from '@client/shared/helpers/get-client-socket.helper';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import type { InstanceStateData } from '@client/store/global.types';
+import Tabs from '@components/Tabs/Tabs';
+import type { TabItem } from '@components/Tabs/Tabs.type';
 
 export const emitter = new TinyEmitter();
 export const esc = new EscapeService();
@@ -24,6 +26,7 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   const dispatch = useDispatch<AppDispatch>();
   const { [REFRESH_TOKEN]: refreshToken } = authSlice;
   const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.auth]);
+  const navigate = useNavigate();
 
   const handleAuthAndRefresh = useCallback(() => {
     if (data?.[StoreEnum.auth]) {
@@ -54,5 +57,11 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
     };
   }, [dispatch]);
 
-  return !isAuthenticated ? <LoginForm /> : component;
+  const tabs: TabItem[] = [
+    { label: 'INSTANCE.TITLE', onClick: () => navigate('/instance') },
+    { label: 'QUEUE.TITLE', onClick: () => navigate('/queue') },
+    { label: 'CHAT.TITLE', onClick: () => navigate('/chat') },
+  ];
+
+  return !isAuthenticated ? <LoginForm /> : <Tabs items={tabs}>{component}</Tabs>;
 }
