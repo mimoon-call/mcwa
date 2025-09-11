@@ -101,8 +101,8 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
       )}
       {/* Message Input - Always visible at bottom */}
       {!phoneNumber || !withPhoneNumber ? null : (
-        <div className="bg-white ps-4 pt-2 pb-4 flex-shrink-0 border-t">
-          <div className="flex justify-between gap-2 items-center space-x-3">
+        <div className="bg-white px-4 pt-2 pb-4 flex-shrink-0 border-t">
+          <div className="flex gap-2 items-center">
             <TextField
               ref={refInput}
               className="flex-grow"
@@ -118,9 +118,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
               placeholder={t('GENERAL.ENTER_MESSAGE')}
             />
 
-            <div className="flex items-center">
-              <Icon className="hover:text-blue-500" name="svg:paper-plane" size="1.75rem" onClick={!disabled && !isSending ? send : undefined} />
-            </div>
+            <Icon className="hover:text-blue-500" name="svg:paper-plane" size="1.75rem" onClick={!disabled && !isSending ? send : undefined} />
           </div>
         </div>
       )}
