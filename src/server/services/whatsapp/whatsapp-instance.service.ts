@@ -782,7 +782,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Create a more descriptive reason that includes the error code
         const disconnectReason = code ? `${code}: ${reason}` : reason;
-        this.update({ statusCode: code, errorMessage: reason } as WAAppAuth<T>);
+        this.update({ statusCode: code, errorMessage: reason, lastErrorAt: getLocalTime() } as WAAppAuth<T>);
         this.log('info', `Disconnected (${disconnectReason})`);
 
         // Log specific error types for better debugging
@@ -1304,7 +1304,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
           // Check if socket is healthy and update status code if needed
           if (this.connected) {
-            await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+            await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
           }
         }
       } catch (error) {
@@ -1803,7 +1803,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         onSuccess?.(record, raw, deliveryStatus || undefined);
 
-        return { fromNumber: this.phoneNumber, toNumber, messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
+        return {
+          fromNumber: this.phoneNumber,
+          toNumber,
+          messageId: raw!.key.id,
+          sentAt: getLocalTime(),
+          ...raw,
+          ...(deliveryStatus || {}),
+        } as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 
@@ -1815,21 +1822,33 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (errorCode === 403 || errorMessage.includes('Forbidden')) {
           this.log('error', `🚫 User ${toNumber} has blocked this number`);
           await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
-          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
           throw new Error(`Message blocked: User has blocked this number`);
         }
 
         if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
           this.log('error', `🚫 Authentication failed - account may be blocked`);
           await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
-          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
           throw new Error(`Message blocked: Authentication failed`);
         }
 
         if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
           this.log('error', `🚫 Rate limited - too many messages`);
           await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-          this.update({ outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1, errorMessage } as WAAppAuth<T>);
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
           throw new Error(`Message blocked: Rate limited`);
         }
 

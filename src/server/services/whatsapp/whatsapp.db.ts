@@ -37,6 +37,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     creds: { type: Schema.Types.Mixed, required: false },
     statusCode: { type: Number, required: false },
     errorMessage: { type: String, required: false },
+    lastErrorAt: { type: Date },
     blockedCount: { type: Number, required: true, default: 0 }, // Lifetime total - never reset
     outgoingErrorCount: { type: Number, default: 0 }, // Lifetime total - never reset
     outgoingReadCount: { type: Number, default: 0 }, // Lifetime total - never reset

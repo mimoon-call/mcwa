@@ -24,6 +24,7 @@ export type WAAppAuth<T extends object> = T & {
   creds: any;
   statusCode?: number;
   errorMessage?: string;
+  lastErrorAt?: Date | null;
   isActive?: boolean;
   blockedCount: number;
   outgoingMessageCount: number; // Lifetime total - never reset

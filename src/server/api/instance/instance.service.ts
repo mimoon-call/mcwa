@@ -42,6 +42,7 @@ export const instanceService = {
         incomingMessageCount: 1,
         statusCode: 1,
         errorMessage: 1,
+        lastErrorAt: 1,
         warmUpDay: 1,
         dailyWarmUpCount: { $cond: [{ $eq: ['$lastWarmedUpDay', today] }, '$dailyWarmUpCount', 0] },
         dailyWarmConversationCount: { $cond: [{ $eq: ['$lastWarmedUpDay', today] }, '$dailyWarmConversationCount', 0] },
