@@ -18,20 +18,59 @@ type ChatLeftPanelProps<T = object> = {
   className?: string;
 };
 
-const ChatLeftPanel = <T,>({
-  items,
-  selectedItem,
-  loading,
-  error,
-  searchValue = '',
-  onItemSelect,
-  onSearch,
-  headerComponent,
-  itemComponent,
-  getItemKey,
-  isItemSelected,
-  className,
-}: ChatLeftPanelProps<T>) => {
+type ListProps<T> = Pick<
+  ChatLeftPanelProps<T>,
+  'loading' | 'items' | 'error' | 'isItemSelected' | 'selectedItem' | 'onItemSelect' | 'getItemKey' | 'itemComponent'
+>;
+
+const List = <T extends object>({ loading, items, error, isItemSelected, selectedItem, onItemSelect, getItemKey, itemComponent }: ListProps<T>) => {
+  const { t } = useTranslation();
+
+  const renderItem = (item: T) => {
+    const isSelected = isItemSelected(item, selectedItem || null);
+    const onClick = () => onItemSelect(item);
+
+    if (typeof itemComponent === 'function') {
+      return itemComponent(item, isSelected, onClick);
+    }
+
+    return itemComponent;
+  };
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {loading && (!items || items.length === 0) ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-gray-500">{t('GENERAL.LOADING')}</div>
+        </div>
+      ) : error ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-red-500">{t('GENERAL.ERROR')}</div>
+        </div>
+      ) : !items || items.length === 0 ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="text-gray-500">{t('GENERAL.EMPTY')}</div>
+        </div>
+      ) : (
+        <>
+          {items.map((item) => (
+            <div key={getItemKey(item)}>{renderItem(item)}</div>
+          ))}
+
+          {/* Loading indicator for infinite scroll */}
+          {loading && items && items.length > 0 && (
+            <div className="flex items-center justify-center p-4">
+              <div className="text-gray-500 text-sm">{t('GENERAL.LOADING_MORE')}</div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
+  const { searchValue = '', onSearch, headerComponent, className, ...listProps } = props;
   const { t } = useTranslation();
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
@@ -53,17 +92,6 @@ const ChatLeftPanel = <T,>({
     setLocalSearchValue(value);
   }, []);
 
-  const renderItem = (item: T) => {
-    const isSelected = isItemSelected(item, selectedItem || null);
-    const onClick = () => onItemSelect(item);
-
-    if (typeof itemComponent === 'function') {
-      return itemComponent(item, isSelected, onClick);
-    }
-
-    return itemComponent;
-  };
-
   return (
     <div className={cn('w-1/4 min-w-[400px] bg-white border-e border-gray-200 flex flex-col', className)}>
       {/* Header */}
@@ -82,34 +110,7 @@ const ChatLeftPanel = <T,>({
       </div>
 
       {/* Items List */}
-      <div className="flex-1 overflow-y-auto">
-        {loading && (!items || items.length === 0) ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">{t('GENERAL.LOADING')}</div>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-red-500">{t('GENERAL.ERROR')}</div>
-          </div>
-        ) : !items || items.length === 0 ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="text-gray-500">{t('GENERAL.EMPTY')}</div>
-          </div>
-        ) : (
-          <>
-            {items.map((item) => (
-              <div key={getItemKey(item)}>{renderItem(item)}</div>
-            ))}
-
-            {/* Loading indicator for infinite scroll */}
-            {loading && items && items.length > 0 && (
-              <div className="flex items-center justify-center p-4">
-                <div className="text-gray-500 text-sm">{t('GENERAL.LOADING_MORE')}</div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      <List {...listProps} />
     </div>
   );
 };

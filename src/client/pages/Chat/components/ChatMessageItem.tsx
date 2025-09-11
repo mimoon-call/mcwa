@@ -3,10 +3,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
-import dayjs from '@client/locale/dayjs';
-import { DateFormat } from '@client-constants';
 import { MessageStatusEnum } from '../store/chat.types';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
+import { formatTime } from '../helpers';
 
 type MessageItemProps = {
   message: ChatMessage;
@@ -18,29 +17,6 @@ type MessageItemProps = {
 
 const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className }) => {
   const { t } = useTranslation();
-
-  const formatTime = (dateString: string) => {
-    const date = dayjs(dateString);
-    const now = dayjs();
-
-    // If showFullDateTime is true, always show full date and time
-    if (showFullDateTime) {
-      return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
-    }
-
-    // If the date is today, show only time
-    if (date.isSame(now, 'day')) {
-      return date.format(DateFormat.TIME_FORMAT);
-    }
-
-    // If the date is yesterday, show "Yesterday" with time
-    if (date.isSame(now.subtract(1, 'day'), 'day')) {
-      return `${t('GENERAL.YESTERDAY')} ${date.format(DateFormat.TIME_FORMAT)}`;
-    }
-
-    // For all other dates (not today or yesterday), show full date and time
-    return date.format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT);
-  };
 
   const formatMessageText = (text: string | null | undefined) => {
     // Handle null, undefined, or empty text
@@ -101,7 +77,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
                   })()}
                 </div>
               )}
-              <div className="text-xs text-gray-500">{formatTime(message.createdAt)}</div>
+              <div className="text-xs text-gray-500">{formatTime(message.createdAt, t, showFullDateTime)}</div>
             </div>
           </div>
         </div>
