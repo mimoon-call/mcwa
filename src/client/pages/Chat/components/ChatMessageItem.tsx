@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../store/chat.types';
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
@@ -7,6 +7,7 @@ import { MessageStatusEnum } from '../store/chat.enum';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { formatTime } from '../helpers';
 import { useTooltip } from '@hooks';
+import type { IconName } from '@components/Icon/Icon.type';
 
 type MessageItemProps = {
   message: ChatMessage;
@@ -55,11 +56,12 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
   const retryElement = (() => {
     if (!onRetry || !message.tempId) return null;
 
-    const retryRef = useTooltip<HTMLDivElement>({ text: 'GENERAL.RETRY' });
+    const retryRef = useTooltip<HTMLDivElement>({ text: t('GENERAL.RETRY') });
+    const [iconName, setIconName] = useState<IconName>('svg:warning');
 
     return (
-      <div ref={retryRef} className="pt-0.5 px-1">
-        <Icon name="svg:warning" size="0.75rem" className="text-red-600" onClick={() => onRetry(message.tempId!)} />
+      <div ref={retryRef} className="pt-0.5 px-1" onMouseOver={() => setIconName('svg:sync')} onMouseLeave={() => setIconName('svg:warning')}>
+        <Icon name={iconName} size="0.75rem" className="text-red-600" onClick={() => onRetry(message.tempId!)} />
       </div>
     );
   })();
