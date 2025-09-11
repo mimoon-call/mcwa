@@ -8,6 +8,7 @@ import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/re
 import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
+import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 
@@ -55,7 +56,10 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
 export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
   const { fromNumber, toNumber, messageId, text, sentAt } = await (async () => {
     const message = await WhatsAppMessage.findOne({ _id: id });
+
     if (!message) return {};
+
+    sendMessageToSocketRoom(message);
 
     // Broadcast new message event
     const messageData = {
@@ -70,9 +74,11 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
       messageId: message.messageId,
     };
 
-    app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
+    // Send message to specific conversation room instead of broadcasting
+    const conversationKey = `conversation:${message.fromNumber}:${message.toNumber}`;
+    app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, messageData);
 
-    // Broadcast new conversation event with conversation details
+    // Send conversation update to specific conversation room
     const conversationData = {
       name: message.raw?.pushName || message.toNumber,
       phoneNumber: message.toNumber,
@@ -86,7 +92,7 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
       reason: message.reason,
     };
 
-    app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
+    app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_CONVERSATION, conversationData);
 
     const startMessage = await MessageQueueDb.findOne(
       { phoneNumber: message.fromNumber, instanceNumber: message.toNumber, sentAt: { $exists: true } },
@@ -179,6 +185,17 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
           await handleAiInterest(leadNumber, text, ai);
 
           if (ai.suggestedReply) {
+            // Check if there are active members in the conversation room
+            const conversationKey = `conversation:${yourNumber}:${leadNumber}`;
+            const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);
+
+            if (hasActiveMembers) {
+              console.log(`[Auto-reply skipped] Conversation room has active members: ${conversationKey} - Human is actively viewing the chat`);
+              return; // Skip auto-reply if someone is actively viewing the chat
+            }
+
+            console.log(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
+
             try {
               const sendResult = await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply, {
                 trackDelivery: true,
@@ -198,7 +215,8 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
                 messageId: sendResult.key!.id,
               };
 
-              app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, sentMessageData);
+              // Send message to specific conversation room instead of broadcasting
+              app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, sentMessageData);
             } catch (error) {
               console.error('sendMessage:error', error);
             }

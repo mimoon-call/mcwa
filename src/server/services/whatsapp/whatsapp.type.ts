@@ -1,5 +1,6 @@
 import type { Language } from './whatsapp.ai';
-import type { WAAppAuth, WAInstanceConfig } from './whatsapp-instance.type';
+import { WAAppAuth, WAInstanceConfig, WAMessage, WAMessageDelivery, WAMessageIncomingRaw, WAMessageOutgoingRaw } from './whatsapp-instance.type';
+import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 
 export type WAPersona = {
   phoneNumber: string;
@@ -23,3 +24,8 @@ export type WAServiceConfig<T extends object> = Omit<WAInstanceConfig<T>, 'tempD
 export type WAConversation = { fromNumber: string; toNumber: string; text: string; sentAt?: Date };
 
 export type WAReadyEvent = { readyCount: number; totalCount: number };
+
+export type MessageDocument = WAMessage & {
+  raw: WAMessageIncomingRaw | WAMessageOutgoingRaw;
+  createdAt: Date;
+} & Partial<InterestResult & WAMessageDelivery>;

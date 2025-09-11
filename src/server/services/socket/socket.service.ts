@@ -116,6 +116,18 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     return false;
   }
 
+  sendToRoom<S extends object>(roomKey: string, event: string, payload: S): boolean {
+    const targetRoom = this.namedRoom(roomKey);
+    this.io.to(targetRoom).emit(event, payload);
+    return true;
+  }
+
+  hasRoomMembers(roomKey: string): boolean {
+    const targetRoom = this.namedRoom(roomKey);
+    const room = this.io.sockets.adapter.rooms.get(targetRoom);
+    return !!(room && room.size > 0);
+  }
+
   // Send message to all active connections with except optional
   broadcast<S extends object>(event: string, payload: S, excludeUserIds?: string[]): void {
     if (excludeUserIds?.length) {
@@ -154,5 +166,17 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     }
 
     this.onConnectedCallbacks.push([event, callback]);
+  }
+
+  // Method to register custom event handlers
+  registerHandler(event: string, handler: (socket: SocketManage<Token>, ...args: any[]) => void): void {
+    this.io.on('connection', (socket: SocketManage<Token>) => {
+      socket.on(event, (...args) => handler(socket, ...args));
+    });
+    
+    // Also register for existing connections
+    this.io.sockets.sockets.forEach((socket: SocketManage<Token>) => {
+      socket.on(event, (...args) => handler(socket, ...args));
+    });
   }
 }

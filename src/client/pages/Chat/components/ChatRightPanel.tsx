@@ -19,10 +19,10 @@ type RightPanelProps = {
   error: boolean;
   phoneNumber?: string;
   withPhoneNumber?: string;
-  hasMore: boolean;
   className?: string;
   headerComponent?: React.ReactNode;
   onSendMessage: (phoneNumber: string, withPhoneNumber: string, text: string) => void;
+  onRetry?: (tempId: string) => void;
 };
 
 const ChatRightPanel: React.FC<RightPanelProps> = ({
@@ -33,9 +33,9 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   error,
   phoneNumber,
   withPhoneNumber,
-  hasMore,
   headerComponent,
   onSendMessage,
+  onRetry,
   className,
   menuItems,
 }) => {
@@ -85,7 +85,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
               error={error}
               phoneNumber={phoneNumber}
               withPhoneNumber={withPhoneNumber}
-              hasMore={hasMore}
+              onRetry={onRetry}
             />
           </div>
         </>

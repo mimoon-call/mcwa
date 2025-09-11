@@ -21,6 +21,7 @@ import { incomingMessageHandler } from '@server/api/instance/helpers/incoming-me
 import { outgoingMessageHandler } from '@server/api/instance/helpers/outgoing-message.handler';
 import { updateMessageHandler } from '@server/api/instance/helpers/update-message.handler';
 import { messageSendingHandler } from '@server/api/instance/helpers/message-sending.handler';
+import { registerConversationSocketHandlers } from '@server/api/conversation/conversation-socket.handlers';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -72,6 +73,9 @@ export const wa = new WhatsappWarmService({
     const readyCount = wa.listInstanceNumbers({ activeFlag: true, onlyConnectedFlag: true }).length;
     return { readyCount, totalCount };
   });
+
+  // Register conversation socket handlers
+  registerConversationSocketHandlers(app.socket);
 
   wa.onReady(() => {
     wa.startWarmingUp();

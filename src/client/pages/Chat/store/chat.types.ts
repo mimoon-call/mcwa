@@ -2,14 +2,8 @@
 import type { EntityList } from '@models/entity-list';
 import type { Pagination } from '@models/pagination';
 
-export enum MessageStatusEnum {
-  RECEIVED = 'RECEIVED',
-  PENDING = 'PENDING',
-  DELIVERED = 'DELIVERED',
-  READ = 'READ',
-  PLAYED = 'PLAYED',
-  ERROR = 'ERROR',
-}
+// Re-export enum for convenience
+export { MessageStatusEnum } from './chat.enum';
 
 export type GlobalChatContact = {
   name: string;
@@ -36,6 +30,9 @@ export type ChatMessage = {
   playedAt?: string;
   status?: string;
   messageId?: string;
+  isOptimistic?: boolean; // Flag to identify optimistic messages
+  tempId?: string; // Temporary ID for optimistic messages
+  errorMessage?: string; // Error message for failed messages
 };
 
 export type SearchAllConversationsReq = {
@@ -60,3 +57,8 @@ export type DeleteConversationReq = { fromNumber: string; toNumber: string };
 export type DeleteConversationRes = { returnCode: number; deletedMessagesCount: number; deletedQueueCount: number };
 
 export type RemoveConversationReq = { fromNumber: string; toNumber: string };
+
+export type ConversationPairItem = Omit<GlobalChatContact, 'instanceNumber'> & {
+  instanceNumber: string | null;
+  instanceConnected: boolean;
+};

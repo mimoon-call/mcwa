@@ -3,9 +3,10 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
-import { MessageStatusEnum } from '../store/chat.types';
+import { MessageStatusEnum } from '../store/chat.enum';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { formatTime } from '../helpers';
+import { useTooltip } from '@hooks';
 
 type MessageItemProps = {
   message: ChatMessage;
@@ -13,9 +14,10 @@ type MessageItemProps = {
   showDate: boolean;
   showFullDateTime?: boolean;
   className?: string;
+  onRetry?: (tempId: string) => void;
 };
 
-const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className }) => {
+const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className, onRetry }) => {
   const { t } = useTranslation();
 
   const formatMessageText = (text: string | null | undefined) => {
@@ -50,6 +52,18 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     return ['text-green-500', 'text-green-500'];
   };
 
+  const retryElement = (() => {
+    if (!onRetry || !message.tempId) return null;
+
+    const retryRef = useTooltip<HTMLDivElement>({ text: 'GENERAL.RETRY' });
+
+    return (
+      <div ref={retryRef} className="pt-0.5 px-1">
+        <Icon name="svg:warning" size="0.75rem" className="text-red-600" onClick={() => onRetry(message.tempId!)} />
+      </div>
+    );
+  })();
+
   return !message.text ? null : (
     <div className={cn('', className)}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
@@ -65,16 +79,18 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
               {isFromUser && (
                 <div className="flex space-x-1">
-                  {(() => {
-                    const checkStyle = getCheckmarkStyle(message.status);
+                  {message.status === MessageStatusEnum.ERROR && message.tempId && onRetry
+                    ? retryElement
+                    : (() => {
+                        const checkStyle = getCheckmarkStyle(message.status);
 
-                    return (
-                      <div className="pe-1 flex">
-                        <Icon name="svg:check" size="0.625rem" className={checkStyle[0]} />
-                        {checkStyle[1] && <Icon name="svg:check" size="0.625rem" className={cn(checkStyle[1], 'ltr:-ml-1.5 rtl:-mr-1.5')} />}
-                      </div>
-                    );
-                  })()}
+                        return (
+                          <div className="pe-1 flex">
+                            <Icon name="svg:check" size="0.625rem" className={checkStyle[0]} />
+                            {checkStyle[1] && <Icon name="svg:check" size="0.625rem" className={cn(checkStyle[1], 'ltr:-ml-1.5 rtl:-mr-1.5')} />}
+                          </div>
+                        );
+                      })()}
                 </div>
               )}
               <div className="text-xs text-gray-500">{formatTime(message.createdAt, t, showFullDateTime)}</div>

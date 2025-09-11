@@ -385,11 +385,14 @@ export const conversationService = {
       messageId: result.messageId,
     };
 
-    app.socket.broadcast(ConversationEventEnum.NEW_MESSAGE, messageData);
+    // Send message to specific conversation room instead of broadcasting
+    const conversationKey = `conversation:${fromNumber}:${toNumber}`;
+    app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, messageData);
+    
     const message = await WhatsAppMessage.findOne({ fromNumber, toNumber, messageId: result.messageId });
 
     if (message) {
-      // Broadcast new conversation event
+      // Send conversation update to specific conversation room
       const conversationData = {
         name: message.raw?.pushName || toNumber,
         phoneNumber: toNumber,
@@ -405,7 +408,7 @@ export const conversationService = {
         instanceConnected: true,
       };
 
-      app.socket.broadcast(ConversationEventEnum.NEW_CONVERSATION, conversationData);
+      app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_CONVERSATION, conversationData);
     }
 
     return { returnCode: 0 };
@@ -440,4 +443,5 @@ export const conversationService = {
       deletedQueueCount,
     };
   },
+
 };

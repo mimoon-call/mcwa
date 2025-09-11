@@ -1,17 +1,8 @@
-import {
-  WAAppAuth,
-  WAAppKey,
-  WAMessage,
-  WAMessageIncomingRaw,
-  WAMessageOutgoingRaw,
-  WAMessageDelivery,
-  WAUnsubscribe,
-} from './whatsapp-instance.type';
-import type { WAPersona } from './whatsapp.type';
+import type { WAAppAuth, WAAppKey, WAUnsubscribe } from './whatsapp-instance.type';
+import type { MessageDocument, WAPersona } from './whatsapp.type';
 import { Schema } from 'mongoose';
 import getLocalTime from '../../helpers/get-local-time';
 import { MongoService } from '../database/mongo.service';
-import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { LeadActionEnum, LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 
@@ -94,12 +85,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
   }
 );
 
-export const WhatsAppMessage = new MongoService<
-  WAMessage & {
-    raw: WAMessageIncomingRaw | WAMessageOutgoingRaw;
-    createdAt: Date;
-  } & Partial<InterestResult & WAMessageDelivery>
->(
+export const WhatsAppMessage = new MongoService<MessageDocument>(
   'WhatsAppMessage',
   {
     fromNumber: { type: String, required: true },

@@ -31,6 +31,9 @@ import {
   CHAT_LOAD_MORE_CONVERSATIONS,
   CHAT_DELETE_CONVERSATION,
   CHAT_REMOVE_CONVERSATION,
+  CHAT_ADD_OPTIMISTIC_MESSAGE,
+  CHAT_REPLACE_OPTIMISTIC_MESSAGE,
+  CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
   SEARCH_LOADING,
 } from './chat.constants';
 import type {
@@ -244,31 +247,46 @@ const globalChatSlice = createSlice({
     },
     addIncomingMessage: (state, action) => {
       const newMessage = action.payload as ChatMessage;
-      const selectedContact = state[CHAT_SELECTED_CONTACT];
       const existingMessages = state[CHAT_MESSAGES_DATA] || [];
 
-      // First check if this message belongs to the currently active chat
-      if (!selectedContact) return;
-
-      const isActiveChat =
-        (newMessage.fromNumber === selectedContact.instanceNumber && newMessage.toNumber === selectedContact.phoneNumber) ||
-        (newMessage.fromNumber === selectedContact.phoneNumber && newMessage.toNumber === selectedContact.instanceNumber);
-
-      if (!isActiveChat) return;
-
-      // Check if message already exists by messageId
+      // If message has messageId, try to update existing or replace optimistic
       if (newMessage.messageId) {
-        const existingMessageIndex = existingMessages.findIndex((msg) => msg.messageId === newMessage.messageId);
+        const existingIndex = existingMessages.findIndex((msg) => msg.messageId === newMessage.messageId);
 
-        if (existingMessageIndex !== -1) {
-          // Update existing message with new data
-          state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === existingMessageIndex ? { ...msg, ...newMessage } : msg));
+        if (existingIndex !== -1) {
+          // Update existing message
+          const existingMsg = state[CHAT_MESSAGES_DATA]?.[existingIndex];
+          if (existingMsg) {
+            Object.assign(existingMsg, newMessage);
+            if (existingMsg.isOptimistic) {
+              existingMsg.isOptimistic = false;
+            }
+          }
         } else {
-          // Add new message to the end of the array
-          state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
+          // Try to replace optimistic message
+          const optimisticIndex = existingMessages.findIndex((msg) => 
+            msg.isOptimistic && 
+            msg.fromNumber === newMessage.fromNumber && 
+            msg.toNumber === newMessage.toNumber && 
+            msg.text === newMessage.text &&
+            Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 30000
+          );
+
+          if (optimisticIndex !== -1) {
+            // Replace optimistic message
+            const optimisticMsg = state[CHAT_MESSAGES_DATA]?.[optimisticIndex];
+            if (optimisticMsg) {
+              Object.assign(optimisticMsg, newMessage);
+              optimisticMsg.isOptimistic = false;
+              optimisticMsg.tempId = undefined;
+            }
+          } else {
+            // Add new message
+            state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
+          }
         }
       } else {
-        // If no messageId, just add as new message
+        // Add message without messageId
         state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
       }
 
@@ -277,8 +295,8 @@ const globalChatSlice = createSlice({
         const conversations = state[CHAT_SEARCH_DATA] || [];
         const conversationIndex = conversations.findIndex(
           (conv) =>
-            (conv.instanceNumber === selectedContact.instanceNumber && conv.phoneNumber === selectedContact.phoneNumber) ||
-            (conv.instanceNumber === selectedContact.phoneNumber && conv.phoneNumber === selectedContact.instanceNumber)
+            (conv.instanceNumber === newMessage.fromNumber && conv.phoneNumber === newMessage.toNumber) ||
+            (conv.instanceNumber === newMessage.toNumber && conv.phoneNumber === newMessage.fromNumber)
         );
 
         if (conversationIndex !== -1) {
@@ -360,6 +378,48 @@ const globalChatSlice = createSlice({
             (conv.instanceNumber === toNumber && conv.phoneNumber === fromNumber)
           )
       );
+    },
+    addOptimisticMessage: (state, action) => {
+      const optimisticMessage = action.payload as ChatMessage;
+      
+      // Add optimistic message to the end of the array using direct mutation
+      if (!state[CHAT_MESSAGES_DATA]) {
+        state[CHAT_MESSAGES_DATA] = [];
+      }
+      state[CHAT_MESSAGES_DATA].push(optimisticMessage);
+    },
+    replaceOptimisticMessage: (state, action) => {
+      const { tempId, realMessage } = action.payload as { tempId: string; realMessage: ChatMessage };
+      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+
+      // Find and replace the optimistic message with the real message
+      const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId);
+      
+      if (messageIndex !== -1) {
+        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => 
+          index === messageIndex ? realMessage : msg
+        );
+      }
+    },
+    updateOptimisticMessageStatus: (state, action) => {
+      const { tempId, status, errorMessage } = action.payload as { tempId: string; status: string; errorMessage?: string };
+      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+
+      const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId && msg.isOptimistic);
+      
+      if (messageIndex !== -1) {
+        const messageToUpdate = state[CHAT_MESSAGES_DATA]?.[messageIndex];
+        if (messageToUpdate) {
+          messageToUpdate.status = status;
+          if (errorMessage) {
+            messageToUpdate.errorMessage = errorMessage;
+          }
+          if (status === 'SENT') {
+            messageToUpdate.sentAt = new Date().toISOString();
+          }
+          messageToUpdate.isOptimistic = true;
+        }
+      }
     },
   },
   extraReducers: (builder) => {
@@ -499,4 +559,7 @@ export default {
   [CHAT_ADD_NEW_CONVERSATION]: globalChatSlice.actions.addNewConversation,
   [CHAT_UPDATE_MESSAGE_STATUS]: globalChatSlice.actions.updateMessageStatus,
   [CHAT_REMOVE_CONVERSATION]: globalChatSlice.actions.removeConversation,
+  [CHAT_ADD_OPTIMISTIC_MESSAGE]: globalChatSlice.actions.addOptimisticMessage,
+  [CHAT_REPLACE_OPTIMISTIC_MESSAGE]: globalChatSlice.actions.replaceOptimisticMessage,
+  [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: globalChatSlice.actions.updateOptimisticMessageStatus,
 };
