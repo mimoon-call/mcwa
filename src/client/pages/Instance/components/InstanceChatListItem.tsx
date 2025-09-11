@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
-import type { ChatContact } from '../store/chat.types';
+import type { ChatContact } from '../../Chat/store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { formatTime, getDisplayName } from '../../Chat/helpers';

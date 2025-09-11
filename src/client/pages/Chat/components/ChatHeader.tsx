@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '@components/Icon/Icon';
-import type { ChatContact } from '@client/pages/Instance/store/chat.types';
+import type { ChatContact } from '../store/chat.types';
 import Avatar from '@components/Avatar/Avatar';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 

@@ -33,3 +33,9 @@ export enum ChatDepartmentEnum {
   MORTGAGE = 'MORTGAGE',
   GENERAL = 'GENERAL',
 }
+
+export enum MessageHandlerActionEnum {
+  UPDATE = 'update',
+  REPLACE = 'replace',
+  ADD = 'add',
+}

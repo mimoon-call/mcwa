@@ -7,30 +7,30 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { cn } from '@client/plugins';
 import { v4 as uuidv4 } from 'uuid';
 import { StoreEnum } from '@client/store/store.enum';
-import globalChatSlice from './store/chat.slice';
+import { chatSlice } from './store/chat.slice';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { joinConversationRoom, leaveConversationRoom } from '@helpers/room.helper';
 import { ConversationEventEnum } from './store/chat-event.enum';
 import {
+  CHAT_ADD_INCOMING_MESSAGE,
+  CHAT_ADD_NEW_CONVERSATION,
+  CHAT_RESET_PAGINATION,
   CHAT_SEARCH_ALL_CONVERSATIONS,
   CHAT_GET_CONVERSATION,
+  CHAT_DELETE_CONVERSATION,
+  CHAT_SET_SELECTED_CONTACT,
+  CHAT_UPDATE_MESSAGE_STATUS,
+  CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
+  CHAT_ADD_OPTIMISTIC_MESSAGE,
+  CHAT_REMOVE_CONVERSATION,
+  CHAT_CLEAR_SEARCH_DATA,
   CHAT_SEARCH_DATA,
   CHAT_SEARCH_VALUE,
   CHAT_MESSAGES_DATA,
   CHAT_LOADING,
   SEARCH_LOADING,
   CHAT_ERROR,
-  CHAT_SELECTED_CONTACT,
-  CHAT_UPDATE_MESSAGE_STATUS,
-  CHAT_ADD_INCOMING_MESSAGE,
-  CHAT_ADD_NEW_CONVERSATION,
-  CHAT_RESET_PAGINATION,
-  CHAT_SET_SELECTED_CONTACT,
-  CHAT_CLEAR_SEARCH_DATA,
-  CHAT_DELETE_CONVERSATION,
-  CHAT_REMOVE_CONVERSATION,
-  CHAT_ADD_OPTIMISTIC_MESSAGE,
-  CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
+  GLOBAL_SELECTED_CONTACT,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -47,34 +47,50 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const dispatch = useDispatch<AppDispatch>();
   const lastSearchValueRef = useRef<string>('');
 
-  // Get data from store
+  // Get all chat actions using constants
+  const {
+    [CHAT_SEARCH_ALL_CONVERSATIONS]: searchConversations,
+    [CHAT_GET_CONVERSATION]: getConversation,
+    [CHAT_DELETE_CONVERSATION]: deleteConversation,
+    [CHAT_ADD_INCOMING_MESSAGE]: addIncomingMessage,
+    [CHAT_ADD_NEW_CONVERSATION]: addNewConversation,
+    [CHAT_RESET_PAGINATION]: resetPagination,
+    [CHAT_SET_SELECTED_CONTACT]: setSelectedContact,
+    [CHAT_UPDATE_MESSAGE_STATUS]: updateMessageStatus,
+    [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: updateOptimisticMessageStatus,
+    [CHAT_ADD_OPTIMISTIC_MESSAGE]: addOptimisticMessage,
+    [CHAT_REMOVE_CONVERSATION]: removeConversation,
+    [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
+  } = chatSlice;
+
+  // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
   const searchValue = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_VALUE]);
   const messages = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_MESSAGES_DATA]) || [];
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_LOADING]);
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_ERROR]) !== null;
-  const selectedContact = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SELECTED_CONTACT]);
-  
+  const selectedContact = useSelector((state: RootState) => state[StoreEnum.globalChat][GLOBAL_SELECTED_CONTACT]);
+
   // Get active instances from global store
   const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
   // Load conversations on component mount
   useEffect(() => {
-    dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
-    dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({}));
+    dispatch(resetPagination());
+    dispatch(searchConversations({}));
     // Initialize the ref with the current search value
     lastSearchValueRef.current = searchValue;
   }, [dispatch]);
 
   // Find selected contact based on URL parameters
   const selectedContactFromUrl =
-    conversations?.find((contact) => contact.instanceNumber === instanceNumber && contact.phoneNumber === phoneNumber) || null;
+    (conversations as GlobalChatContact[])?.find((contact) => contact.instanceNumber === instanceNumber && contact.phoneNumber === phoneNumber) || null;
 
   // Set selected contact if URL parameters match
   useEffect(() => {
     if (selectedContactFromUrl && selectedContact !== selectedContactFromUrl) {
-      dispatch(globalChatSlice[CHAT_SET_SELECTED_CONTACT](selectedContactFromUrl));
+      dispatch(setSelectedContact(selectedContactFromUrl));
     }
   }, [selectedContactFromUrl, selectedContact, dispatch]);
 
@@ -83,15 +99,15 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     if (selectedContact) {
       // Join the conversation room for live updates
       joinConversationRoom(selectedContact.instanceNumber, selectedContact.phoneNumber);
-      
+
       dispatch(
-        globalChatSlice[CHAT_GET_CONVERSATION]({
+        getConversation({
           phoneNumber: selectedContact.instanceNumber,
           withPhoneNumber: selectedContact.phoneNumber,
         })
       );
     }
-    
+
     // Cleanup: leave conversation room when component unmounts or chat changes
     return () => {
       if (selectedContact) {
@@ -105,11 +121,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     const socket = getClientSocket();
 
     const handleNewMessage = (messageData: ChatMessage) => {
-      dispatch(globalChatSlice[CHAT_ADD_INCOMING_MESSAGE](messageData));
+      dispatch(addIncomingMessage(messageData));
     };
 
     const handleNewConversation = (conversationData: GlobalChatContact) => {
-      dispatch(globalChatSlice[CHAT_ADD_NEW_CONVERSATION](conversationData));
+      dispatch(addNewConversation(conversationData));
     };
 
     const handleMessageStatusUpdate = (statusData: {
@@ -122,26 +138,25 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       errorCode?: number;
       errorMessage?: string;
     }) => {
-      dispatch(globalChatSlice[CHAT_UPDATE_MESSAGE_STATUS](statusData));
+      dispatch(updateMessageStatus(statusData));
     };
 
-    const handleMessageSent = (response: {
-      success: boolean;
-      tempId: string;
-      returnCode?: number;
-      error?: string;
-    }) => {
+    const handleMessageSent = (response: { success: boolean; tempId: string; returnCode?: number; error?: string }) => {
       if (response.success) {
-        dispatch(globalChatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-          tempId: response.tempId,
-          status: MessageStatusEnum.DELIVERED
-        }));
+        dispatch(
+          updateOptimisticMessageStatus({
+            tempId: response.tempId,
+            status: MessageStatusEnum.DELIVERED,
+          })
+        );
       } else {
-        dispatch(globalChatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-          tempId: response.tempId,
-          status: MessageStatusEnum.ERROR,
-          errorMessage: response.error || 'Failed to send message'
-        }));
+        dispatch(
+          updateOptimisticMessageStatus({
+            tempId: response.tempId,
+            status: MessageStatusEnum.ERROR,
+            errorMessage: response.error || 'Failed to send message',
+          })
+        );
       }
     };
 
@@ -176,7 +191,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       tempId: tempId,
     };
 
-    dispatch(globalChatSlice[CHAT_ADD_OPTIMISTIC_MESSAGE](optimisticMessage));
+    dispatch(addOptimisticMessage(optimisticMessage));
 
     // Send message via socket
     const socket = getClientSocket();
@@ -192,15 +207,17 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   const handleRetryMessage = (tempId: string) => {
     // Find the failed message by tempId
-    const failedMessage = messages.find(msg => msg.tempId === tempId && msg.status === MessageStatusEnum.ERROR);
-    
+    const failedMessage = messages.find((msg) => msg.tempId === tempId && msg.status === MessageStatusEnum.ERROR);
+
     if (!failedMessage) return;
 
     // Update the message status back to PENDING
-    dispatch(globalChatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-      tempId: tempId,
-      status: MessageStatusEnum.PENDING
-    }));
+    dispatch(
+      updateOptimisticMessageStatus({
+        tempId: tempId,
+        status: MessageStatusEnum.PENDING,
+      })
+    );
 
     // Resend the message via socket
     const socket = getClientSocket();
@@ -226,11 +243,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         lastSearchValueRef.current = value;
 
         // Reset pagination only if search value actually changed
-        dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
+        dispatch(resetPagination());
 
         // Clear current data and search with new value
-        dispatch(globalChatSlice[CHAT_CLEAR_SEARCH_DATA]());
-        dispatch(globalChatSlice[CHAT_SEARCH_ALL_CONVERSATIONS]({ searchValue: value }));
+        dispatch(clearSearchData());
+        dispatch(searchConversations({ searchValue: value }));
       }
     },
     [dispatch]
@@ -243,21 +260,21 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       title: 'CHAT.DELETE_CONVERSATION',
       description: 'CHAT.DELETE_CONVERSATION_WARNING',
       callback: async () => {
-        await globalChatSlice[CHAT_DELETE_CONVERSATION]({
+        await deleteConversation({
           fromNumber: selectedContact.instanceNumber,
           toNumber: selectedContact.phoneNumber,
         });
 
         // Remove conversation from state
         dispatch(
-          globalChatSlice[CHAT_REMOVE_CONVERSATION]({
+          removeConversation({
             fromNumber: selectedContact.instanceNumber,
             toNumber: selectedContact.phoneNumber,
           })
         );
 
         // Clear selected contact and navigate to chat without params
-        dispatch(globalChatSlice[CHAT_SET_SELECTED_CONTACT](null));
+        dispatch(setSelectedContact(null));
         navigate('/chat', { replace: true });
       },
       successMessage: 'CHAT.CONVERSATION_DELETED_SUCCESSFULLY',
@@ -279,7 +296,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   return (
     <div className={cn('flex h-full bg-gray-100', className)}>
       <ChatLeftPanel
-        items={conversations}
+        items={conversations as GlobalChatContact[]}
         selectedItem={selectedContact}
         loading={searchLoading}
         error={error}

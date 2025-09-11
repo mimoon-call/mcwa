@@ -1,6 +1,6 @@
 import type { MenuItem } from '@components/Menu/Menu.type';
 import type { ChatMessage, GlobalChatContact } from '../store/chat.types';
-import type { ChatContact } from '../../Instance/store/chat.types';
+import type { ChatContact } from '../store/chat.types';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';

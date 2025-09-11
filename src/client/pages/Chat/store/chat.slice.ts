@@ -4,118 +4,118 @@ import { Http } from '@services/http';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';
 import {
-  CHAT_ERROR,
   CHAT_GET_CONVERSATION,
-  CHAT_LOADING,
-  CHAT_MESSAGES_DATA,
-  CHAT_MESSAGES_PAGINATION,
-  CHAT_SEARCH_ALL_CONVERSATIONS,
-  CHAT_SEARCH_DATA,
-  CHAT_SEARCH_PAGINATION,
-  CHAT_SEARCH_VALUE,
-  CHAT_SELECTED_CONTACT,
   CHAT_SEND_MESSAGE,
   CHAT_UPDATE_MESSAGE_STATUS,
-  CHAT_CLEAR_SEARCH,
   CHAT_CLEAR_SEARCH_DATA,
   CHAT_RESET_PAGINATION,
-  CHAT_CLEAR_MESSAGES,
-  CHAT_RESET,
-  CHAT_SET_SELECTED_CONTACT,
-  CHAT_SET_SEARCH_VALUE,
-  CHAT_UPDATE_SEARCH_PAGINATION,
-  CHAT_UPDATE_MESSAGES_PAGINATION,
   CHAT_ADD_INCOMING_MESSAGE,
   CHAT_ADD_NEW_CONVERSATION,
   CHAT_LOAD_MORE_MESSAGES,
   CHAT_LOAD_MORE_CONVERSATIONS,
+  CHAT_ADD_OPTIMISTIC_MESSAGE,
+  CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
+  CHAT_SET_SELECTED_CONTACT,
   CHAT_DELETE_CONVERSATION,
   CHAT_REMOVE_CONVERSATION,
-  CHAT_ADD_OPTIMISTIC_MESSAGE,
-  CHAT_REPLACE_OPTIMISTIC_MESSAGE,
-  CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
+  CHAT_SEARCH_ALL_CONVERSATIONS,
+  CHAT_SEARCH_CONVERSATIONS,
+  CHAT_SET_SELECTED_PHONE_NUMBER,
+  INSTANCE_GET_CONVERSATION,
+  INSTANCE_LOAD_MORE_MESSAGES,
+  INSTANCE_LOAD_MORE_CONVERSATIONS,
+  CHAT_SEARCH_DATA,
+  CHAT_SEARCH_PAGINATION,
+  CHAT_SEARCH_VALUE,
+  CHAT_MESSAGES_DATA,
+  CHAT_MESSAGES_PAGINATION,
+  CHAT_LOADING,
   SEARCH_LOADING,
+  CHAT_ERROR,
+  GLOBAL_SELECTED_CONTACT,
+  GLOBAL_LAST_SEARCH_PARAMS,
+  INSTANCE_SEARCH_METADATA,
+  INSTANCE_SELECTED_PHONE_NUMBER,
+  INSTANCE_LAST_SEARCH_PARAMS,
 } from './chat.constants';
-import type {
-  ChatMessage,
-  GetConversationReq,
-  GetConversationRes,
-  GlobalChatContact,
-  SearchAllConversationsReq,
-  SearchAllConversationsRes,
-  SendMessageReq,
-  DeleteConversationReq,
-  DeleteConversationRes,
-  RemoveConversationReq,
+import {
+  type ChatMessage,
+  type GetConversationReq,
+  type GetConversationRes,
+  type GlobalChatContact,
+  type SearchAllConversationsReq,
+  type SearchAllConversationsRes,
+  type SendMessageReq,
+  type DeleteConversationReq,
+  type DeleteConversationRes,
+  type RemoveConversationReq,
+  type SearchConversationsReq,
+  type SearchConversationsRes,
+  type ChatContact,
+  type InstanceChat,
 } from './chat.types';
 import type { ErrorResponse } from '@services/http/types';
-import isEqual from 'lodash/isEqual';
+import { deduplicateMessages, deduplicateGlobalConversations, deduplicateInstanceConversations, addOrUpdateConversation } from './chat.utils';
+import {
+  handleIncomingMessage,
+  handleOptimisticMessage,
+  handleMessageStatusUpdate,
+  handleOptimisticMessageStatusUpdate,
+} from './chat-message-handler';
 
-// Helper function to deduplicate messages by messageId, keeping the last occurrence
-const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
-  const seen = new Map<string, ChatMessage>();
-
-  // Process messages in order, keeping the last occurrence of each messageId
-  messages.forEach((message) => {
-    if (message.messageId) {
-      seen.set(message.messageId, message);
-    }
-  });
-
-  // Return messages without messageId first, then deduplicated messages
-  const messagesWithoutId = messages.filter((msg) => !msg.messageId);
-  const deduplicatedMessages = Array.from(seen.values());
-
-  return [...messagesWithoutId, ...deduplicatedMessages];
-};
-
-// Helper function to deduplicate conversations by phoneNumber+instanceNumber, keeping the last occurrence
-const deduplicateConversations = (conversations: GlobalChatContact[]): GlobalChatContact[] => {
-  const seen = new Map<string, GlobalChatContact>();
-
-  // Process conversations in order, keeping the last occurrence of each phoneNumber+instanceNumber combination
-  conversations.forEach((conversation) => {
-    const key = `${conversation.phoneNumber}+${conversation.instanceNumber}`;
-    seen.set(key, conversation);
-  });
-
-  return Array.from(seen.values());
-};
-
-export interface GlobalChatState {
-  [CHAT_SEARCH_DATA]: GlobalChatContact[] | null;
-  [CHAT_SEARCH_PAGINATION]: Partial<Omit<SearchAllConversationsRes, 'data'>>;
+// Chat State Interface - combines both global and instance functionality
+export interface ChatState {
+  // Shared properties
+  [CHAT_SEARCH_DATA]: GlobalChatContact[] | ChatContact[] | null;
+  [CHAT_SEARCH_PAGINATION]:
+    | Partial<Omit<SearchAllConversationsRes, 'data'>>
+    | Partial<Omit<SearchConversationsRes, 'data' | 'isConnected' | 'statusCode' | 'errorMessage'>>;
   [CHAT_SEARCH_VALUE]: string;
   [CHAT_MESSAGES_DATA]: ChatMessage[] | null;
   [CHAT_MESSAGES_PAGINATION]: Partial<Omit<GetConversationRes, 'data'>>;
-  [CHAT_SELECTED_CONTACT]: GlobalChatContact | null;
   [CHAT_LOADING]: boolean;
   [SEARCH_LOADING]: boolean;
   [CHAT_ERROR]: ErrorResponse | null;
-  lastSearchParams: { searchValue: string } | null;
+
+  // Global chat specific properties
+  [GLOBAL_SELECTED_CONTACT]: GlobalChatContact | null;
+  [GLOBAL_LAST_SEARCH_PARAMS]: { searchValue: string } | null;
+
+  // Instance chat specific properties
+  [INSTANCE_SEARCH_METADATA]: InstanceChat | null;
+  [INSTANCE_SELECTED_PHONE_NUMBER]: string | null;
+  [INSTANCE_LAST_SEARCH_PARAMS]: { phoneNumber: string; searchValue: string } | null;
 }
 
-const initialState: GlobalChatState = {
+const initialState: ChatState = {
+  // Shared initial state
   [CHAT_SEARCH_DATA]: null,
   [CHAT_SEARCH_PAGINATION]: { pageSize: 50, hasMore: false },
   [CHAT_SEARCH_VALUE]: '',
   [CHAT_MESSAGES_DATA]: null,
   [CHAT_MESSAGES_PAGINATION]: { pageSize: 50 },
-  [CHAT_SELECTED_CONTACT]: null,
   [CHAT_LOADING]: false,
   [SEARCH_LOADING]: false,
   [CHAT_ERROR]: null,
-  lastSearchParams: null,
+
+  // Global chat specific initial state
+  [GLOBAL_SELECTED_CONTACT]: null,
+  [GLOBAL_LAST_SEARCH_PARAMS]: null,
+
+  // Instance chat specific initial state
+  [INSTANCE_SEARCH_METADATA]: null,
+  [INSTANCE_SELECTED_PHONE_NUMBER]: null,
+  [INSTANCE_LAST_SEARCH_PARAMS]: null,
 };
 
-// Async thunk for search all conversations
+// Async thunk for search all conversations (Global Chat)
 const searchAllConversations = createAsyncThunk(
   `${StoreEnum.globalChat}/${CHAT_SEARCH_ALL_CONVERSATIONS}`,
   async ({ page, searchValue }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_SEARCH_PAGINATION] || initialState[CHAT_SEARCH_PAGINATION];
-      const currentSearchValue = state[StoreEnum.globalChat]?.[CHAT_SEARCH_VALUE] || '';
+      const currentPagination = state[StoreEnum.globalChat]?.searchPagination || initialState.searchPagination;
+      const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
       const data = {
         page: { ...currentPagination, ...(page || {}) },
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
@@ -132,13 +132,39 @@ const searchAllConversations = createAsyncThunk(
   }
 );
 
-// Async thunk for get conversation messages
-const getConversation = createAsyncThunk(
+// Async thunk for search conversations (Instance Chat)
+const searchConversations = createAsyncThunk(
+  `${StoreEnum.chat}/${CHAT_SEARCH_CONVERSATIONS}`,
+  async ({ phoneNumber, page, searchValue }: SearchConversationsReq, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const currentPagination = state[StoreEnum.chat]?.searchPagination || initialState.searchPagination;
+      const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
+      const data = {
+        page: { ...currentPagination, ...(page || {}) },
+        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+      };
+
+      const result = await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
+
+      return {
+        ...result,
+        isNewSearch: searchValue !== currentSearchValue,
+        phoneNumber,
+      };
+    } catch (error: unknown) {
+      return rejectWithValue(error as ErrorResponse);
+    }
+  }
+);
+
+// Async thunk for get conversation messages (Global)
+const getGlobalConversation = createAsyncThunk(
   `${StoreEnum.globalChat}/${CHAT_GET_CONVERSATION}`,
   async ({ phoneNumber, withPhoneNumber, page }: GetConversationReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
+      const currentPagination = state[StoreEnum.globalChat]?.messagesPagination || initialState.messagesPagination;
       const data = { page: { ...currentPagination, ...(page || {}) } };
 
       return await Http.post<GetConversationRes, typeof data>(`/conversation/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
@@ -148,13 +174,29 @@ const getConversation = createAsyncThunk(
   }
 );
 
-// Async thunk for loading more messages (for infinite scroll)
-const loadMoreMessages = createAsyncThunk(
+// Async thunk for get conversation messages (Instance)
+const getInstanceConversation = createAsyncThunk(
+  `${StoreEnum.chat}/${CHAT_GET_CONVERSATION}`,
+  async ({ phoneNumber, withPhoneNumber, page }: GetConversationReq, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const currentPagination = state[StoreEnum.chat]?.messagesPagination || initialState.messagesPagination;
+      const data = { page: { ...currentPagination, ...(page || {}) } };
+
+      return await Http.post<GetConversationRes, typeof data>(`/conversation/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+    } catch (error: unknown) {
+      return rejectWithValue(error as ErrorResponse);
+    }
+  }
+);
+
+// Async thunk for loading more messages (Global)
+const loadMoreGlobalMessages = createAsyncThunk(
   `${StoreEnum.globalChat}/loadMoreMessages`,
   async ({ phoneNumber, withPhoneNumber }: { phoneNumber: string; withPhoneNumber: string }, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
+      const currentPagination = state[StoreEnum.globalChat]?.messagesPagination || initialState.messagesPagination;
       const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
       const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
 
@@ -165,19 +207,55 @@ const loadMoreMessages = createAsyncThunk(
   }
 );
 
-// Async thunk for loading more conversations (for infinite scroll)
-const loadMoreConversations = createAsyncThunk(
+// Async thunk for loading more messages (Instance)
+const loadMoreInstanceMessages = createAsyncThunk(
+  `${StoreEnum.chat}/loadMoreMessages`,
+  async ({ phoneNumber, withPhoneNumber }: { phoneNumber: string; withPhoneNumber: string }, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const currentPagination = state[StoreEnum.chat]?.messagesPagination || initialState.messagesPagination;
+      const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
+      const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
+
+      return await Http.post<GetConversationRes, typeof data>(`/conversation/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+    } catch (error: unknown) {
+      return rejectWithValue(error as ErrorResponse);
+    }
+  }
+);
+
+// Async thunk for loading more conversations (Global)
+const loadMoreGlobalConversations = createAsyncThunk(
   `${StoreEnum.globalChat}/loadMoreConversations`,
   async ({ page, searchValue }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentSearchValue = state[StoreEnum.globalChat]?.[CHAT_SEARCH_VALUE] || '';
+      const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
       const data = {
         page,
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
       };
 
       return await Http.post<SearchAllConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
+    } catch (error: unknown) {
+      return rejectWithValue(error as ErrorResponse);
+    }
+  }
+);
+
+// Async thunk for loading more conversations (Instance)
+const loadMoreInstanceConversations = createAsyncThunk(
+  `${StoreEnum.chat}/loadMoreConversations`,
+  async ({ phoneNumber, page, searchValue }: SearchConversationsReq, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
+      const data = {
+        page,
+        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+      };
+
+      return await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -194,181 +272,35 @@ const deleteConversation = async ({ fromNumber, toNumber }: DeleteConversationRe
   return await Http.delete<DeleteConversationRes>(`/conversation/${CHAT_DELETE_CONVERSATION}/${fromNumber}/${toNumber}`);
 };
 
-const globalChatSlice = createSlice({
-  name: StoreEnum.globalChat,
+// Chat Slice
+const chatSliceReducer = createSlice({
+  name: 'chat',
   initialState,
   reducers: {
-    clearSearch: (state) => {
+    // Global chat actions
+    clearGlobalSearchData: (state) => {
       state[CHAT_SEARCH_DATA] = null;
-      state[CHAT_SEARCH_VALUE] = '';
-      state[CHAT_SEARCH_PAGINATION] = initialState[CHAT_SEARCH_PAGINATION];
+      state[CHAT_SEARCH_PAGINATION] = { pageSize: 50, hasMore: false };
     },
-    clearSearchData: (state) => {
-      state[CHAT_SEARCH_DATA] = null;
-      state[CHAT_SEARCH_VALUE] = '';
-      // Don't reset pagination - keep hasMore state
+    resetGlobalPagination: (state) => {
+      state[CHAT_SEARCH_PAGINATION] = { pageSize: 50, hasMore: false };
+      state[CHAT_MESSAGES_PAGINATION] = { pageSize: 100 };
     },
-    resetPagination: (state) => {
-      state[CHAT_SEARCH_PAGINATION] = initialState[CHAT_SEARCH_PAGINATION];
+    setGlobalSelectedContact: (state, action) => {
+      state[GLOBAL_SELECTED_CONTACT] = action.payload;
     },
-    clearMessages: (state) => {
-      state[CHAT_MESSAGES_DATA] = null;
+    addGlobalIncomingMessage: (state, action) => {
+      handleIncomingMessage(state, CHAT_MESSAGES_DATA, CHAT_SEARCH_DATA, action.payload, true);
     },
-    reset: (state) => {
-      state[CHAT_SEARCH_PAGINATION] = initialState[CHAT_SEARCH_PAGINATION];
-      state[CHAT_SEARCH_VALUE] = initialState[CHAT_SEARCH_VALUE];
-      state[CHAT_MESSAGES_PAGINATION] = initialState[CHAT_MESSAGES_PAGINATION];
-      state[CHAT_SELECTED_CONTACT] = null;
+    addGlobalNewConversation: (state, action) => {
+      state[CHAT_SEARCH_DATA] = addOrUpdateConversation(state[CHAT_SEARCH_DATA] || [], action.payload, true);
     },
-    setSelectedContact: (state, action) => {
-      state[CHAT_SELECTED_CONTACT] = action.payload;
+    updateGlobalMessageStatus: (state, action) => {
+      handleMessageStatusUpdate(state, CHAT_MESSAGES_DATA, action.payload);
     },
-    setSearchValue: (state, action) => {
-      state[CHAT_SEARCH_VALUE] = action.payload;
-    },
-    updateSearchPagination: (state, action) => {
-      const newPagination = { ...state[CHAT_SEARCH_PAGINATION], ...action.payload };
-
-      if (isEqual(newPagination, state[CHAT_SEARCH_PAGINATION])) {
-        return;
-      }
-
-      state[CHAT_SEARCH_PAGINATION] = newPagination;
-    },
-    updateMessagesPagination: (state, action) => {
-      const newPagination = { ...state[CHAT_MESSAGES_PAGINATION], ...action.payload };
-
-      if (isEqual(newPagination, state[CHAT_MESSAGES_PAGINATION])) {
-        return;
-      }
-
-      state[CHAT_MESSAGES_PAGINATION] = newPagination;
-    },
-    addIncomingMessage: (state, action) => {
-      const newMessage = action.payload as ChatMessage;
-      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
-
-      // If message has messageId, try to update existing or replace optimistic
-      if (newMessage.messageId) {
-        const existingIndex = existingMessages.findIndex((msg) => msg.messageId === newMessage.messageId);
-
-        if (existingIndex !== -1) {
-          // Update existing message
-          const existingMsg = state[CHAT_MESSAGES_DATA]?.[existingIndex];
-          if (existingMsg) {
-            Object.assign(existingMsg, newMessage);
-            if (existingMsg.isOptimistic) {
-              existingMsg.isOptimistic = false;
-            }
-          }
-        } else {
-          // Try to replace optimistic message
-          const optimisticIndex = existingMessages.findIndex(
-            (msg) =>
-              msg.isOptimistic &&
-              msg.fromNumber === newMessage.fromNumber &&
-              msg.toNumber === newMessage.toNumber &&
-              msg.text === newMessage.text &&
-              Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 30000
-          );
-
-          if (optimisticIndex !== -1) {
-            // Replace optimistic message
-            const optimisticMsg = state[CHAT_MESSAGES_DATA]?.[optimisticIndex];
-            if (optimisticMsg) {
-              Object.assign(optimisticMsg, newMessage);
-              optimisticMsg.isOptimistic = false;
-              optimisticMsg.tempId = undefined;
-            }
-          } else {
-            // Add new message
-            state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
-          }
-        }
-      } else {
-        // Add message without messageId
-        state[CHAT_MESSAGES_DATA] = [...existingMessages, newMessage];
-      }
-
-      // Update lastMessage and lastMessageAt in conversations list if message has createdAt and text
-      if (newMessage.createdAt && newMessage.text && newMessage.text.trim()) {
-        const conversations = state[CHAT_SEARCH_DATA] || [];
-        const conversationIndex = conversations.findIndex(
-          (conv) =>
-            (conv.instanceNumber === newMessage.fromNumber && conv.phoneNumber === newMessage.toNumber) ||
-            (conv.instanceNumber === newMessage.toNumber && conv.phoneNumber === newMessage.fromNumber)
-        );
-
-        if (conversationIndex !== -1) {
-          // Update the conversation with new message data
-          const updatedConversation = {
-            ...conversations[conversationIndex],
-            lastMessage: newMessage.text!,
-            lastMessageAt: newMessage.createdAt,
-          };
-
-          // Remove the conversation from its current position and add it to the top
-          const remainingConversations = conversations.filter((_, index) => index !== conversationIndex);
-          state[CHAT_SEARCH_DATA] = [updatedConversation, ...remainingConversations];
-        }
-      }
-    },
-    addNewConversation: (state, action) => {
-      const newConversation = action.payload as GlobalChatContact;
-      const existingConversations = state[CHAT_SEARCH_DATA] || [];
-
-      // Check if conversation already exists
-      const conversationIndex = existingConversations.findIndex(
-        (conv) =>
-          (conv.instanceNumber === newConversation.instanceNumber && conv.phoneNumber === newConversation.phoneNumber) ||
-          (conv.instanceNumber === newConversation.phoneNumber && conv.phoneNumber === newConversation.instanceNumber)
-      );
-
-      if (conversationIndex !== -1) {
-        // Update existing conversation and move to top
-        const existingConversation = existingConversations[conversationIndex];
-        const updatedConversation = {
-          ...existingConversation,
-          ...newConversation,
-          // Preserve existing name if new conversation doesn't have one
-          name: newConversation.name || existingConversation.name,
-        };
-
-        // Remove the conversation from its current position and add it to the top
-        const remainingConversations = existingConversations.filter((_, index) => index !== conversationIndex);
-        state[CHAT_SEARCH_DATA] = [updatedConversation, ...remainingConversations];
-      } else {
-        // Add new conversation to the top of the list
-        state[CHAT_SEARCH_DATA] = [newConversation, ...existingConversations];
-      }
-    },
-    updateMessageStatus: (state, action) => {
-      const { messageId, status, sentAt, deliveredAt, readAt, playedAt, errorCode, errorMessage } = action.payload;
-      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
-
-      // Find and update the message with the matching messageId
-      const messageIndex = existingMessages.findIndex((msg) => msg.messageId === messageId);
-
-      if (messageIndex !== -1) {
-        const updatedMessage = {
-          ...existingMessages[messageIndex],
-          ...(status && { status }),
-          ...(sentAt && { sentAt }),
-          ...(deliveredAt && { deliveredAt }),
-          ...(readAt && { readAt }),
-          ...(playedAt && { playedAt }),
-          ...(errorCode && { errorCode }),
-          ...(errorMessage && { errorMessage }),
-        };
-
-        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === messageIndex ? updatedMessage : msg));
-      }
-    },
-    removeConversation: (state, action) => {
+    removeGlobalConversation: (state, action) => {
       const { fromNumber, toNumber } = action.payload as RemoveConversationReq;
-      const existingConversations = state[CHAT_SEARCH_DATA] || [];
-
-      // Remove conversation that matches either direction of the phone numbers
+      const existingConversations = (state[CHAT_SEARCH_DATA] as GlobalChatContact[]) || [];
       state[CHAT_SEARCH_DATA] = existingConversations.filter(
         (conv) =>
           !(
@@ -377,65 +309,33 @@ const globalChatSlice = createSlice({
           )
       );
     },
-    addOptimisticMessage: (state, action) => {
-      const optimisticMessage = action.payload as ChatMessage;
-
-      // Add optimistic message to the end of the array using direct mutation
-      if (!state[CHAT_MESSAGES_DATA]) {
-        state[CHAT_MESSAGES_DATA] = [];
-      }
-      state[CHAT_MESSAGES_DATA].push(optimisticMessage);
+    addGlobalOptimisticMessage: (state, action) => {
+      handleOptimisticMessage(state, CHAT_MESSAGES_DATA, action.payload);
     },
-    replaceOptimisticMessage: (state, action) => {
-      const { tempId, realMessage } = action.payload as { tempId: string; realMessage: ChatMessage };
-      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
-
-      // Find and replace the optimistic message with the real message
-      const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId);
-
-      if (messageIndex !== -1) {
-        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === messageIndex ? realMessage : msg));
-      }
+    updateGlobalOptimisticMessageStatus: (state, action) => {
+      handleOptimisticMessageStatusUpdate(state, CHAT_MESSAGES_DATA, action.payload);
     },
-    updateOptimisticMessageStatus: (state, action) => {
-      const { tempId, status, errorMessage } = action.payload as { tempId: string; status: string; errorMessage?: string };
-      const existingMessages = state[CHAT_MESSAGES_DATA] || [];
 
-      const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId && msg.isOptimistic);
-
-      if (messageIndex !== -1) {
-        const messageToUpdate = state[CHAT_MESSAGES_DATA]?.[messageIndex];
-        if (messageToUpdate) {
-          messageToUpdate.status = status;
-          if (errorMessage) {
-            messageToUpdate.errorMessage = errorMessage;
-          }
-          if (status === 'SENT') {
-            messageToUpdate.sentAt = new Date().toISOString();
-          }
-          messageToUpdate.isOptimistic = true;
-        }
-      }
+    // Instance chat actions
+    setInstanceSelectedPhoneNumber: (state, action) => {
+      state[INSTANCE_SELECTED_PHONE_NUMBER] = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Search all conversations
+      // Global chat reducers
       .addCase(searchAllConversations.pending, (state) => {
-        state[SEARCH_LOADING] = true;
-        state[CHAT_ERROR] = null;
+        state.searchLoading = true;
+        state.error = null;
       })
       .addCase(searchAllConversations.fulfilled, (state, action) => {
-        const currentSearchValue = state[CHAT_SEARCH_VALUE] || '';
+        const currentSearchValue = state.searchValue || '';
         const searchValue = action.meta.arg.searchValue || currentSearchValue;
+        const shouldResetPagination = !state.globalLastSearchParams || state.globalLastSearchParams.searchValue !== searchValue;
 
-        // Check if this is a new search (different search value)
-        const shouldResetPagination = !state.lastSearchParams || state.lastSearchParams.searchValue !== searchValue;
-
-        // Only update pagination if it's a new search
         if (shouldResetPagination) {
-          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
-          state[CHAT_SEARCH_PAGINATION] = {
+          state.searchData = deduplicateGlobalConversations(action.payload.data);
+          state.searchPagination = {
             totalItems: action.payload.totalItems,
             hasMore: action.payload.hasMore,
             pageIndex: action.payload.pageIndex,
@@ -444,32 +344,24 @@ const globalChatSlice = createSlice({
             pageSort: action.payload.pageSort,
           };
         } else {
-          // Keep existing pagination but update data
-          state[CHAT_SEARCH_DATA] = deduplicateConversations(action.payload.data);
+          state.searchData = deduplicateGlobalConversations(action.payload.data);
         }
 
-        // Update search value in state
-        state[CHAT_SEARCH_VALUE] = searchValue;
-
-        // Update last search params
-        state.lastSearchParams = {
-          searchValue,
-        };
-
-        state[SEARCH_LOADING] = false;
+        state.searchValue = searchValue;
+        state.globalLastSearchParams = { searchValue };
+        state.searchLoading = false;
       })
       .addCase(searchAllConversations.rejected, (state, action) => {
-        state[SEARCH_LOADING] = false;
-        state[CHAT_ERROR] = action.payload as ErrorResponse;
+        state.searchLoading = false;
+        state.error = action.payload as ErrorResponse;
       })
-      // Get conversation messages
-      .addCase(getConversation.pending, (state) => {
-        state[CHAT_LOADING] = true;
-        state[CHAT_ERROR] = null;
+      .addCase(getGlobalConversation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
-      .addCase(getConversation.fulfilled, (state, action) => {
-        state[CHAT_MESSAGES_DATA] = deduplicateMessages(action.payload.data);
-        state[CHAT_MESSAGES_PAGINATION] = {
+      .addCase(getGlobalConversation.fulfilled, (state, action) => {
+        state.messagesData = deduplicateMessages(action.payload.data);
+        state.messagesPagination = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -477,23 +369,21 @@ const globalChatSlice = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state[CHAT_LOADING] = false;
+        state.loading = false;
       })
-      .addCase(getConversation.rejected, (state, action) => {
-        state[CHAT_LOADING] = false;
-        state[CHAT_ERROR] = action.payload as ErrorResponse;
+      .addCase(getGlobalConversation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as ErrorResponse;
       })
-      // Load more messages
-      .addCase(loadMoreMessages.pending, (state) => {
-        state[CHAT_LOADING] = true;
-        state[CHAT_ERROR] = null;
+      .addCase(loadMoreGlobalMessages.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
-      .addCase(loadMoreMessages.fulfilled, (state, action) => {
-        // Append new messages to existing ones (for infinite scroll)
-        const existingMessages = state[CHAT_MESSAGES_DATA] || [];
+      .addCase(loadMoreGlobalMessages.fulfilled, (state, action) => {
+        const existingMessages = state.messagesData || [];
         const combinedMessages = [...action.payload.data, ...existingMessages];
-        state[CHAT_MESSAGES_DATA] = deduplicateMessages(combinedMessages);
-        state[CHAT_MESSAGES_PAGINATION] = {
+        state.messagesData = deduplicateMessages(combinedMessages);
+        state.messagesPagination = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -501,23 +391,21 @@ const globalChatSlice = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state[CHAT_LOADING] = false;
+        state.loading = false;
       })
-      .addCase(loadMoreMessages.rejected, (state, action) => {
-        state[CHAT_LOADING] = false;
-        state[CHAT_ERROR] = action.payload as ErrorResponse;
+      .addCase(loadMoreGlobalMessages.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as ErrorResponse;
       })
-      // Load more conversations
-      .addCase(loadMoreConversations.pending, (state) => {
-        state[SEARCH_LOADING] = true;
-        state[CHAT_ERROR] = null;
+      .addCase(loadMoreGlobalConversations.pending, (state) => {
+        state.searchLoading = true;
+        state.error = null;
       })
-      .addCase(loadMoreConversations.fulfilled, (state, action) => {
-        // Append new conversations to existing ones (for infinite scroll)
-        const existingConversations = state[CHAT_SEARCH_DATA] || [];
+      .addCase(loadMoreGlobalConversations.fulfilled, (state, action) => {
+        const existingConversations = (state.searchData as GlobalChatContact[]) || [];
         const combinedConversations = [...existingConversations, ...action.payload.data];
-        state[CHAT_SEARCH_DATA] = deduplicateConversations(combinedConversations);
-        state[CHAT_SEARCH_PAGINATION] = {
+        state.searchData = deduplicateGlobalConversations(combinedConversations);
+        state.searchPagination = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -525,37 +413,155 @@ const globalChatSlice = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state[SEARCH_LOADING] = false;
+        state.searchLoading = false;
       })
-      .addCase(loadMoreConversations.rejected, (state, action) => {
-        state[SEARCH_LOADING] = false;
-        state[CHAT_ERROR] = action.payload as ErrorResponse;
+      .addCase(loadMoreGlobalConversations.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.error = action.payload as ErrorResponse;
+      })
+
+      // Instance chat reducers
+      .addCase(searchConversations.pending, (state) => {
+        state.searchLoading = true;
+        state.error = null;
+      })
+      .addCase(searchConversations.fulfilled, (state, action) => {
+        const { phoneNumber } = action.payload as SearchConversationsRes & { isNewSearch: boolean; phoneNumber: string };
+        const currentSearchValue = state.searchValue || '';
+        const searchValue = action.meta.arg.searchValue || currentSearchValue;
+        const isNewPhoneNumber = !state.instanceLastSearchParams || state.instanceLastSearchParams.phoneNumber !== phoneNumber;
+        const isNewSearchValue = !state.instanceLastSearchParams || state.instanceLastSearchParams.searchValue !== searchValue;
+        const shouldResetPagination = isNewPhoneNumber || isNewSearchValue;
+
+        if (shouldResetPagination) {
+          state.searchData = deduplicateInstanceConversations(action.payload.data);
+          state.searchPagination = {
+            totalItems: action.payload.totalItems,
+            hasMore: action.payload.hasMore,
+            pageIndex: action.payload.pageIndex,
+            pageSize: action.payload.pageSize,
+            totalPages: action.payload.totalPages,
+            pageSort: action.payload.pageSort,
+          };
+        } else {
+          state.searchData = deduplicateInstanceConversations(action.payload.data);
+        }
+
+        state.instanceSearchMetadata = {
+          isConnected: action.payload.isConnected,
+          statusCode: action.payload.statusCode,
+          errorMessage: action.payload.errorMessage,
+          profilePictureUrl: action.payload.profilePictureUrl,
+        };
+
+        state.searchValue = searchValue;
+        state.instanceLastSearchParams = { phoneNumber, searchValue };
+        state.searchLoading = false;
+      })
+      .addCase(searchConversations.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.error = action.payload as ErrorResponse;
+      })
+      .addCase(getInstanceConversation.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getInstanceConversation.fulfilled, (state, action) => {
+        state.messagesData = deduplicateMessages(action.payload.data);
+        state.messagesPagination = {
+          totalItems: action.payload.totalItems,
+          hasMore: action.payload.hasMore,
+          pageIndex: action.payload.pageIndex,
+          pageSize: action.payload.pageSize,
+          totalPages: action.payload.totalPages,
+          pageSort: action.payload.pageSort,
+        };
+        state.loading = false;
+      })
+      .addCase(getInstanceConversation.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as ErrorResponse;
+      })
+      .addCase(loadMoreInstanceMessages.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadMoreInstanceMessages.fulfilled, (state, action) => {
+        const existingMessages = state.messagesData || [];
+        const combinedMessages = [...action.payload.data, ...existingMessages];
+        state.messagesData = deduplicateMessages(combinedMessages);
+        state.messagesPagination = {
+          totalItems: action.payload.totalItems,
+          hasMore: action.payload.hasMore,
+          pageIndex: action.payload.pageIndex,
+          pageSize: action.payload.pageSize,
+          totalPages: action.payload.totalPages,
+          pageSort: action.payload.pageSort,
+        };
+        state.loading = false;
+      })
+      .addCase(loadMoreInstanceMessages.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as ErrorResponse;
+      })
+      .addCase(loadMoreInstanceConversations.pending, (state) => {
+        state.searchLoading = true;
+        state.error = null;
+      })
+      .addCase(loadMoreInstanceConversations.fulfilled, (state, action) => {
+        const existingConversations = state.searchData || [];
+        const combinedConversations = [...existingConversations, ...action.payload.data];
+        state.searchData = deduplicateInstanceConversations(combinedConversations);
+        state.searchPagination = {
+          totalItems: action.payload.totalItems,
+          hasMore: action.payload.hasMore,
+          pageIndex: action.payload.pageIndex,
+          pageSize: action.payload.pageSize,
+          totalPages: action.payload.totalPages,
+          pageSort: action.payload.pageSort,
+        };
+        state.searchLoading = false;
+      })
+      .addCase(loadMoreInstanceConversations.rejected, (state, action) => {
+        state.searchLoading = false;
+        state.error = action.payload as ErrorResponse;
       });
   },
 });
 
-export default {
-  reducer: globalChatSlice.reducer,
+// Export the chat slice with both global and instance functionality
+export const chatSlice = {
+  reducer: chatSliceReducer.reducer,
+  actions: chatSliceReducer.actions,
+
+  // Global chat async actions using constants
   [CHAT_SEARCH_ALL_CONVERSATIONS]: searchAllConversations,
-  [CHAT_GET_CONVERSATION]: getConversation,
-  [CHAT_SEND_MESSAGE]: sendMessage,
+  [CHAT_GET_CONVERSATION]: getGlobalConversation,
+  [CHAT_LOAD_MORE_MESSAGES]: loadMoreGlobalMessages,
+  [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreGlobalConversations,
   [CHAT_DELETE_CONVERSATION]: deleteConversation,
-  [CHAT_LOAD_MORE_MESSAGES]: loadMoreMessages,
-  [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
-  [CHAT_CLEAR_SEARCH]: globalChatSlice.actions.clearSearch,
-  [CHAT_CLEAR_SEARCH_DATA]: globalChatSlice.actions.clearSearchData,
-  [CHAT_RESET_PAGINATION]: globalChatSlice.actions.resetPagination,
-  [CHAT_CLEAR_MESSAGES]: globalChatSlice.actions.clearMessages,
-  [CHAT_RESET]: globalChatSlice.actions.reset,
-  [CHAT_SET_SELECTED_CONTACT]: globalChatSlice.actions.setSelectedContact,
-  [CHAT_SET_SEARCH_VALUE]: globalChatSlice.actions.setSearchValue,
-  [CHAT_UPDATE_SEARCH_PAGINATION]: globalChatSlice.actions.updateSearchPagination,
-  [CHAT_UPDATE_MESSAGES_PAGINATION]: globalChatSlice.actions.updateMessagesPagination,
-  [CHAT_ADD_INCOMING_MESSAGE]: globalChatSlice.actions.addIncomingMessage,
-  [CHAT_ADD_NEW_CONVERSATION]: globalChatSlice.actions.addNewConversation,
-  [CHAT_UPDATE_MESSAGE_STATUS]: globalChatSlice.actions.updateMessageStatus,
-  [CHAT_REMOVE_CONVERSATION]: globalChatSlice.actions.removeConversation,
-  [CHAT_ADD_OPTIMISTIC_MESSAGE]: globalChatSlice.actions.addOptimisticMessage,
-  [CHAT_REPLACE_OPTIMISTIC_MESSAGE]: globalChatSlice.actions.replaceOptimisticMessage,
-  [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: globalChatSlice.actions.updateOptimisticMessageStatus,
+
+  // Instance chat async actions using constants
+  [CHAT_SEARCH_CONVERSATIONS]: searchConversations,
+  [INSTANCE_GET_CONVERSATION]: getInstanceConversation,
+  [INSTANCE_LOAD_MORE_MESSAGES]: loadMoreInstanceMessages,
+  [INSTANCE_LOAD_MORE_CONVERSATIONS]: loadMoreInstanceConversations,
+
+  // Shared async actions using constants
+  [CHAT_SEND_MESSAGE]: sendMessage,
+
+  // Action aliases for backward compatibility using constants
+  [CHAT_CLEAR_SEARCH_DATA]: chatSliceReducer.actions.clearGlobalSearchData,
+  [CHAT_RESET_PAGINATION]: chatSliceReducer.actions.resetGlobalPagination,
+  [CHAT_SET_SELECTED_CONTACT]: chatSliceReducer.actions.setGlobalSelectedContact,
+  [CHAT_ADD_INCOMING_MESSAGE]: chatSliceReducer.actions.addGlobalIncomingMessage,
+  [CHAT_ADD_NEW_CONVERSATION]: chatSliceReducer.actions.addGlobalNewConversation,
+  [CHAT_UPDATE_MESSAGE_STATUS]: chatSliceReducer.actions.updateGlobalMessageStatus,
+  [CHAT_REMOVE_CONVERSATION]: chatSliceReducer.actions.removeGlobalConversation,
+  [CHAT_ADD_OPTIMISTIC_MESSAGE]: chatSliceReducer.actions.addGlobalOptimisticMessage,
+  [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: chatSliceReducer.actions.updateGlobalOptimisticMessageStatus,
+  [CHAT_SET_SELECTED_PHONE_NUMBER]: chatSliceReducer.actions.setInstanceSelectedPhoneNumber,
 };
+
+// Default export for backward compatibility
+export default chatSlice;

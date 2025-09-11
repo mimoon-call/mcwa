@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../Chat/store/chat.types';
-import type { ChatContact, ConversationPairItem } from './store/chat.types';
+import type { ChatContact, ConversationPairItem } from '../Chat/store/chat.types';
 import { MessageStatusEnum } from '../Chat/store/chat.enum';
 import type { RootState, AppDispatch } from '@client/store';
 import React, { useEffect, useCallback, useRef } from 'react';
@@ -10,17 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
 import { StoreEnum } from '@client/store/store.enum';
-import chatSlice from './store/chat.slice';
+import { chatSlice } from '../Chat/store/chat.slice';
 import {
-  CHAT_SEARCH_CONVERSATIONS,
-  CHAT_GET_CONVERSATION,
-  CHAT_SEARCH_DATA,
-  CHAT_SEARCH_METADATA,
-  CHAT_SEARCH_VALUE,
-  CHAT_MESSAGES_DATA,
-  CHAT_LOADING,
-  SEARCH_LOADING,
-  CHAT_ERROR,
   CHAT_UPDATE_MESSAGE_STATUS,
   CHAT_RESET_PAGINATION,
   CHAT_CLEAR_SEARCH_DATA,
@@ -28,7 +19,16 @@ import {
   CHAT_ADD_NEW_CONVERSATION,
   CHAT_ADD_OPTIMISTIC_MESSAGE,
   CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
-} from './store/chat.constants';
+  CHAT_SEARCH_CONVERSATIONS,
+  INSTANCE_GET_CONVERSATION,
+  CHAT_SEARCH_DATA,
+  INSTANCE_SEARCH_METADATA,
+  CHAT_SEARCH_VALUE,
+  CHAT_MESSAGES_DATA,
+  CHAT_LOADING,
+  SEARCH_LOADING,
+  CHAT_ERROR,
+} from '../Chat/store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { joinConversationRoom, leaveConversationRoom } from '@helpers/room.helper';
@@ -45,9 +45,22 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const dispatch = useDispatch<AppDispatch>();
   const lastSearchValueRef = useRef<string>('');
 
-  // Get data from store
+  // Get all chat actions using constants
+  const {
+    [CHAT_SEARCH_CONVERSATIONS]: searchConversations,
+    [INSTANCE_GET_CONVERSATION]: getConversation,
+    [CHAT_RESET_PAGINATION]: resetPagination,
+    [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
+    [CHAT_ADD_INCOMING_MESSAGE]: addIncomingMessage,
+    [CHAT_ADD_NEW_CONVERSATION]: addNewConversation,
+    [CHAT_ADD_OPTIMISTIC_MESSAGE]: addOptimisticMessage,
+    [CHAT_UPDATE_MESSAGE_STATUS]: updateMessageStatus,
+    [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: updateOptimisticMessageStatus,
+  } = chatSlice;
+
+  // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
-  const searchMetadata = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_METADATA]);
+  const searchMetadata = useSelector((state: RootState) => state[StoreEnum.chat][INSTANCE_SEARCH_METADATA]);
   const searchValue = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_VALUE]);
   const messages = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_DATA]) || [];
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
@@ -60,8 +73,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   // Load conversations on component mount
   useEffect(() => {
     if (phoneNumber && !withPhoneNumber) {
-      dispatch(chatSlice[CHAT_RESET_PAGINATION]());
-      dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber }));
+      dispatch(resetPagination());
+      dispatch(searchConversations({ phoneNumber }));
     }
   }, [phoneNumber, withPhoneNumber, dispatch]);
 
@@ -72,7 +85,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       joinConversationRoom(phoneNumber, withPhoneNumber);
 
       dispatch(
-        chatSlice[CHAT_GET_CONVERSATION]({
+        getConversation({
           phoneNumber,
           withPhoneNumber,
         })
@@ -92,7 +105,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     const socket = getClientSocket();
 
     const handleNewMessage = (messageData: ChatMessage) => {
-      dispatch(chatSlice[CHAT_ADD_INCOMING_MESSAGE](messageData));
+      dispatch(addIncomingMessage(messageData));
     };
 
     const handleNewConversation = (conversationData: Partial<ConversationPairItem>) => {
@@ -102,7 +115,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
           ...(conversationData.lastMessage && { lastMessage: conversationData.lastMessage }),
           ...(conversationData.lastMessageAt && { lastMessageAt: conversationData.lastMessageAt }),
         };
-        dispatch(chatSlice[CHAT_ADD_NEW_CONVERSATION](chatContact));
+        dispatch(addNewConversation(chatContact));
       }
     };
 
@@ -116,20 +129,20 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       errorCode?: number;
       errorMessage?: string;
     }) => {
-      dispatch(chatSlice[CHAT_UPDATE_MESSAGE_STATUS](statusData));
+      dispatch(updateMessageStatus(statusData));
     };
 
     const handleMessageSent = (response: { success: boolean; tempId: string; returnCode?: number; error?: string }) => {
       if (response.success) {
         dispatch(
-          chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+          updateOptimisticMessageStatus({
             tempId: response.tempId,
             status: MessageStatusEnum.DELIVERED,
           })
         );
       } else {
         dispatch(
-          chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+          updateOptimisticMessageStatus({
             tempId: response.tempId,
             status: MessageStatusEnum.ERROR,
             errorMessage: response.error || 'Failed to send message',
@@ -174,7 +187,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       tempId: tempId,
     };
 
-    dispatch(chatSlice[CHAT_ADD_OPTIMISTIC_MESSAGE](optimisticMessage));
+    dispatch(addOptimisticMessage(optimisticMessage));
 
     // Send message via socket
     const socket = getClientSocket();
@@ -196,7 +209,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
     // Update the message status back to PENDING
     dispatch(
-      chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+      updateOptimisticMessageStatus({
         tempId: tempId,
         status: MessageStatusEnum.PENDING,
       })
@@ -224,9 +237,9 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     (value: string) => {
       if (phoneNumber && value !== lastSearchValueRef.current) {
         lastSearchValueRef.current = value;
-        dispatch(chatSlice[CHAT_RESET_PAGINATION]());
-        dispatch(chatSlice[CHAT_CLEAR_SEARCH_DATA]());
-        dispatch(chatSlice[CHAT_SEARCH_CONVERSATIONS]({ phoneNumber, searchValue: value }));
+        dispatch(resetPagination());
+        dispatch(clearSearchData());
+        dispatch(searchConversations({ phoneNumber, searchValue: value }));
       }
     },
     [phoneNumber, dispatch]

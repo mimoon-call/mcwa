@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
-import { CHAT_MESSAGES_DATA } from '../store/chat.constants';
-import chatSlice from '../store/chat.slice';
+import { INSTANCE_LOAD_MORE_MESSAGES, CHAT_MESSAGES_DATA } from '../../Chat/store/chat.constants';
+import { chatSlice } from '../../Chat/store/chat.slice';
 
 type UseInfiniteScrollProps = {
   phoneNumber?: string;
@@ -38,7 +38,7 @@ export const useInfiniteScroll = ({ phoneNumber, withPhoneNumber, hasMore, loadi
     }
 
     isLoadingMoreRef.current = true;
-    dispatch(chatSlice.loadMoreMessages({ phoneNumber, withPhoneNumber })).finally(() => {
+    dispatch(chatSlice[INSTANCE_LOAD_MORE_MESSAGES]({ phoneNumber, withPhoneNumber })).finally(() => {
       isLoadingMoreRef.current = false;
     });
   }, [dispatch, phoneNumber, withPhoneNumber, loading, hasMore]);

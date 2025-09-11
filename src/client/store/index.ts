@@ -6,8 +6,7 @@ import { SET_AUTH_STATE } from '@client/store/auth.constants';
 import instanceSlice, { type InstanceState } from '@client/pages/Instance/store/instance.slice';
 import globalSlice, { type GlobalState } from '@client/store/global.slice';
 import messageQueueSlice, { type MessageQueueState } from '@client/pages/Queue/store/message-queue.slice';
-import chatSlice, { type ChatState } from '@client/pages/Instance/store/chat.slice';
-import globalChatSlice, { type GlobalChatState } from '@client/pages/Chat/store/chat.slice';
+import { chatSlice, type ChatState } from '@client/pages/Chat/store/chat.slice';
 
 export type RootState = {
   [StoreEnum.auth]: AuthState;
@@ -15,7 +14,7 @@ export type RootState = {
   [StoreEnum.queue]: MessageQueueState;
   [StoreEnum.global]: GlobalState;
   [StoreEnum.chat]: ChatState;
-  [StoreEnum.globalChat]: GlobalChatState;
+  [StoreEnum.globalChat]: ChatState;
 };
 
 export const createStore = (authState?: Partial<RootState[StoreEnum.auth]>) => {
@@ -26,7 +25,7 @@ export const createStore = (authState?: Partial<RootState[StoreEnum.auth]>) => {
       [StoreEnum.queue]: messageQueueSlice.reducer,
       [StoreEnum.global]: globalSlice.reducer,
       [StoreEnum.chat]: chatSlice.reducer,
-      [StoreEnum.globalChat]: globalChatSlice.reducer,
+      [StoreEnum.globalChat]: chatSlice.reducer,
     },
   });
 

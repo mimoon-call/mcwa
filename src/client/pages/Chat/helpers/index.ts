@@ -1,6 +1,6 @@
 import dayjs from '@client/locale/dayjs';
 import { DateFormat } from '@client-constants';
-import type { ChatContact } from '@client/pages/Instance/store/chat.types';
+import type { ChatContact } from '../store/chat.types';
 
 /**
  * Formats a date string for display in chat components

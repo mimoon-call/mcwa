@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import Icon from '@components/Icon/Icon';
-import type { InstanceChat } from '../store/chat.types';
+import type { InstanceChat } from '../../Chat/store/chat.types';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';

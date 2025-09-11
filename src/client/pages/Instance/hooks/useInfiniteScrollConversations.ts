@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '@client/store';
 import { StoreEnum } from '@client/store/store.enum';
-import { CHAT_SEARCH_DATA, CHAT_SEARCH_PAGINATION } from '../store/chat.constants';
-import chatSlice from '../store/chat.slice';
+import { INSTANCE_LOAD_MORE_CONVERSATIONS, CHAT_SEARCH_DATA, CHAT_SEARCH_PAGINATION } from '../../Chat/store/chat.constants';
+import { chatSlice } from '../../Chat/store/chat.slice';
 
 type UseInfiniteScrollConversationsProps = {
   phoneNumber?: string;
@@ -52,7 +52,7 @@ export const useInfiniteScrollConversations = ({
     const nextPageIndex = (pagination.pageIndex || 0) + 1;
 
     dispatch(
-      chatSlice.loadMoreConversations({
+      chatSlice[INSTANCE_LOAD_MORE_CONVERSATIONS]({
         phoneNumber,
         page: {
           ...pagination,
