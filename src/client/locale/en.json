@@ -55,8 +55,8 @@
     "ALL_INSTANCES": "All Instances",
     "MESSAGES": "messages",
     "INTERESTED": "Interested",
-    "YESTERDAY": "YESTERDAY",
-    "PHONE_NUMBER_REQUIRED": "Phone number is required"
+    "YESTERDAY": "Yesterday",
+    "RETRY": "Retry"
   },
   "CHAT": {
     "TITLE": "Chat",
@@ -185,6 +185,7 @@
     "COLOR_SHOULD_BE_LIGHTER": "Color should be lighter",
     "INVALID_PRICE": "Invalid price",
     "INVALID_ID_NUMBER": "Invalid ID number",
-    "INVALID_FILE": "Invalid file"
+    "INVALID_FILE": "Invalid file",
+    "PHONE_NUMBER_REQUIRED": "Phone number is required"
   }
 }

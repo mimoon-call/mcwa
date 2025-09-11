@@ -67,7 +67,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     if (withPhoneNumber && phoneNumber) {
       // Join the conversation room for live updates
       joinConversationRoom(phoneNumber, withPhoneNumber);
-      
+
       dispatch(
         chatSlice[CHAT_GET_CONVERSATION]({
           phoneNumber,
@@ -75,7 +75,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         })
       );
     }
-    
+
     // Cleanup: leave conversation room when component unmounts or chat changes
     return () => {
       if (withPhoneNumber && phoneNumber) {
@@ -116,23 +116,22 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       dispatch(chatSlice[CHAT_UPDATE_MESSAGE_STATUS](statusData));
     };
 
-    const handleMessageSent = (response: {
-      success: boolean;
-      tempId: string;
-      returnCode?: number;
-      error?: string;
-    }) => {
+    const handleMessageSent = (response: { success: boolean; tempId: string; returnCode?: number; error?: string }) => {
       if (response.success) {
-        dispatch(chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-          tempId: response.tempId,
-          status: MessageStatusEnum.DELIVERED
-        }));
+        dispatch(
+          chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+            tempId: response.tempId,
+            status: MessageStatusEnum.DELIVERED,
+          })
+        );
       } else {
-        dispatch(chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-          tempId: response.tempId,
-          status: MessageStatusEnum.ERROR,
-          errorMessage: response.error || 'Failed to send message'
-        }));
+        dispatch(
+          chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+            tempId: response.tempId,
+            status: MessageStatusEnum.ERROR,
+            errorMessage: response.error || 'Failed to send message',
+          })
+        );
       }
     };
 
@@ -185,15 +184,17 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
   const handleRetryMessage = (tempId: string) => {
     // Find the failed message by tempId
-    const failedMessage = messages.find(msg => msg.tempId === tempId && msg.status === MessageStatusEnum.ERROR);
-    
+    const failedMessage = messages.find((msg) => msg.tempId === tempId && msg.status === MessageStatusEnum.ERROR);
+
     if (!failedMessage) return;
 
     // Update the message status back to PENDING
-    dispatch(chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
-      tempId: tempId,
-      status: MessageStatusEnum.PENDING
-    }));
+    dispatch(
+      chatSlice[CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]({
+        tempId: tempId,
+        status: MessageStatusEnum.PENDING,
+      })
+    );
 
     // Resend the message via socket
     const socket = getClientSocket();
@@ -232,7 +233,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         <div className="text-center">
           <Icon name="svg:exclamation-triangle" size="3rem" className="text-red-500 mx-auto mb-4" />
           <div className="text-red-500 text-lg font-semibold mb-2">{t('GENERAL.ERROR')}</div>
-          <div className="text-gray-600">{t('GENERAL.PHONE_NUMBER_REQUIRED')}</div>
+          <div className="text-gray-600">{t('VALIDATE.PHONE_NUMBER_REQUIRED')}</div>
         </div>
       </div>
     );

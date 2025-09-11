@@ -56,7 +56,7 @@
     "MESSAGES": "הודעות",
     "INTERESTED": "מעוניין",
     "YESTERDAY": "אתמול",
-    "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
+    "RETRY": "נסה שוב"
   },
   "CHAT": {
     "TITLE": "צ'אט",
@@ -185,6 +185,7 @@
     "COLOR_SHOULD_BE_LIGHTER": "הצבע צריך להיות בהיר יותר",
     "INVALID_PRICE": "מחיר לא תקין",
     "INVALID_ID_NUMBER": "מספר זיהוי לא תקין",
-    "INVALID_FILE": "קובץ לא תקין"
+    "INVALID_FILE": "קובץ לא תקין",
+    "PHONE_NUMBER_REQUIRED": "מספר טלפון נדרש"
   }
 }
