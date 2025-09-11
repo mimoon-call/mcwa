@@ -3,7 +3,6 @@ import type { AppDispatch, RootState } from '@client/store';
 import TextField from '../../../shared/components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import { SelectField } from '@components/Fields';
-import { Checkbox } from '@components/Checkbox/Checkbox';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
 import { useTranslation } from 'react-i18next';
@@ -28,28 +27,43 @@ export const InstanceSearchPanel = () => {
     setPayload(instanceFilter);
   }, []); // Empty dependency array - only run on mount
 
-  const statusCode: Options<number> = useMemo(() => [200, 401, 403, 408].map((value) => {
-    const translation = statusCodeMap.get(value);
-    const title = translation ? `${value} - ${t(translation)}` : String(value);
-    return { title, value };
-  }), [t]);
+  const statusCode: Options<number> = useMemo(
+    () =>
+      [200, 401, 403, 408].map((value) => {
+        const translation = statusCodeMap.get(value);
+        const title = translation ? `${value} - ${t(translation)}` : String(value);
+        return { title, value };
+      }),
+    [t]
+  );
 
-  const onChange = useCallback((data: Omit<SearchInstanceReq, 'page'>) => {
-    // Update Redux filter state
-    dispatch(updateFilter(data));
-    
-    // Update local payload for form display
-    setPayload(prevPayload => {
-      // Only update if the data actually changed
-      const hasChanges = Object.keys(data).some(key => {
-        const typedKey = key as keyof typeof data;
-        return prevPayload[typedKey] !== data[typedKey];
+  const statusOptions: Options<boolean> = useMemo(
+    () => [
+      { title: t('GENERAL.YES'), value: true },
+      { title: t('GENERAL.NO'), value: false },
+    ],
+    [t]
+  );
+
+  const onChange = useCallback(
+    (data: Omit<SearchInstanceReq, 'page'>) => {
+      // Update Redux filter state
+      dispatch(updateFilter(data));
+
+      // Update local payload for form display
+      setPayload((prevPayload) => {
+        // Only update if the data actually changed
+        const hasChanges = Object.keys(data).some((key) => {
+          const typedKey = key as keyof typeof data;
+          return prevPayload[typedKey] !== data[typedKey];
+        });
+        if (!hasChanges) return prevPayload;
+
+        return { ...prevPayload, ...data };
       });
-      if (!hasChanges) return prevPayload;
-      
-      return { ...prevPayload, ...data };
-    });
-  }, [dispatch, updateFilter]);
+    },
+    [dispatch, updateFilter]
+  );
 
   const onSearch = useCallback(() => dispatch(searchInstance({})), [dispatch]);
 
@@ -72,18 +86,20 @@ export const InstanceSearchPanel = () => {
       />
       <SelectField
         clearable
+        searchable
         name="statusCode"
         label="INSTANCE.STATUS_CODE"
         value={payload.statusCode}
         options={statusCode}
         onChange={(value) => onChange({ statusCode: value })}
       />
-      <Checkbox
-        className="mt-2 ms-2"
+      <SelectField
+        clearable
+        name="isActive"
         label="GENERAL.ACTIVE"
-        id="isActive"
-        value={payload.isActive || false}
-        onChange={() => onChange({ isActive: !payload.isActive })}
+        value={payload.isActive}
+        options={statusOptions}
+        onChange={(value) => onChange({ isActive: value })}
       />
     </SearchPanel>
   );

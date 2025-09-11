@@ -35,7 +35,7 @@ export const SearchPanel = ({ onSearch, onClear, debounce = 500, children, paylo
       isInitialMount.current = false;
       return;
     }
-    
+
     if (payload !== undefined) {
       search();
     }
@@ -44,7 +44,7 @@ export const SearchPanel = ({ onSearch, onClear, debounce = 500, children, paylo
   return (
     <Form ref={formRef} className="p-4 bg-gray-50 m-2 rounded shadow">
       <div className="flex justify-between">
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(6, minmax(300px, 1fr))', minWidth: '400px' }}>
+        <div className="flex-grow grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 0.2fr))' }}>
           {children}
         </div>
 

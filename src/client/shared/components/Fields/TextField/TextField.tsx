@@ -50,7 +50,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
           styles['text-field'],
           className,
           disabled && '!bg-gray-200 !text-gray-600',
-          clearable && value && styles['with-clear']
+          clearable && value !== undefined && styles['with-clear']
         )}
         value={value}
         disabled={disabled}
@@ -58,7 +58,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
         {...rest}
       />
 
-      {clearable && value && !disabled && (
+      {clearable && value !== undefined && !disabled && (
         <Icon
           name="svg:x-mark"
           size="0.875rem"

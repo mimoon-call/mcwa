@@ -37,7 +37,7 @@ const extractTextFromReactNode = (node: ReactNode): string => {
 
 const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, hideDetails, options, placeholder, clearable, searchable = true, disabled = false } = props;
+  const { className, onChange, name, label, rules, value, hideDetails, options, placeholder, clearable, searchable, disabled = false } = props;
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,7 +176,7 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
             {displayValue || placeholderText}
           </span>
 
-          {clearable && value && !disabled && (
+          {clearable && value !== undefined && !disabled && (
             <Icon
               name="svg:x-mark"
               size="0.875rem"
