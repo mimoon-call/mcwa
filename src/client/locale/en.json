@@ -65,7 +65,12 @@
       "CAR": "Car",
       "MORTGAGE": "Mortgage"
     },
-    "SENDING_MESSAGE_FAILED": "Sending message failed, please try again"
+    "SENDING_MESSAGE_FAILED": "Sending message failed, please try again",
+    "DELETE_CONVERSATION": "Delete Conversation",
+    "DELETE_CONVERSATION_WARNING": "Are you sure you want to delete this conversation?\nThis action cannot be undone.",
+    "CONVERSATION_DELETED_SUCCESSFULLY": "Conversation deleted successfully",
+    "NOTHING_TO_DELETE": "Nothing to delete - conversation is already empty",
+    "DELETE_FAILED": "Failed to delete conversation"
   },
   "QUEUE": {
     "TITLE": "Send Messages",

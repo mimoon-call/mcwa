@@ -43,3 +43,7 @@ export type GetAllConversationPairsReq = { page: Pagination; searchValue?: strin
 export type GetAllConversationPairsRes = EntityList<ConversationPairItem>;
 
 export type SendMessageReq = { textMessage: string };
+
+export type DeleteConversationReq = { fromNumber: string; toNumber: string };
+
+export type DeleteConversationRes = { returnCode: number; deletedMessagesCount: number; deletedQueueCount: number };

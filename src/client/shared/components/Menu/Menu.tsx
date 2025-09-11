@@ -26,13 +26,13 @@ const MenuList: FC<{ items: MenuProps['items']; popoverRef: PopoverProps['ref'] 
     return { ...rest, loading, disabled: isDisabled, onClick: !isDisabled ? call : undefined };
   });
 
-  return items.map(({ label, iconName, disabled, loading, onClick }, index) => {
+  return items.map(({ label, iconName, disabled, loading, className, onClick }, index) => {
     const hasLoading = items.some(({ loading }) => loading);
 
     return (
       <div
         key={index}
-        className={cn('flex gap-2 align-middle', disabled || hasLoading ? 'opacity-50' : 'cursor-pointer')}
+        className={cn('flex gap-2 align-middle', disabled || hasLoading ? 'opacity-50' : 'cursor-pointer', className)}
         {...(!disabled && !hasLoading ? { role: 'button' } : {})}
         tabIndex={disabled ? -1 : 0}
         onClick={!hasLoading ? onClick : undefined}

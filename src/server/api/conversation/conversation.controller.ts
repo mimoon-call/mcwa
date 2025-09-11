@@ -7,10 +7,12 @@ import type {
   GetAllConversationPairsReq,
   GetAllConversationPairsRes,
   SendMessageReq,
+  DeleteConversationReq,
+  DeleteConversationRes,
 } from '@server/api/conversation/conversation.types';
 import RecordValidator from '@server/services/record-validator';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE } from '@server/api/conversation/conversation.map';
+import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE, DELETE_CONVERSATION } from '@server/api/conversation/conversation.map';
 import { conversationService } from '@server/api/conversation/conversation.service';
 import { BaseResponse } from '@server/models';
 
@@ -61,5 +63,14 @@ export const conversationController = {
     ]).validate();
 
     res.send(await conversationService[SEND_MESSAGE](fromNumber, toNumber, textMessage));
+  },
+
+  [DELETE_CONVERSATION]: async (req: Request<{ fromNumber: string; toNumber: string }, never, DeleteConversationReq>, res: Response<DeleteConversationRes>) => {
+    const { fromNumber, toNumber } = await new RecordValidator({ ...req.params, ...req.body }, [
+      ['fromNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+      ['toNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+    ]).validate();
+
+    res.send(await conversationService[DELETE_CONVERSATION](fromNumber, toNumber));
   },
 };

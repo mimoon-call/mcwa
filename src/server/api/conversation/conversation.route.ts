@@ -1,7 +1,7 @@
 import express from 'express';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
 import { conversationController } from '@server/api/conversation/conversation.controller';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE } from '@server/api/conversation/conversation.map';
+import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE, DELETE_CONVERSATION } from '@server/api/conversation/conversation.map';
 
 const conversationRoute = express.Router();
 
@@ -15,5 +15,6 @@ conversationRoute.post(`/${SEARCH_ALL_CONVERSATIONS}`, routeMiddleware({ isAuthR
 
 conversationRoute.post(`/${SEND_MESSAGE}/:fromNumber/:toNumber`, routeMiddleware({ isAuthRequired: true }, conversationController[SEND_MESSAGE]));
 
+conversationRoute.delete(`/${DELETE_CONVERSATION}/:fromNumber/:toNumber`, routeMiddleware({ isAuthRequired: true }, conversationController[DELETE_CONVERSATION]));
 
 export default conversationRoute;

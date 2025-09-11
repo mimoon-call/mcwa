@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 export type MenuItem = {
   label: string | ReactNode;
   iconName?: IconName;
+  className?: ClassValue;
   onClick: () => Promise<unknown> | unknown;
   disabled?: boolean | (() => boolean);
 };

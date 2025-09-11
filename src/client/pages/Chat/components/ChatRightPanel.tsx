@@ -1,3 +1,4 @@
+import type { MenuItem } from '@components/Menu/Menu.type';
 import type { ChatMessage, GlobalChatContact } from '../store/chat.types';
 import type { ChatContact } from '../../Instance/store/chat.types';
 import React from 'react';
@@ -7,8 +8,10 @@ import { cn } from '@client/plugins';
 import ChatMessages from './ChatMessages';
 import { TextField } from '@components/Fields';
 import { useAsyncFn, useToast } from '@hooks';
+import { Menu } from '@components/Menu/Menu';
 
 type RightPanelProps = {
+  menuItems?: MenuItem[];
   selectedContact?: ChatContact | GlobalChatContact | null;
   messages?: ChatMessage[];
   disabled?: boolean;
@@ -34,6 +37,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   headerComponent,
   onSendMessage,
   className,
+  menuItems,
 }) => {
   const toast = useToast({ y: 'top' });
   const { t } = useTranslation();
@@ -63,7 +67,18 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
           {headerComponent}
 
           {/* Chat Messages */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden relative">
+            {/* Floating 3 dots menu */}
+            {phoneNumber && withPhoneNumber && !!menuItems?.length && (
+              <div className="absolute top-4 rtl:left-4 ltr:right-4 z-40">
+                <Menu
+                  activator="svg:dots-vertical"
+                  items={menuItems}
+                  className="bg-white shadow-lg border border-gray-200 rounded-lg min-w-[200px]"
+                />
+              </div>
+            )}
+
             <ChatMessages
               messages={messages}
               loading={loading}

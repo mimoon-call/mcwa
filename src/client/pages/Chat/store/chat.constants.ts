@@ -25,3 +25,5 @@ export const CHAT_ADD_INCOMING_MESSAGE = 'add-incoming-message';
 export const CHAT_ADD_NEW_CONVERSATION = 'add-new-conversation';
 export const CHAT_LOAD_MORE_MESSAGES = 'load-more-messages';
 export const CHAT_LOAD_MORE_CONVERSATIONS = 'load-more-conversations';
+export const CHAT_DELETE_CONVERSATION = 'delete-conversation';
+export const CHAT_REMOVE_CONVERSATION = 'remove-conversation';

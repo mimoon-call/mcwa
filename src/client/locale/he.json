@@ -65,7 +65,12 @@
       "CAR": "רכב",
       "MORTGAGE": "משכנתא"
     },
-    "SENDING_MESSAGE_FAILED": "שליחת ההודעה נכשלה, נסה שוב"
+    "SENDING_MESSAGE_FAILED": "שליחת ההודעה נכשלה, נסה שוב",
+    "DELETE_CONVERSATION": "מחק שיחה",
+    "DELETE_CONVERSATION_WARNING": "האם אתה בטוח שברצונך למחוק את השיחה הזו?\nפעולה זו לא ניתנת לביטול.",
+    "CONVERSATION_DELETED_SUCCESSFULLY": "השיחה נמחקה בהצלחה",
+    "NOTHING_TO_DELETE": "אין מה למחוק - השיחה כבר ריקה",
+    "DELETE_FAILED": "נכשל במחיקת השיחה"
   },
   "QUEUE": {
     "TITLE": "שליחת הודעות",

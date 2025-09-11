@@ -208,6 +208,13 @@ export class MongoService<TDoc extends object> {
     };
   }
 
+  /**
+   * Start a MongoDB session for transactions
+   */
+  async startSession(): Promise<ClientSession> {
+    return await mongoose.startSession();
+  }
+
   /* ---------------- Lean helpers (typed) ---------------- */
 
   async findOneLean<TOut = TDoc>(

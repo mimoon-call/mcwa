@@ -4,9 +4,17 @@ import {
   SearchConversationRes,
   GetAllConversationPairsRes,
   ConversationPairItem,
+  DeleteConversationRes,
 } from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
-import { GET_CONVERSATION, SEARCH_CONVERSATIONS, SEARCH_ALL_CONVERSATIONS, SEND_MESSAGE } from '@server/api/conversation/conversation.map';
+import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
+import {
+  GET_CONVERSATION,
+  SEARCH_CONVERSATIONS,
+  SEARCH_ALL_CONVERSATIONS,
+  SEND_MESSAGE,
+  DELETE_CONVERSATION,
+} from '@server/api/conversation/conversation.map';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
@@ -406,5 +414,35 @@ export const conversationService = {
     }
 
     return { returnCode: 0 };
+  },
+
+  [DELETE_CONVERSATION]: async (fromNumber: string, toNumber: string): Promise<DeleteConversationRes> => {
+    // Delete messages from WhatsAppMessage collection
+    // Delete messages where fromNumber/toNumber match either direction
+    const messageDeleteResult = await WhatsAppMessage.deleteMany({
+      $or: [
+        { fromNumber: fromNumber, toNumber: toNumber },
+        { fromNumber: toNumber, toNumber: fromNumber },
+      ],
+    });
+
+    // Delete messages from WhatsAppQueue collection
+    // Delete messages where instanceNumber matches either fromNumber or toNumber
+    // and phoneNumber matches the other participant
+    const queueDeleteResult = await MessageQueueDb.deleteMany({
+      $or: [
+        { instanceNumber: fromNumber, phoneNumber: toNumber },
+        { instanceNumber: toNumber, phoneNumber: fromNumber },
+      ],
+    });
+
+    const deletedMessagesCount = messageDeleteResult.deletedCount || 0;
+    const deletedQueueCount = queueDeleteResult.deletedCount || 0;
+
+    return {
+      returnCode: 0,
+      deletedMessagesCount,
+      deletedQueueCount,
+    };
   },
 };

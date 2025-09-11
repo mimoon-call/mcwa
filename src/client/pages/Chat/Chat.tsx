@@ -26,9 +26,13 @@ import {
   CHAT_SET_SELECTED_CONTACT,
   CHAT_SEND_MESSAGE,
   CHAT_CLEAR_SEARCH_DATA,
+  CHAT_DELETE_CONVERSATION,
+  CHAT_REMOVE_CONVERSATION,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
+import { openDeletePopup } from '@helpers/open-delete-popup';
+import type { MenuItem } from '@components/Menu/Menu.type';
 
 type ChatProps = {
   className?: string;
@@ -139,7 +143,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       if (value !== lastSearchValueRef.current) {
         // Update the ref to track the last searched value
         lastSearchValueRef.current = value;
-        
+
         // Reset pagination only if search value actually changed
         dispatch(globalChatSlice[CHAT_RESET_PAGINATION]());
 
@@ -150,6 +154,43 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     },
     [dispatch]
   );
+
+  const handleDeleteConversation = async () => {
+    if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
+
+    await openDeletePopup({
+      title: 'CHAT.DELETE_CONVERSATION',
+      description: 'CHAT.DELETE_CONVERSATION_WARNING',
+      callback: async () => {
+        await globalChatSlice[CHAT_DELETE_CONVERSATION]({
+          fromNumber: selectedContact.instanceNumber,
+          toNumber: selectedContact.phoneNumber,
+        });
+
+        // Remove conversation from state
+        dispatch(
+          globalChatSlice[CHAT_REMOVE_CONVERSATION]({
+            fromNumber: selectedContact.instanceNumber,
+            toNumber: selectedContact.phoneNumber,
+          })
+        );
+
+        // Clear selected contact and navigate to chat without params
+        dispatch(globalChatSlice[CHAT_SET_SELECTED_CONTACT](null));
+        navigate('/chat', { replace: true });
+      },
+      successMessage: 'CHAT.CONVERSATION_DELETED_SUCCESSFULLY',
+    });
+  };
+
+  const actions: MenuItem[] = [
+    {
+      label: 'GENERAL.DELETE',
+      iconName: 'svg:trash',
+      className: 'text-red-800',
+      onClick: handleDeleteConversation,
+    },
+  ];
 
   return (
     <div className={cn('flex h-full bg-gray-100', className)}>
@@ -170,6 +211,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         }
       />
       <ChatRightPanel
+        menuItems={actions}
         selectedContact={selectedContact}
         messages={messages}
         disabled={false}

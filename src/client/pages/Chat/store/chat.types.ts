@@ -54,3 +54,9 @@ export type GetConversationReq = {
 export type GetConversationRes = EntityList<ChatMessage>;
 
 export type SendMessageReq = { fromNumber: string; toNumber: string; textMessage: string };
+
+export type DeleteConversationReq = { fromNumber: string; toNumber: string };
+
+export type DeleteConversationRes = { returnCode: number; deletedMessagesCount: number; deletedQueueCount: number };
+
+export type RemoveConversationReq = { fromNumber: string; toNumber: string };

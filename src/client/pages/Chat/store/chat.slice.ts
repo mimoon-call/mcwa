@@ -29,6 +29,8 @@ import {
   CHAT_ADD_NEW_CONVERSATION,
   CHAT_LOAD_MORE_MESSAGES,
   CHAT_LOAD_MORE_CONVERSATIONS,
+  CHAT_DELETE_CONVERSATION,
+  CHAT_REMOVE_CONVERSATION,
   SEARCH_LOADING,
 } from './chat.constants';
 import type {
@@ -39,6 +41,9 @@ import type {
   SearchAllConversationsReq,
   SearchAllConversationsRes,
   SendMessageReq,
+  DeleteConversationReq,
+  DeleteConversationRes,
+  RemoveConversationReq,
 } from './chat.types';
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
@@ -180,6 +185,11 @@ const loadMoreConversations = createAsyncThunk(
 // Async function for send message
 const sendMessage = async ({ fromNumber, toNumber, ...data }: SendMessageReq): Promise<void> => {
   return await Http.post<void, Omit<SendMessageReq, 'fromNumber' | 'toNumber'>>(`/conversation/${CHAT_SEND_MESSAGE}/${fromNumber}/${toNumber}`, data);
+};
+
+// Async function for delete conversation
+const deleteConversation = async ({ fromNumber, toNumber }: DeleteConversationReq): Promise<DeleteConversationRes> => {
+  return await Http.delete<DeleteConversationRes>(`/conversation/${CHAT_DELETE_CONVERSATION}/${fromNumber}/${toNumber}`);
 };
 
 const globalChatSlice = createSlice({
@@ -338,6 +348,19 @@ const globalChatSlice = createSlice({
         );
       }
     },
+    removeConversation: (state, action) => {
+      const { fromNumber, toNumber } = action.payload as RemoveConversationReq;
+      const existingConversations = state[CHAT_SEARCH_DATA] || [];
+
+      // Remove conversation that matches either direction of the phone numbers
+      state[CHAT_SEARCH_DATA] = existingConversations.filter(
+        (conv) =>
+          !(
+            (conv.instanceNumber === fromNumber && conv.phoneNumber === toNumber) ||
+            (conv.instanceNumber === toNumber && conv.phoneNumber === fromNumber)
+          )
+      );
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -460,6 +483,7 @@ export default {
   [CHAT_SEARCH_ALL_CONVERSATIONS]: searchAllConversations,
   [CHAT_GET_CONVERSATION]: getConversation,
   [CHAT_SEND_MESSAGE]: sendMessage,
+  [CHAT_DELETE_CONVERSATION]: deleteConversation,
   [CHAT_LOAD_MORE_MESSAGES]: loadMoreMessages,
   [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
   [CHAT_CLEAR_SEARCH]: globalChatSlice.actions.clearSearch,
@@ -474,4 +498,5 @@ export default {
   [CHAT_ADD_INCOMING_MESSAGE]: globalChatSlice.actions.addIncomingMessage,
   [CHAT_ADD_NEW_CONVERSATION]: globalChatSlice.actions.addNewConversation,
   [CHAT_UPDATE_MESSAGE_STATUS]: globalChatSlice.actions.updateMessageStatus,
+  [CHAT_REMOVE_CONVERSATION]: globalChatSlice.actions.removeConversation,
 };

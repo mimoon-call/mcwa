@@ -13,6 +13,21 @@ let globalRoot: ReturnType<typeof createRoot> | null = null;
 let lastToastContent: string | null = null;
 let lastToastTime: number = 0;
 
+// Helper function to check if toast should be shown (deduplication)
+const shouldShowToast = (content: string): boolean => {
+  const now = Date.now();
+  const contentString = content;
+  
+  // Prevent showing the same toast content within 1 second (regardless of type)
+  if (contentString === lastToastContent && now - lastToastTime < 1000) {
+    return false;
+  }
+  
+  lastToastContent = contentString;
+  lastToastTime = now;
+  return true;
+};
+
 export const useToast = (props: Partial<ToastProps> = {}) => {
   const { t } = useTranslation();
 
@@ -40,6 +55,12 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
   const error = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
+    const contentString = typeof content === 'string' ? content : content?.toString() || '';
+    
+    // Deduplication: prevent showing the same toast content within 1 second
+    if (!shouldShowToast(contentString)) {
+      return;
+    }
 
     openToast?.(
       <div className="flex gap-1 align-middle">
@@ -53,6 +74,12 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
   const warning = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
+    const contentString = typeof content === 'string' ? content : content?.toString() || '';
+    
+    // Deduplication: prevent showing the same toast content within 1 second
+    if (!shouldShowToast(contentString)) {
+      return;
+    }
 
     openToast?.(
       <div className="flex gap-1 align-middle">
@@ -68,14 +95,10 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
     
-    // Deduplication: prevent showing the same toast within 1 second
-    const now = Date.now();
-    if (contentString === lastToastContent && now - lastToastTime < 1000) {
+    // Deduplication: prevent showing the same toast content within 1 second
+    if (!shouldShowToast(contentString)) {
       return;
     }
-    
-    lastToastContent = contentString;
-    lastToastTime = now;
 
     openToast?.(
       <div className="flex gap-1 align-middle">
