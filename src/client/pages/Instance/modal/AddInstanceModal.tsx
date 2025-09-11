@@ -40,6 +40,7 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
         rules={{ required: [true], regex: [RegexPattern.MOBILE_PHONE_IL, 'VALIDATE.INVALID_PHONE_NUMBER'] }}
         pattern={RegexPattern.PHONE_INPUT}
         onChange={setPhoneNumber}
+        beforeChange={(value) => value.replace(/\D/g, '')}
       />
     </div>
   );
