@@ -47,40 +47,46 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     });
   }, [headers]);
 
-  const detectEdge = useCallback((e: ReactMouseEvent<HTMLElement>, cell: HTMLElement, headerIndex: number) => {
-    const rect = cell.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+  const detectEdge = useCallback(
+    (e: ReactMouseEvent<HTMLElement>, cell: HTMLElement, headerIndex: number) => {
+      const rect = cell.getBoundingClientRect();
+      const x = e.clientX - rect.left;
 
-    const onLeft = x <= RESIZE_THRESHOLD && headerIndex > 0;
-    const onRight = x >= rect.width - RESIZE_THRESHOLD && headerIndex < headers.length - 1;
+      const onLeft = x <= RESIZE_THRESHOLD && headerIndex > 0;
+      const onRight = x >= rect.width - RESIZE_THRESHOLD && headerIndex < headers.length - 1;
 
-    if (isRtl()) {
-      return { onLeft: onRight, onRight: onLeft }; // mirror behavior
-    }
+      if (isRtl()) {
+        return { onLeft: onRight, onRight: onLeft }; // mirror behavior
+      }
 
-    return { onLeft, onRight };
-  }, [headers.length]);
+      return { onLeft, onRight };
+    },
+    [headers.length]
+  );
 
-  const mouseMoveHandler = useCallback((e: MouseEvent) => {
-    if (!dragData.current || edgeIndex === null) return;
+  const mouseMoveHandler = useCallback(
+    (e: MouseEvent) => {
+      if (!dragData.current || edgeIndex === null) return;
 
-    didDrag.current = true;
+      didDrag.current = true;
 
-    let delta = e.clientX - dragData.current.startX;
-    if (isRtl()) {
-      delta = -delta;
-    }
+      let delta = e.clientX - dragData.current.startX;
+      if (isRtl()) {
+        delta = -delta;
+      }
 
-    const left = colRefs.current[edgeIndex];
-    const right = colRefs.current[edgeIndex + 1];
-    if (!left || !right) return;
+      const left = colRefs.current[edgeIndex];
+      const right = colRefs.current[edgeIndex + 1];
+      if (!left || !right) return;
 
-    const newLeft = Math.max(MIN_WIDTH, dragData.current.leftWidth + delta);
-    const newRight = Math.max(MIN_WIDTH, dragData.current.rightWidth - delta);
+      const newLeft = Math.max(MIN_WIDTH, dragData.current.leftWidth + delta);
+      const newRight = Math.max(MIN_WIDTH, dragData.current.rightWidth - delta);
 
-    left.style.width = `${newLeft}px`;
-    right.style.width = `${newRight}px`;
-  }, [edgeIndex, colRefs, isRtl]);
+      left.style.width = `${newLeft}px`;
+      right.style.width = `${newRight}px`;
+    },
+    [edgeIndex, colRefs, isRtl]
+  );
 
   const stopResize = useCallback(() => {
     dragData.current = null;
@@ -96,7 +102,10 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
       const columnWidth = headers
         .filter(({ hidden }) => !hidden)
         .reduce((acc: Record<string, string>, { value }, headerIndex) => {
-          const width = colRefs.current[headerIndex]!.getBoundingClientRect().width;
+          const width = colRefs.current[headerIndex]?.getBoundingClientRect().width;
+
+          if (!width) return acc;
+
           const widthPercentage = (width / tableWidth) * 100;
           return { ...acc, [value]: `${widthPercentage}%` };
         }, {});
@@ -110,72 +119,81 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
     });
   }, [mouseMoveHandler, headers, colRefs, theadRef]);
 
-  const onMouseOver = useCallback((headerIndex: number) => (e: ReactMouseEvent<HTMLElement>) => {
-    const cell = e.currentTarget as HTMLElement;
+  const onMouseOver = useCallback(
+    (headerIndex: number) => (e: ReactMouseEvent<HTMLElement>) => {
+      const cell = e.currentTarget as HTMLElement;
 
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const { onLeft, onRight } = detectEdge(e, cell, headerIndex);
-
-    if (onLeft) {
-      cell.style.cursor = 'ew-resize';
-      setEdgeIndex(headerIndex - 1); // resizer between headerIndex-1 & idx
-    } else if (onRight) {
-      cell.style.cursor = 'ew-resize';
-      setEdgeIndex(headerIndex); // resizer between headerIndex & headerIndex+1
-    } else {
-      cell.style.cursor = 'default';
-      setEdgeIndex(null);
-    }
-  }, [detectEdge, setEdgeIndex]);
-
-  const onMouseDown = useCallback((e: ReactMouseEvent<HTMLElement>) => {
-    if (edgeIndex === null) {
-      return;
-    }
-
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const leftWidth = colRefs.current[edgeIndex]?.getBoundingClientRect().width;
-    const rightWidth = colRefs.current[edgeIndex + 1]?.getBoundingClientRect().width;
-
-    if (!leftWidth || !rightWidth) {
-      return;
-    }
-
-    dragData.current = { startX: e.clientX, leftWidth, rightWidth };
-    document.body.style.cursor = 'ew-resize';
-    window.addEventListener('mousemove', mouseMoveHandler);
-    window.addEventListener('mouseup', stopResize);
-  }, [edgeIndex, mouseMoveHandler, stopResize, colRefs]);
-
-  const onClick = useCallback((value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
-    if (edgeIndex !== null || !sortable || didDrag.current) {
-      return;
-    }
-
-    const newSort = { ...(sort || {}) };
-
-    const toggle = (k: string) => {
-      if (newSort[k] === 1) {
-        delete newSort[k];
-      } else if (newSort[k] === -1) {
-        newSort[k] = 1;
-      } else {
-        newSort[k] = -1;
+      if (typeof window === 'undefined') {
+        return;
       }
-    };
 
-    (Array.isArray(sortable) ? sortable : sortable ? [value] : [value]).forEach(toggle);
-    onSort?.(newSort);
-  }, [edgeIndex, sort, onSort, didDrag]);
+      const { onLeft, onRight } = detectEdge(e, cell, headerIndex);
+
+      if (onLeft) {
+        cell.style.cursor = 'ew-resize';
+        setEdgeIndex(headerIndex - 1); // resizer between headerIndex-1 & idx
+      } else if (onRight) {
+        cell.style.cursor = 'ew-resize';
+        setEdgeIndex(headerIndex); // resizer between headerIndex & headerIndex+1
+      } else {
+        cell.style.cursor = 'default';
+        setEdgeIndex(null);
+      }
+    },
+    [detectEdge, setEdgeIndex]
+  );
+
+  const onMouseDown = useCallback(
+    (e: ReactMouseEvent<HTMLElement>) => {
+      if (edgeIndex === null) {
+        return;
+      }
+
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const leftWidth = colRefs.current[edgeIndex]?.getBoundingClientRect().width;
+      const rightWidth = colRefs.current[edgeIndex + 1]?.getBoundingClientRect().width;
+
+      if (!leftWidth || !rightWidth) {
+        return;
+      }
+
+      dragData.current = { startX: e.clientX, leftWidth, rightWidth };
+      document.body.style.cursor = 'ew-resize';
+      window.addEventListener('mousemove', mouseMoveHandler);
+      window.addEventListener('mouseup', stopResize);
+    },
+    [edgeIndex, mouseMoveHandler, stopResize, colRefs]
+  );
+
+  const onClick = useCallback(
+    (value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
+      if (edgeIndex !== null || !sortable || didDrag.current) {
+        return;
+      }
+
+      const newSort = { ...(sort || {}) };
+
+      const toggle = (k: string) => {
+        if (newSort[k] === 1) {
+          delete newSort[k];
+        } else if (newSort[k] === -1) {
+          newSort[k] = 1;
+        } else {
+          newSort[k] = -1;
+        }
+      };
+
+      (Array.isArray(sortable) ? sortable : sortable ? [value] : [value]).forEach(toggle);
+      onSort?.(newSort);
+    },
+    [edgeIndex, sort, onSort, didDrag]
+  );
 
   useEffect(() => () => stopResize(), [stopResize]); // cleanup on unmount
 

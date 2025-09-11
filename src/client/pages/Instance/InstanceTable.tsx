@@ -17,6 +17,7 @@ import {
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
   INSTANCE_SEARCH_DATA,
+  INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE,
@@ -51,6 +52,7 @@ const InstanceTable = () => {
 
   const {
     [INSTANCE_SEARCH_DATA]: instanceList,
+    [INSTANCE_SEARCH_FILTER]: instanceFilter,
     [INSTANCE_SEARCH_PAGINATION]: instancePagination,
     [INSTANCE_LOADING]: instanceLoading,
   } = useSelector((state: RootState) => state[StoreEnum.instance]);
@@ -80,7 +82,9 @@ const InstanceTable = () => {
             />
             <div className="flex flex-col">
               <span className="text-xs text-gray-600">{item?.name}</span>
-              <span dir="ltr" className="whitespace-nowrap">{internationalPhonePrettier(item.phoneNumber, '-', true)}</span>
+              <span dir="ltr" className="whitespace-nowrap">
+                {internationalPhonePrettier(item.phoneNumber, '-', true)}
+              </span>
             </div>
             <div className="flex justify-center items-center ps-2 h-full">
               <Icon className={iconColorClass} name="svg:warm" />
@@ -121,6 +125,16 @@ const InstanceTable = () => {
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
+      hidden: !!instanceFilter.statusCode && instanceFilter.statusCode !== 200,
+      class: ['whitespace-nowrap'],
+      sortable: true,
+      component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+    },
+    {
+      title: 'INSTANCE.LAST_ERROR_AT',
+      value: 'lastErrorAt',
+      hidden: !instanceFilter.statusCode || instanceFilter.statusCode === 200,
+      class: ['whitespace-nowrap'],
       sortable: true,
       component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
     },
