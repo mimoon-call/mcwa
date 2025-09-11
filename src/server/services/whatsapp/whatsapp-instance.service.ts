@@ -548,7 +548,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             const creds = await readJsonFile<AuthenticationCreds>('creds.json');
             const credsForStorage = convertBufferToPlain(creds);
 
-            await this.updateAppAuth({ creds: credsForStorage, ...(this.connected ? { statusCode: 200, errorMessage: null } : {}) } as WAAppAuth<T>);
+            await this.updateAppAuth({
+              creds: credsForStorage,
+              ...(this.connected ? { statusCode: 200, errorMessage: null, lastErrorAt: null } : {}),
+            } as WAAppAuth<T>);
 
             this.log('info', 'creds.json has been updated');
           } catch (error) {
@@ -782,7 +785,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Create a more descriptive reason that includes the error code
         const disconnectReason = code ? `${code}: ${reason}` : reason;
-        this.update({ statusCode: code, errorMessage: reason, lastErrorAt: getLocalTime() } as WAAppAuth<T>);
+        if (code !== this.appState?.statusCode) {
+          this.update({ statusCode: code, errorMessage: reason, lastErrorAt: getLocalTime() } as WAAppAuth<T>);
+        }
+
         this.log('info', `Disconnected (${disconnectReason})`);
 
         // Log specific error types for better debugging
@@ -1448,10 +1454,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
               // Update status to indicate need for re-authentication
               const errorType = isDecryptError ? 'decrypt' : 'unsupported state';
-              await this.update({
-                statusCode: 401,
-                errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
-              } as Partial<WAAppAuth<T>>);
+              if (this.appState?.statusCode !== 401) {
+                await this.update({
+                  statusCode: 401,
+                  errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
+                  lastErrorAt: getLocalTime(),
+                } as Partial<WAAppAuth<T>>);
+              }
 
               // Disable the instance
               await this.disable();
@@ -1466,10 +1475,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.socket = null;
           this.connected = false;
 
-          await this.update({
-            statusCode: 500,
-            errorMessage: `Recovery failed: ${(secondRestoreError as any)?.message || 'Unknown error'}`,
-          } as Partial<WAAppAuth<T>>);
+          if (this.appState?.statusCode !== 500) {
+            await this.update({
+              statusCode: 500,
+              errorMessage: `Recovery failed: ${(secondRestoreError as any)?.message || 'Unknown error'}`,
+              lastErrorAt: getLocalTime(),
+            } as Partial<WAAppAuth<T>>);
+          }
 
           await this.disable();
 
@@ -1485,10 +1497,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       // Update status to indicate recovery failure
       const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
-      await this.update({
-        statusCode: 500,
-        errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
-      } as Partial<WAAppAuth<T>>);
+
+      if (this.appState?.statusCode !== 500) {
+        await this.update({
+          statusCode: 500,
+          errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
+          lastErrorAt: getLocalTime(),
+        } as Partial<WAAppAuth<T>>);
+      }
 
       return false;
     }
@@ -1575,7 +1591,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('info', `Disconnected during QR (${reason})`);
 
           if (this.appState?.statusCode !== code) {
-            await this.update({ statusCode: code } as WAAppAuth<T>);
+            await this.update({
+              statusCode: code,
+              errorMessage: code === 200 ? null : reason,
+              lastErrorAt: code === 200 ? null : getLocalTime(),
+            } as WAAppAuth<T>);
           }
 
           if (code === DisconnectReason.loggedOut) {
