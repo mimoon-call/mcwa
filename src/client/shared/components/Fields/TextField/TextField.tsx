@@ -45,13 +45,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
   return (
     <div className={styles['text-field-container']}>
       <input
-        className={cn(
-          global['field'],
-          styles['text-field'],
-          className,
-          disabled && '!bg-gray-200 !text-gray-600',
-          clearable && value !== undefined && value !== '' && styles['with-clear']
-        )}
+        className={cn(global['field'], styles['text-field'], className, disabled && '!bg-gray-200 !text-gray-600')}
         value={value}
         disabled={disabled}
         onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern, beforeChange) : undefined}
