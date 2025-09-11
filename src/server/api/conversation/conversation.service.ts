@@ -265,10 +265,7 @@ export const conversationService = {
       {
         $lookup: {
           from: 'whatsappqueues',
-          let: {
-            phoneNumber: '$phoneNumber',
-            instanceNumber: '$instanceNumber',
-          },
+          let: { phoneNumber: '$phoneNumber', instanceNumber: '$instanceNumber' },
           pipeline: [
             {
               $match: {
@@ -311,17 +308,19 @@ export const conversationService = {
                 },
               },
             },
-            {
-              $project: {
-                action: 1,
-                confidence: 1,
-                department: 1,
-                interested: 1,
-                reason: 1,
-              },
-            },
+            { $project: { action: 1, confidence: 1, department: 1, interested: 1, reason: 1 } },
           ],
           as: 'messageDetails',
+        },
+      },
+
+      // Lookup unsubscribed status from whatsappunsubscribes collection
+      {
+        $lookup: {
+          from: 'whatsappunsubscribes',
+          let: { phoneNumber: '$phoneNumber' },
+          pipeline: [{ $match: { $expr: { $eq: ['$phoneNumber', '$$phoneNumber'] } } }, { $project: { createdAt: 1 } }],
+          as: 'unsubscribedData',
         },
       },
 
@@ -333,16 +332,12 @@ export const conversationService = {
           department: { $arrayElemAt: ['$messageDetails.department', 0] },
           interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
           reason: { $arrayElemAt: ['$messageDetails.reason', 0] },
+          unsubscribedAt: { $arrayElemAt: ['$unsubscribedData.createdAt', 0] },
         },
       },
 
       // Remove the temporary arrays
-      {
-        $project: {
-          lastQueueMessage: 0,
-          messageDetails: 0,
-        },
-      },
+      { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } },
     ];
 
     const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline, afterPipeline);
