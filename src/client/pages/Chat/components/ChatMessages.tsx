@@ -18,6 +18,7 @@ type ChatMessagesProps = {
 const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, phoneNumber, withPhoneNumber, className, onRetry }) => {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageRef = useRef<HTMLDivElement>(null);
 
   const isMessageFromUser = (message: ChatMessage) => {
     return message.fromNumber === phoneNumber;
@@ -35,17 +36,22 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, p
     }
   }, [withPhoneNumber]);
 
+  useEffect(() => {
+    lastMessageRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [messages.length]);
+
   const renderContent = () => {
     if (loading) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.LOADING')}</div>;
     if (error) return <div className="flex items-center justify-center h-32 text-red-500">{t('GENERAL.ERROR')}</div>;
     if (messages.length === 0) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.EMPTY')}</div>;
-    
+
     return messages.map((message, index) => {
       const isFromUser = isMessageFromUser(message);
       const messageKey = message.messageId || message.tempId || `${message.createdAt}-${index}`;
+      const isLastMessage = index === messages.length - 1;
 
       return (
-        <div key={messageKey} data-message-index={index}>
+        <div ref={isLastMessage ? lastMessageRef : undefined} key={messageKey} data-message-index={index}>
           <ChatMessageItem message={message} isFromUser={isFromUser} showDate={true} showFullDateTime={true} onRetry={onRetry} />
         </div>
       );

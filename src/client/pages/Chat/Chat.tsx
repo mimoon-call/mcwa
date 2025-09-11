@@ -85,7 +85,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   // Find selected contact based on URL parameters
   const selectedContactFromUrl =
-    (conversations as GlobalChatContact[])?.find((contact) => contact.instanceNumber === instanceNumber && contact.phoneNumber === phoneNumber) || null;
+    (conversations as GlobalChatContact[])?.find((contact) => contact.instanceNumber === instanceNumber && contact.phoneNumber === phoneNumber) ||
+    null;
 
   // Set selected contact if URL parameters match
   useEffect(() => {
@@ -205,16 +206,16 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     }
   };
 
-  const handleRetryMessage = (tempId: string) => {
+  const handleRetryMessage = (id: string) => {
     // Find the failed message by tempId
-    const failedMessage = messages.find((msg) => msg.tempId === tempId && msg.status === MessageStatusEnum.ERROR);
+    const failedMessage = messages.find((msg) => (msg.tempId === id || msg.messageId === id) && msg.status === MessageStatusEnum.ERROR);
 
     if (!failedMessage) return;
 
     // Update the message status back to PENDING
     dispatch(
       updateOptimisticMessageStatus({
-        tempId: tempId,
+        tempId: id,
         status: MessageStatusEnum.PENDING,
       })
     );
@@ -226,7 +227,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         fromNumber: failedMessage.fromNumber,
         toNumber: failedMessage.toNumber,
         textMessage: failedMessage.text,
-        tempId: tempId,
+        messageId: failedMessage.messageId,
+        tempId: id,
       });
     }
   };

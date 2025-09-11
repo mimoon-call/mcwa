@@ -29,7 +29,6 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
 
     // URL regex pattern to match http/https URLs
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-
     const parts = text.split(urlRegex);
 
     return parts.map((part, index) => {
@@ -54,14 +53,15 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
   };
 
   const retryElement = (() => {
-    if (!onRetry || !message.tempId) return null;
+    if (!onRetry || (!message.tempId && message.status !== MessageStatusEnum.ERROR)) return null;
 
+    const id = message.tempId || message.messageId;
     const retryRef = useTooltip<HTMLDivElement>({ text: t('GENERAL.RETRY') });
     const [iconName, setIconName] = useState<IconName>('svg:warning');
 
     return (
       <div ref={retryRef} className="pt-0.5 px-1" onMouseOver={() => setIconName('svg:sync')} onMouseLeave={() => setIconName('svg:warning')}>
-        <Icon name={iconName} size="0.75rem" className="text-red-600" onClick={() => onRetry(message.tempId!)} />
+        <Icon name={iconName} size="0.75rem" className="text-red-600" onClick={() => onRetry(id!)} />
       </div>
     );
   })();
@@ -81,7 +81,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
               {isFromUser && (
                 <div className="flex space-x-1">
-                  {message.status === MessageStatusEnum.ERROR && message.tempId && onRetry
+                  {(message.status === MessageStatusEnum.ERROR || message.tempId) && onRetry
                     ? retryElement
                     : (() => {
                         const checkStyle = getCheckmarkStyle(message.status);

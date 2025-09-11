@@ -5,21 +5,32 @@ import { ConversationEventEnum } from './conversation-event.enum';
 import { SocketService } from '@server/services/socket/socket.service';
 import { AccessToken } from '@server/services/token/token.type';
 import { SEND_MESSAGE } from '@server/api/conversation/conversation.map';
+import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 
 export const registerConversationSocketHandlers = (socketService: SocketService<AccessToken>) => {
   // Handler for sending messages via socket
   socketService.registerHandler(
-    ConversationEventEnum.SEND_MESSAGE,
-    async (socket: SocketManage<AccessToken>, data: { fromNumber: string; toNumber: string; textMessage: string; tempId: string }) => {
+    ConversationEventEnum.SEND_CHAT_MESSAGE,
+    async (
+      socket: SocketManage<AccessToken>,
+      data: { fromNumber: string; toNumber: string; textMessage: string; tempId: string; messageId: string }
+    ) => {
+      const { fromNumber, toNumber, messageId } = data;
+
       try {
         // Send the message using the existing service
         const result = await conversationService[SEND_MESSAGE](data.fromNumber, data.toNumber, data.textMessage);
 
+        if (messageId) {
+          WhatsAppMessage.deleteOne({ fromNumber, toNumber, messageId });
+        }
+
         if (result.returnCode === 0) {
           // Send success response back to client
-          socket.emit(ConversationEventEnum.MESSAGE_SENT, {
+          socket.emit(ConversationEventEnum.CHAT_MESSAGE_SENT, {
             success: true,
             tempId: data.tempId,
+            messageId: data.messageId,
             returnCode: result.returnCode,
           });
 
@@ -27,17 +38,19 @@ export const registerConversationSocketHandlers = (socketService: SocketService<
           // which will replace the optimistic message on the client side
         } else {
           // Send error response
-          socket.emit(ConversationEventEnum.MESSAGE_SENT, {
+          socket.emit(ConversationEventEnum.CHAT_MESSAGE_SENT, {
             success: false,
             tempId: data.tempId,
+            messageId: data.messageId,
             returnCode: result.returnCode,
             error: 'Message sending failed',
           });
         }
       } catch (error) {
-        socket.emit(ConversationEventEnum.MESSAGE_SENT, {
+        socket.emit(ConversationEventEnum.CHAT_MESSAGE_SENT, {
           success: false,
           tempId: data.tempId,
+          messageId: data.messageId,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
       }
