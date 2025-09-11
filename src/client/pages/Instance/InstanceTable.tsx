@@ -136,7 +136,7 @@ const InstanceTable = () => {
       hidden: !instanceFilter.statusCode || instanceFilter.statusCode === 200,
       class: ['whitespace-nowrap'],
       sortable: true,
-      component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+      component: ({ item }) => (item.lastErrorAt ? dayjs(item.lastErrorAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT) : null),
     },
   ];
 

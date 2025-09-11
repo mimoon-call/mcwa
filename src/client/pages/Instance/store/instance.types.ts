@@ -20,6 +20,7 @@ export type InstanceItem = {
   lastIpAddress?: string | null;
   isWarmingUp: boolean;
   isConnected: boolean;
+  lastErrorAt: string;
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;
