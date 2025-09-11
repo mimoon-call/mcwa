@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../store/chat.types';
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
