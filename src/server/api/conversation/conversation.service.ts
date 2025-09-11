@@ -34,7 +34,7 @@ export const conversationService = {
                 { fromNumber: withPhoneNumber, toNumber: phoneNumber },
               ],
             },
-            { text: { $ne: '' } },
+            { $and: [{ text: { $ne: '' } }, { text: { $ne: null } }] },
           ],
         },
       },
@@ -46,7 +46,16 @@ export const conversationService = {
   [SEARCH_CONVERSATIONS]: async (phoneNumber: string, page: Pagination, searchValue?: string): Promise<SearchConversationRes> => {
     const pipeline: PipelineStage[] = [
       // only messages where myNumber is involved
-      { $match: { $and: [{ $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] }, { internalFlag: false }] } },
+      {
+        $match: {
+          $and: [
+            { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] },
+            { internalFlag: false },
+            { text: { $ne: '' } },
+            { text: { $ne: null } },
+          ],
+        },
+      },
 
       // extract the other participant per message and pushName if available
       {
@@ -119,7 +128,7 @@ export const conversationService = {
   [SEARCH_ALL_CONVERSATIONS]: async (page: Pagination, searchValue?: string): Promise<GetAllConversationPairsRes> => {
     const pipeline: PipelineStage[] = [
       // Filter out internal messages and empty text
-      { $match: { $and: [{ internalFlag: false }, { text: { $ne: '' } }] } },
+      { $match: { $and: [{ internalFlag: false }, { text: { $ne: '' } }, { text: { $ne: null } }] } },
 
       // Create a normalized conversation pair key (always smaller number first)
       {
@@ -388,7 +397,7 @@ export const conversationService = {
     // Send message to specific conversation room instead of broadcasting
     const conversationKey = `conversation:${fromNumber}:${toNumber}`;
     app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, messageData);
-    
+
     const message = await WhatsAppMessage.findOne({ fromNumber, toNumber, messageId: result.messageId });
 
     if (message) {
@@ -443,5 +452,4 @@ export const conversationService = {
       deletedQueueCount,
     };
   },
-
 };
