@@ -40,7 +40,6 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
     handleAuthAndRefresh();
   }, [handleAuthAndRefresh]);
 
-  // Socket watcher for InstanceEventEnum.INSTANCE_READY and update global state (activeList, readyCount, totalCount)
   useEffect(() => {
     const socket = getClientSocket();
 

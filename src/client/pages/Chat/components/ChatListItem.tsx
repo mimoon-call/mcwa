@@ -88,7 +88,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClic
         <div className="flex items-center justify-between mt-1">
           <div className="font-medium text-sm text-gray-600 truncate flex gap-1">
             <span dir="ltr">{internationalPhonePrettier(contact.instanceNumber, '-', true)}</span>
-            <Icon name="svg:arrow-two-way" size="1rem" />
+            <Icon className="rotate-90 mt-1" name="svg:arrow-up-down" size="0.8725rem" />
             <span dir="ltr">{internationalPhonePrettier(contact.phoneNumber, '-', true)}</span>
           </div>
         </div>
