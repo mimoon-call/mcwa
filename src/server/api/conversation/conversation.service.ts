@@ -380,7 +380,7 @@ export const conversationService = {
       return { returnCode: 1 };
     }
 
-    const result = await instance.send(toNumber, { type: 'text', text: textMessage });
+    const result = await instance.send(toNumber, { type: 'text', text: textMessage }, { trackDelivery: true });
 
     // Broadcast new message event
     const messageData = {

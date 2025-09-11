@@ -990,6 +990,61 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           const status = String(updateData.status);
           this.log('info', `✅ Message ${status.toLowerCase()} to ${toNumber}`);
         }
+
+        // Call the global message update callback to update database
+        if (this.hasGlobalMessageUpdateCallback && key.id && updateData.status !== undefined) {
+          try {
+            const statusMap: { [key: number]: keyof typeof MessageStatusEnum } = {
+              1: MessageStatusEnum.PENDING,
+              2: MessageStatusEnum.SENT,
+              3: MessageStatusEnum.DELIVERED,
+              4: MessageStatusEnum.READ,
+              5: MessageStatusEnum.PLAYED,
+            };
+
+            const numericStatus = Number(updateData.status);
+            const status = statusMap[numericStatus] || MessageStatusEnum.ERROR;
+            const timestamp = getLocalTime();
+
+            // Prepare status-specific timestamps
+            let sentAt = timestamp; // Default to current timestamp
+            let deliveredAt, readAt, playedAt;
+            
+            switch (status) {
+              case MessageStatusEnum.SENT:
+                sentAt = timestamp;
+                break;
+              case MessageStatusEnum.DELIVERED:
+                deliveredAt = timestamp;
+                break;
+              case MessageStatusEnum.READ:
+                readAt = timestamp;
+                break;
+              case MessageStatusEnum.PLAYED:
+                playedAt = timestamp;
+                break;
+            }
+
+            // Get the phone number from the remote JID
+            const toNumber = this.jidToNumber(key.remoteJid!);
+
+            // Call the global callback with proper parameters
+            await this.onMessageUpdate(key.id, {
+              messageId: key.id,
+              fromNumber: this.phoneNumber,
+              toNumber,
+              status,
+              sentAt,
+              deliveredAt,
+              readAt,
+              playedAt,
+              errorMessage: status === MessageStatusEnum.ERROR ? 'Unknown error' : undefined,
+              errorCode: status === MessageStatusEnum.ERROR ? numericStatus : undefined,
+            });
+          } catch (error) {
+            this.log('error', 'Error calling global message update callback:', error);
+          }
+        }
       }
     };
 
