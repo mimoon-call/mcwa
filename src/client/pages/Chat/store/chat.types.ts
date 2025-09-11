@@ -1,8 +1,8 @@
 // src/client/pages/Chat/store/chat.types.ts
 import type { EntityList } from '@models/entity-list';
 import type { Pagination } from '@models/pagination';
+import { type ChatActionEnum, ChatDepartmentEnum, ChatIntentEnum } from '@client/pages/Chat/store/chat.enum';
 
-// Re-export enum for convenience
 export { MessageStatusEnum } from './chat.enum';
 
 export type GlobalChatContact = {
@@ -12,11 +12,12 @@ export type GlobalChatContact = {
   lastMessage: string;
   lastMessageAt: string;
   messageCount: number;
-  action: string;
+  action: ChatActionEnum;
   confidence: number;
-  department: string;
+  department: ChatDepartmentEnum;
   interested: boolean;
   reason: string;
+  intent: ChatIntentEnum;
   profilePictureUrl?: string | null;
 };
 

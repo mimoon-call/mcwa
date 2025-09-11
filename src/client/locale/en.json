@@ -65,6 +65,17 @@
       "CAR": "Car",
       "MORTGAGE": "Mortgage"
     },
+    "INTENT": {
+      "POSITIVE_INTEREST": "Positive Interest",
+      "REQUEST_INFO": "Request Information",
+      "NEUTRAL": "Neutral",
+      "NOT_NOW": "Not Now",
+      "DECLINE": "Decline",
+      "UNSUBSCRIBE": "Unsubscribe",
+      "OUT_OF_SCOPE": "Out of Scope",
+      "AMBIGUOUS": "Ambiguous",
+      "ABUSIVE": "Abusive"
+    },
     "SENDING_MESSAGE_FAILED": "Sending message failed, please try again",
     "DELETE_CONVERSATION": "Delete Conversation",
     "DELETE_CONVERSATION_WARNING": "Are you sure you want to delete this conversation?\nThis action cannot be undone.",

@@ -1,5 +1,6 @@
 import type { WAAppAuth, WAMessage } from '@server/services/whatsapp/whatsapp-instance.type';
 import type { Pagination, EntityList } from '@models';
+import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 
 export type SearchConversationItem = { phoneNumber: string; name: string | null; lastMessage: string; lastMessageAt: string; messageCount: number };
 
@@ -31,11 +32,12 @@ export type ConversationPairItem = {
   phoneNumber: string;
   instanceNumber: string | null;
   instanceConnected: boolean;
-  action?: string;
-  confidence?: number;
-  department?: string;
-  interested?: boolean;
-  reason?: string;
+  action?: InterestResult['action'];
+  confidence?: InterestResult['confidence'];
+  department?: InterestResult['department'];
+  interested?: InterestResult['interested'];
+  reason?: InterestResult['reason'];
+  intent?: InterestResult['intent'];
 };
 
 export type GetAllConversationPairsReq = { page: Pagination; searchValue?: string };

@@ -317,7 +317,7 @@ export const conversationService = {
                 },
               },
             },
-            { $project: { action: 1, confidence: 1, department: 1, interested: 1, reason: 1 } },
+            { $project: { action: 1, confidence: 1, department: 1, interested: 1, reason: 1, intent: 1 } },
           ],
           as: 'messageDetails',
         },
@@ -338,6 +338,7 @@ export const conversationService = {
         $addFields: {
           action: { $arrayElemAt: ['$messageDetails.action', 0] },
           confidence: { $arrayElemAt: ['$messageDetails.confidence', 0] },
+          intent: { $arrayElemAt: ['$messageDetails.intent', 0] },
           department: { $arrayElemAt: ['$messageDetails.department', 0] },
           interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
           reason: { $arrayElemAt: ['$messageDetails.reason', 0] },

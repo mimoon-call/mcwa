@@ -42,10 +42,12 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   const toast = useToast({ y: 'top' });
   const { t } = useTranslation();
   const [message, setMessage] = React.useState('');
+  const refInput = React.useRef<HTMLInputElement>(null);
 
   const { call: send, loading: isSending } = useAsyncFn(() => onSendMessage(phoneNumber!, withPhoneNumber!, message), {
     successCallback: () => {
       setMessage('');
+      refInput.current?.focus();
     },
     errorCallback: () => {
       toast.error('CHAT.SENDING_MESSAGE_FAILED');
@@ -102,13 +104,14 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
         <div className="bg-white ps-4 pt-2 pb-4 flex-shrink-0 border-t">
           <div className="flex justify-between gap-2 items-center space-x-3">
             <TextField
+              ref={refInput}
               className="flex-grow"
               containerClass="!rounded-full !p-4"
               hideDetails
               autoCapitalize="off"
               type="text"
               name="messageInput"
-              disabled={disabled || isSending}
+              disabled={disabled}
               value={message}
               onChange={setMessage}
               onKeyDown={onKeyDown}

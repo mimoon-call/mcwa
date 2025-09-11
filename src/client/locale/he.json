@@ -65,6 +65,17 @@
       "CAR": "רכב",
       "MORTGAGE": "משכנתא"
     },
+    "INTENT": {
+      "POSITIVE_INTEREST": "עניין חיובי",
+      "REQUEST_INFO": "בקשת מידע",
+      "NEUTRAL": "ניטרלי",
+      "NOT_NOW": "לא עכשיו",
+      "DECLINE": "דחייה",
+      "UNSUBSCRIBE": "הסרה מרשימה",
+      "OUT_OF_SCOPE": "מחוץ לתחום",
+      "AMBIGUOUS": "מעורפל",
+      "ABUSIVE": "פוגעני"
+    },
     "SENDING_MESSAGE_FAILED": "שליחת ההודעה נכשלה, נסה שוב",
     "DELETE_CONVERSATION": "מחק שיחה",
     "DELETE_CONVERSATION_WARNING": "האם אתה בטוח שברצונך למחוק את השיחה הזו?\nפעולה זו לא ניתנת לביטול.",

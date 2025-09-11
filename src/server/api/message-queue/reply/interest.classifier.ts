@@ -38,17 +38,7 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-- Consider ALL messages in the conversation (both YOU and LEAD messages).
-- CAR: If ANY message clearly refers to automotive context (any language/emoji/synonyms: "car", "auto", "vehicle", "רכב", "машина", "voiture", "coche", "سيارة", "automóvil", "자동차", "🚗"), set department="CAR".
-- MORTGAGE: Set department="MORTGAGE" ONLY if the message explicitly refers to a home-loan/mortgage context. This requires:
-  (A) a mortgage/home-loan keyword (e.g., "mortgage", "mortage", "משכנתא", "ипотека", "hipoteca", "hypothèque", "رهن عقاري", "房屋贷款", "home loan"),
-  OR a home/real-estate token ("בית", "דירה", "נכס", "🏠", "home", "house", "property", "real estate"),
-  AND
-  (B) a loan/finance term (e.g., "loan", "הלוואה", "credit", "financing") IN THE SAME MESSAGE.
-  Examples mapping to MORTGAGE: "הלוואת משכנתא", "home loan", "mortgage refinancing", "הלוואה לדירה".
-- IMPORTANT: Generic loans without explicit home context ("הלוואה", "personal loan", "business loan") are GENERAL.
-- If both CAR and MORTGAGE appear, choose the department from the most recent message.
-- If neither CAR nor MORTGAGE is matched, department="GENERAL".
+... (unchanged) ...
 
 EXAMPLES:
 - YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
@@ -74,7 +64,11 @@ DECISION RULES:
 - interested=false for declines, unsubscribe, abuse, or out-of-scope.
 - If unclear, intent="AMBIGUOUS" with a brief clarifying suggestedReply.
 
-Return only valid JSON matching the schema.
+// NEW: SARCASM & ROLE-REVERSAL
+- If the LEAD’s message is a role-reversal offering YOU the same product/service you offered (e.g., "אני יכולה לתת לך הלוואה"), treat this as sarcasm/irony indicating lack of interest.
+- In such cases: interested=false; intent="DECLINE".
+- The suggestedReply should remain polite and neutral-corporate (third-person), e.g.:
+  "התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע."
 `.trim();
 
 /* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */

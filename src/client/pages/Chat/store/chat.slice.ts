@@ -54,31 +54,31 @@ import isEqual from 'lodash/isEqual';
 // Helper function to deduplicate messages by messageId, keeping the last occurrence
 const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
   const seen = new Map<string, ChatMessage>();
-  
+
   // Process messages in order, keeping the last occurrence of each messageId
   messages.forEach((message) => {
     if (message.messageId) {
       seen.set(message.messageId, message);
     }
   });
-  
+
   // Return messages without messageId first, then deduplicated messages
-  const messagesWithoutId = messages.filter(msg => !msg.messageId);
+  const messagesWithoutId = messages.filter((msg) => !msg.messageId);
   const deduplicatedMessages = Array.from(seen.values());
-  
+
   return [...messagesWithoutId, ...deduplicatedMessages];
 };
 
 // Helper function to deduplicate conversations by phoneNumber+instanceNumber, keeping the last occurrence
 const deduplicateConversations = (conversations: GlobalChatContact[]): GlobalChatContact[] => {
   const seen = new Map<string, GlobalChatContact>();
-  
+
   // Process conversations in order, keeping the last occurrence of each phoneNumber+instanceNumber combination
   conversations.forEach((conversation) => {
     const key = `${conversation.phoneNumber}+${conversation.instanceNumber}`;
     seen.set(key, conversation);
   });
-  
+
   return Array.from(seen.values());
 };
 
@@ -264,12 +264,13 @@ const globalChatSlice = createSlice({
           }
         } else {
           // Try to replace optimistic message
-          const optimisticIndex = existingMessages.findIndex((msg) => 
-            msg.isOptimistic && 
-            msg.fromNumber === newMessage.fromNumber && 
-            msg.toNumber === newMessage.toNumber && 
-            msg.text === newMessage.text &&
-            Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 30000
+          const optimisticIndex = existingMessages.findIndex(
+            (msg) =>
+              msg.isOptimistic &&
+              msg.fromNumber === newMessage.fromNumber &&
+              msg.toNumber === newMessage.toNumber &&
+              msg.text === newMessage.text &&
+              Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 30000
           );
 
           if (optimisticIndex !== -1) {
@@ -361,9 +362,7 @@ const globalChatSlice = createSlice({
           ...(errorMessage && { errorMessage }),
         };
 
-        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => 
-          index === messageIndex ? updatedMessage : msg
-        );
+        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === messageIndex ? updatedMessage : msg));
       }
     },
     removeConversation: (state, action) => {
@@ -381,7 +380,7 @@ const globalChatSlice = createSlice({
     },
     addOptimisticMessage: (state, action) => {
       const optimisticMessage = action.payload as ChatMessage;
-      
+
       // Add optimistic message to the end of the array using direct mutation
       if (!state[CHAT_MESSAGES_DATA]) {
         state[CHAT_MESSAGES_DATA] = [];
@@ -394,11 +393,9 @@ const globalChatSlice = createSlice({
 
       // Find and replace the optimistic message with the real message
       const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId);
-      
+
       if (messageIndex !== -1) {
-        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => 
-          index === messageIndex ? realMessage : msg
-        );
+        state[CHAT_MESSAGES_DATA] = existingMessages.map((msg, index) => (index === messageIndex ? realMessage : msg));
       }
     },
     updateOptimisticMessageStatus: (state, action) => {
@@ -406,7 +403,7 @@ const globalChatSlice = createSlice({
       const existingMessages = state[CHAT_MESSAGES_DATA] || [];
 
       const messageIndex = existingMessages.findIndex((msg) => msg.tempId === tempId && msg.isOptimistic);
-      
+
       if (messageIndex !== -1) {
         const messageToUpdate = state[CHAT_MESSAGES_DATA]?.[messageIndex];
         if (messageToUpdate) {

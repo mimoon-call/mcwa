@@ -65,7 +65,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
   })();
 
   return !message.text ? null : (
-    <div className={cn('', className)}>
+    <div className={cn('', className)} data-message-id={message.messageId || message.tempId}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
         <div className="max-w-xs lg:max-w-md">
           <div className={cn('rounded-lg p-3 shadow-sm', isFromUser ? 'bg-green-100' : 'bg-white')}>

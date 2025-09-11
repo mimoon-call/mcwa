@@ -1,7 +1,7 @@
 // src/client/shared/components/TextField/TextField.tsx
 import type { ClassValue } from 'clsx';
 import type { InputWrapperProps } from '@components/Fields/InputWrapper/InputWrapper.types';
-import React, { type FC, type InputHTMLAttributes, useEffect, useRef, useCallback } from 'react';
+import React, { type InputHTMLAttributes, useEffect, useRef, useCallback, forwardRef } from 'react';
 import InputWrapper from '@components/Fields/InputWrapper/InputWrapper';
 import global from '@components/Fields/Fields.module.css';
 import styles from '@components/Fields/TextField/TextField.module.css';
@@ -24,7 +24,7 @@ type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
     className?: ClassValue;
   };
 
-const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, ...rest }) => {
+const Input = forwardRef<HTMLInputElement, InputProps>(({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, ...rest }, ref) => {
   const localValue = useRef<string>(value?.toString() || '');
 
   useEffect(() => {
@@ -45,6 +45,7 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
   return (
     <div className={styles['text-field-container']}>
       <input
+        ref={ref}
         className={cn(global['field'], styles['text-field'], className, disabled && '!bg-gray-200 !text-gray-600')}
         value={value}
         disabled={disabled}
@@ -65,9 +66,11 @@ const Input: FC<InputProps> = ({ onChange, className, pattern, value, disabled, 
       )}
     </div>
   );
-};
+});
 
-const TextField: FC<TextFieldProps> = (props) => {
+Input.displayName = 'Input';
+
+const TextField = forwardRef<HTMLInputElement, TextFieldProps>((props, ref) => {
   const { t } = useTranslation();
   const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, containerClass, ...rest } = props;
 
@@ -76,6 +79,7 @@ const TextField: FC<TextFieldProps> = (props) => {
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
       <Input
+        ref={ref}
         {...rest}
         className={containerClass}
         value={value}
@@ -86,6 +90,8 @@ const TextField: FC<TextFieldProps> = (props) => {
       />
     </InputWrapper>
   );
-};
+});
+
+TextField.displayName = 'TextField';
 
 export default TextField;
