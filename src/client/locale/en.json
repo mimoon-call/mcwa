@@ -84,7 +84,7 @@
     "DELETE_FAILED": "Failed to delete conversation"
   },
   "QUEUE": {
-    "TITLE": "Send Messages",
+    "TITLE": "Broadcast",
     "PHONE_NUMBER": "Phone number",
     "FULL_NAME": "Full name",
     "TEXT_MESSAGE": "Message",

@@ -84,7 +84,7 @@
     "DELETE_FAILED": "נכשל במחיקת השיחה"
   },
   "QUEUE": {
-    "TITLE": "שליחת הודעות",
+    "TITLE": "שידור",
     "PHONE_NUMBER": "מספר טלפון",
     "FULL_NAME": "שם",
     "TEXT_MESSAGE": "הודעה",
