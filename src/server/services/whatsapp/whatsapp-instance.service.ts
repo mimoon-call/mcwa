@@ -620,7 +620,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private jidToNumber(jidOrPhone: string): string {
-    if (jidOrPhone.endsWith('@s.whatsapp.net')) return jidOrPhone.split('@')[0];
+    if (jidOrPhone?.endsWith('@s.whatsapp.net')) return jidOrPhone.split('@')[0];
 
     return jidOrPhone;
   }
@@ -1009,7 +1009,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             // Prepare status-specific timestamps
             let sentAt = timestamp; // Default to current timestamp
             let deliveredAt, readAt, playedAt;
-            
+
             switch (status) {
               case MessageStatusEnum.SENT:
                 sentAt = timestamp;
