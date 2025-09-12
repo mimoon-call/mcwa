@@ -5,6 +5,7 @@ export const CHAT_GET_CONVERSATION = 'get-conversation';
 export const CHAT_SEARCH_DATA = 'searchData';
 export const CHAT_SEARCH_PAGINATION = 'searchPagination';
 export const CHAT_SEARCH_VALUE = 'searchValue';
+export const CHAT_EXTERNAL_FLAG = 'externalFlag';
 export const CHAT_MESSAGES_DATA = 'messagesData';
 export const CHAT_MESSAGES_PAGINATION = 'messagesPagination';
 export const CHAT_LOADING = 'loading';

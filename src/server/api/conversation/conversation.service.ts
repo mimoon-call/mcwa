@@ -57,7 +57,7 @@ export const conversationService = {
             { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] },
             { text: { $ne: '' } },
             { text: { $ne: null } },
-            ...(externalFlag === true ? [{ $match: { internalFlag: false } }] : []),
+            ...(externalFlag === true ? [{ internalFlag: false }] : []),
           ],
         },
       },

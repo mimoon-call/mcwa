@@ -27,6 +27,7 @@ import {
   CHAT_SEARCH_DATA,
   CHAT_SEARCH_PAGINATION,
   CHAT_SEARCH_VALUE,
+  CHAT_EXTERNAL_FLAG,
   CHAT_MESSAGES_DATA,
   CHAT_MESSAGES_PAGINATION,
   CHAT_LOADING,
@@ -71,6 +72,7 @@ export interface ChatState {
     | Partial<Omit<SearchAllConversationsRes, 'data'>>
     | Partial<Omit<SearchConversationsRes, 'data' | 'isConnected' | 'statusCode' | 'errorMessage'>>;
   [CHAT_SEARCH_VALUE]: string;
+  [CHAT_EXTERNAL_FLAG]: boolean;
   [CHAT_MESSAGES_DATA]: ChatMessage[] | null;
   [CHAT_MESSAGES_PAGINATION]: Partial<Omit<GetConversationRes, 'data'>>;
   [CHAT_LOADING]: boolean;
@@ -92,6 +94,7 @@ const initialState: ChatState = {
   [CHAT_SEARCH_DATA]: null,
   [CHAT_SEARCH_PAGINATION]: { pageSize: 50, hasMore: false },
   [CHAT_SEARCH_VALUE]: '',
+  [CHAT_EXTERNAL_FLAG]: false,
   [CHAT_MESSAGES_DATA]: null,
   [CHAT_MESSAGES_PAGINATION]: { pageSize: 50 },
   [CHAT_LOADING]: false,
@@ -135,7 +138,7 @@ const searchAllConversations = createAsyncThunk(
 // Async thunk for search conversations (Instance Chat)
 const searchConversations = createAsyncThunk(
   `${StoreEnum.chat}/${CHAT_SEARCH_CONVERSATIONS}`,
-  async ({ phoneNumber, page, searchValue }: SearchConversationsReq, { rejectWithValue, getState }) => {
+  async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.chat]?.searchPagination || initialState.searchPagination;
@@ -143,6 +146,7 @@ const searchConversations = createAsyncThunk(
       const data = {
         page: { ...currentPagination, ...(page || {}) },
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        externalFlag,
       };
 
       const result = await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
@@ -319,6 +323,9 @@ const chatSliceReducer = createSlice({
     // Instance chat actions
     setInstanceSelectedPhoneNumber: (state, action) => {
       state[INSTANCE_SELECTED_PHONE_NUMBER] = action.payload;
+    },
+    setExternalFlag: (state, action) => {
+      state[CHAT_EXTERNAL_FLAG] = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -561,6 +568,7 @@ export const chatSlice = {
   [CHAT_ADD_OPTIMISTIC_MESSAGE]: chatSliceReducer.actions.addGlobalOptimisticMessage,
   [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: chatSliceReducer.actions.updateGlobalOptimisticMessageStatus,
   [CHAT_SET_SELECTED_PHONE_NUMBER]: chatSliceReducer.actions.setInstanceSelectedPhoneNumber,
+  setExternalFlag: chatSliceReducer.actions.setExternalFlag,
 };
 
 // Default export for backward compatibility

@@ -69,6 +69,7 @@ export type ChatContact = Pick<GlobalChatContact, 'phoneNumber' | 'name' | 'last
 
 export type SearchConversationsReq = SearchAllConversationsReq & {
   phoneNumber: string;
+  externalFlag?: boolean;
 };
 
 export type InstanceChat = { 
