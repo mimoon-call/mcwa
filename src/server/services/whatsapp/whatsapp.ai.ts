@@ -1,14 +1,13 @@
 import type { WAConversation, WAPersona } from './whatsapp.type';
 import type { JsonSchema } from '../open-ai/open-ai.types';
 import { OpenAiService } from '../open-ai/open-ai.service';
-import { LRUCache } from 'lru-cache';
+import { WhatsAppAuth } from '@server/services/whatsapp/whatsapp.db';
 
 export type Language = 'en' | 'he' | 'ar' | 'ru';
 
 export class WhatsappAiService {
   private ai: OpenAiService;
   private langMap: Record<Language, string> = { en: 'English', he: 'Hebrew', ar: 'Arabic', ru: 'Russian' };
-  private personaCache = new LRUCache<number, Omit<WAPersona, 'phoneNumber'>>({ max: 1000, ttl: 1000 * 60 * 60 * 24 });
 
   constructor() {
     this.ai = new OpenAiService();
@@ -143,18 +142,18 @@ export class WhatsappAiService {
     if (!weights || weights.length === 0) {
       return 1; // fallback to 1 if no weights provided
     }
-    
+
     const total = weights.reduce((s, [, w]) => s + w, 0);
     if (total <= 0) {
       return 1; // fallback to 1 if total weight is 0 or negative
     }
-    
+
     let r = Math.random() * total;
     for (const [len, w] of weights) {
       r -= w;
       if (r <= 0) return len;
     }
-    
+
     // This should never happen, but if it does, return the first weight's length
     return weights[0][0];
   }
@@ -223,7 +222,7 @@ export class WhatsappAiService {
     // If we have fewer items than expected, adjust the order to match what we have
     const actualCount = items.length;
     const expectedCount = order.length;
-    
+
     if (actualCount < expectedCount) {
       console.warn(`[AI Warning] Incomplete response: got ${actualCount} messages, expected ${expectedCount}. Using available messages.`);
       // Truncate the order to match what we actually have
@@ -446,7 +445,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
           return null;
         }
 
-            const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
+        const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
 
         // Pre-generate localized links for potential topics
         const potentialTopics = ['travel', 'books', 'music', 'restaurants', 'movies', 'shopping'];
@@ -454,8 +453,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
 
         for (const topic of potentialTopics) {
           try {
-            const links = await this.getLocalizedLinksAI(topic, profileA.location || profileB.location);
-            localizedLinks[topic] = links;
+            localizedLinks[topic] = await this.getLocalizedLinksAI(topic, profileA.location || profileB.location);
           } catch (error) {
             console.warn(`Failed to generate links for ${topic}:`, error);
             localizedLinks[topic] = this.getDefaultLinks(topic);
@@ -520,7 +518,9 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
 
             // Validate emoji-only messages are reasonable length
             if (
-              /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(msg.text.trim())
+              /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u.test(
+                msg.text.trim()
+              )
             ) {
               if (msg.text.trim().length > 10) {
                 console.error(`[AI Error] Emoji-only message too long at index ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg.text);
@@ -546,7 +546,6 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with m
         // If no valid messages were produced, retry
         console.error(`[AI Error] No valid messages produced after enforcing speaker order (attempt ${retryCount + 1}/${maxRetries})`);
         retryCount++;
-        
       } catch (error) {
         console.error(`[AI Error] Failed to generate conversation (attempt ${retryCount + 1}/${maxRetries}):`, error);
         retryCount++;
@@ -670,8 +669,29 @@ You are generating exactly ONE fictional WhatsApp persona (seed ${randomSeed} @ 
 `.trim();
   }
 
+  async loadPersonaFromDb(): Promise<WAPersona[]> {
+    return WhatsAppAuth.find<WAPersona>(
+      { statusCode: 200 },
+      {
+        _id: 0,
+        phoneNumber: 1,
+        name: 1,
+        language: 1,
+        age: 1,
+        gender: 1,
+        jobTitle: 1,
+        hobbies: 1,
+        interests: 1,
+        personality: 1,
+        location: 1,
+        maritalStatus: 1,
+        children: 1,
+      }
+    );
+  }
+
   async generatePersona(name: string, language: Language = 'he'): Promise<Omit<WAPersona, 'phoneNumber'> | null> {
-    const history = Array.from(this.personaCache.values()).slice(-40);
+    const history = await this.loadPersonaFromDb();
     const targets = this.choosePersonaTargets(history);
     const prompt = this.buildPersonaPrompt(name, language, history, targets);
 
@@ -725,9 +745,6 @@ You are generating exactly ONE fictional WhatsApp persona (seed ${randomSeed} @ 
       return null;
     }
 
-    const persona: Omit<WAPersona, 'phoneNumber'> = { ...parsed, language };
-    this.personaCache.set(Date.now(), persona);
-
-    return persona;
+    return { ...parsed, language };
   }
 }
