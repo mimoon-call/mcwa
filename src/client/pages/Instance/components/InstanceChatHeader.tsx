@@ -75,7 +75,7 @@ const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, se
         </div>
       </div>
 
-      <div className="flex justify-end mt-2">
+      <div className="flex justify-end mt-2 pt-1 border-t text-sm">
         <Checkbox value={externalFlag} onChange={handleExternalFlagChange} label={t('INSTANCE.EXTERNAL_ONLY')} className="text-white" />
       </div>
     </div>
