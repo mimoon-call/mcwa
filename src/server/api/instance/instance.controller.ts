@@ -1,23 +1,7 @@
 import type { Request, Response } from 'express';
-import {
-  AddInstanceRes,
-  GetInstanceConversationReq,
-  GetInstanceConversationRes,
-  GetInstanceConversationsReq,
-  GetInstanceConversationsRes,
-  SearchInstanceReq,
-  SearchInstanceRes,
-} from '@server/api/instance/instance.types';
+import { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@server/api/instance/instance.types';
 import RecordValidator from '@server/services/record-validator';
-import {
-  ACTIVE_TOGGLE_INSTANCE,
-  ADD_INSTANCE,
-  DELETE_INSTANCE,
-  GET_INSTANCE_CONVERSATION,
-  GET_INSTANCE_CONVERSATIONS,
-  INSTANCE_REFRESH,
-  SEARCH_INSTANCE,
-} from '@server/api/instance/instance.map';
+import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE } from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 
@@ -33,35 +17,6 @@ export const instanceController = {
     ]).validate();
 
     res.send(await instanceService[SEARCH_INSTANCE](data, page));
-  },
-
-  [GET_INSTANCE_CONVERSATION]: async (
-    req: Request<{ phoneNumber: string }, never, GetInstanceConversationReq>,
-    res: Response<GetInstanceConversationRes>
-  ) => {
-    const { phoneNumber, withPhoneNumber, page } = await new RecordValidator({ ...req.params, ...req.body }, [
-      ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
-      ['withPhoneNumber', { required: [true], type: ['String'] }],
-      ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
-      ['page.pageIndex', { type: ['Number'] }],
-      ['page.pageSort', { type: [['Object', 'Null']] }],
-    ]).validate();
-
-    res.send(await instanceService[GET_INSTANCE_CONVERSATION](phoneNumber, withPhoneNumber, page));
-  },
-
-  [GET_INSTANCE_CONVERSATIONS]: async (
-    req: Request<{ phoneNumber: string }, never, GetInstanceConversationsReq>,
-    res: Response<GetInstanceConversationsRes>
-  ) => {
-    const { page, phoneNumber } = await new RecordValidator({ ...req.params, ...req.body }, [
-      ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
-      ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
-      ['page.pageIndex', { type: ['Number'] }],
-      ['page.pageSort', { type: [['Object', 'Null']] }],
-    ]).validate();
-
-    res.send(await instanceService[GET_INSTANCE_CONVERSATIONS](phoneNumber, page));
   },
 
   [ADD_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<AddInstanceRes>) => {
