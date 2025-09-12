@@ -54,7 +54,7 @@ npm install @whiskeysockets/baileys qrcode pino
 import { WhatsappInstance } from './whatsapp-instance.service';
 
 const instance = new WhatsappInstance('1234567890', {
-  // Database callbacks
+  // Required database callbacks
   getAppAuth: async (phoneNumber) => {
     // Return stored authentication data
     return await database.getAuth(phoneNumber);
@@ -76,12 +76,21 @@ const instance = new WhatsappInstance('1234567890', {
     return await database.getKeys(phoneNumber);
   },
   
-  // Event callbacks
-  onIncomingMessage: async (message, raw) => {
+  // Optional event callbacks
+  onIncomingMessage: async (message, raw, messageId) => {
     console.log('Received message:', message.text);
   },
-  onOutgoingMessage: async (message, raw, info, deliveryStatus) => {
+  onOutgoingMessage: async (message, raw, deliveryStatus) => {
     console.log('Message sent:', message.text);
+  },
+  onSendingMessage: async (instance, toNumber) => {
+    console.log('Sending message to:', toNumber);
+  },
+  onMessageBlocked: async (fromNumber, toNumber, reason) => {
+    console.log('Message blocked:', reason);
+  },
+  onMessageUpdate: async (messageId, deliveryStatus) => {
+    console.log('Message status updated:', deliveryStatus.status);
   },
   onReady: async (instance) => {
     console.log('Instance is ready!');
@@ -89,8 +98,20 @@ const instance = new WhatsappInstance('1234567890', {
   onDisconnect: async (phoneNumber, reason) => {
     console.log('Disconnected:', reason);
   },
+  onError: async (phoneNumber, error) => {
+    console.log('Error occurred:', error);
+  },
+  onRemove: async (phoneNumber) => {
+    console.log('Instance removed:', phoneNumber);
+  },
+  onUpdate: async (state) => {
+    console.log('State updated:', state);
+  },
+  onRegistered: async (phoneNumber) => {
+    console.log('Instance registered:', phoneNumber);
+  },
   
-  // Configuration
+  // Optional configuration
   debugMode: ['info', 'error'],
   tempDir: '.wa-auth-temp'
 });
@@ -142,14 +163,14 @@ await instance.send('1234567890', {
 ### WAInstanceConfig
 
 ```typescript
-interface WAInstanceConfig<T> {
+type WAInstanceConfig<T extends object = Record<never, never>> = {
   // Required database callbacks
   getAppAuth: (phoneNumber: string) => Promise<WAAppAuth<T> | null>;
   updateAppAuth: (phoneNumber: string, data: Partial<WAAppAuth<T>>) => Promise<WAAppAuth<T>>;
-  deleteAppAuth: (phoneNumber: string) => Promise<void>;
   updateAppKey: (phoneNumber: string, keyType: string, keyId: string, data: Partial<any>) => Promise<void>;
+  deleteAppAuth: (phoneNumber: string) => Promise<void>;
   getAppKeys: (phoneNumber: string) => Promise<any[]>;
-  
+} & Partial<{
   // Optional configuration
   tempDir?: string; // Default: '.wa-auth-temp'
   debugMode?: true | 'error' | 'warn' | 'info' | 'debug' | ('error' | 'warn' | 'info' | 'debug')[];
@@ -157,17 +178,62 @@ interface WAInstanceConfig<T> {
   // Event callbacks
   onIncomingMessage?: WAMessageIncomingCallback;
   onOutgoingMessage?: WAMessageOutgoingCallback;
+  onSendingMessage?: WASendingMessageCallback<T>;
   onMessageBlocked?: WAMessageBlockCallback;
+  onMessageUpdate?: WAMessageUpdateCallback;
   onRegistered?: (phoneNumber: string) => Promise<unknown> | unknown;
-  onReady?: (instance: WhatsappInstance<T>) => Promise<unknown> | unknown;
+  onReady?: WAOnReadyCallback<T>;
   onDisconnect?: (phoneNumber: string, reason: string) => Promise<unknown> | unknown;
   onError?: (phoneNumber: string, error: any) => Promise<unknown> | unknown;
   onRemove?: (phoneNumber: string) => Promise<unknown> | unknown;
   onUpdate?: (state: Partial<WAAppAuth<T>>) => Promise<unknown> | unknown;
-}
+}>;
 ```
 
 ## 📚 API Reference
+
+### Types
+
+#### WASendOptions
+
+```typescript
+type WASendOptions = {
+  maxRetries?: number;
+  retryDelay?: number;
+  onSuccess?: (...arg: any[]) => void;
+  onFailure?: (error: any, attempts: number) => void;
+  // Delivery tracking options
+  trackDelivery?: boolean;
+  // Timeout for delivery tracking (when messages are marked as ERROR)
+  deliveryTrackingTimeout?: number; // milliseconds, default 30000
+  // Wait for delivery confirmation
+  waitForDelivery?: boolean; // Wait for DELIVERED status before resolving
+  waitForRead?: boolean; // Wait for READ status before resolving (implies waitForDelivery)
+  // Timeout for waiting for delivery confirmation
+  waitTimeout?: number; // milliseconds, default 30000
+  // Error handling
+  throwOnDeliveryError?: boolean; // Throw error if delivery fails (default: false)
+  // Message update callbacks (run regardless of waitForDelivery/waitForRead)
+  onUpdate?: (messageId: string, deliveryStatus: WAMessageDelivery) => void;
+};
+```
+
+#### WAMessageDelivery
+
+```typescript
+type WAMessageDelivery = {
+  messageId: string | null;
+  fromNumber: string;
+  toNumber: string;
+  status: keyof typeof MessageStatusEnum;
+  sentAt: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  playedAt?: Date;
+  errorCode?: number;
+  errorMessage?: string;
+};
+```
 
 ### Core Methods
 
@@ -194,7 +260,14 @@ const result = await instance.send('1234567890', 'Hello!', {
   maxRetries: 3,
   retryDelay: 1000,
   trackDelivery: true,
-  waitForDelivery: true
+  waitForDelivery: true,
+  waitForRead: false,
+  deliveryTrackingTimeout: 30000,
+  waitTimeout: 30000,
+  throwOnDeliveryError: false,
+  onUpdate: (messageId, deliveryStatus) => {
+    console.log(`Message ${messageId} status: ${deliveryStatus.status}`);
+  }
 });
 ```
 
@@ -226,6 +299,49 @@ Disables the instance and disconnects it.
 await instance.disable();
 ```
 
+#### `refresh(): Promise<boolean>`
+Manually refreshes the session to check if connection is alive.
+
+```typescript
+const isAlive = await instance.refresh();
+```
+
+#### `getProfilePicture(phoneNumber: string): Promise<string | null>`
+Gets the profile picture URL for a phone number.
+
+```typescript
+const profileUrl = await instance.getProfilePicture('1234567890');
+```
+
+#### `read(messageKey: IMessageKey | IMessageKey[]): Promise<void>`
+Sends read receipt for one or more messages.
+
+```typescript
+await instance.read({ id: 'message-id', remoteJid: '1234567890@s.whatsapp.net' });
+```
+
+#### `update(data: Partial<WAAppAuth<T>>): Promise<void>`
+Updates the instance state in the database.
+
+```typescript
+await instance.update({ isActive: true, statusCode: 200 });
+```
+
+#### `get(key?: keyof WAAppAuth<T>): WAAppAuth<T> | any`
+Gets the current instance state or a specific property.
+
+```typescript
+const state = instance.get();
+const isActive = instance.get('isActive');
+```
+
+#### `cleanup(): void`
+Cleans up the instance and stops all background processes.
+
+```typescript
+instance.cleanup();
+```
+
 ### Utility Methods
 
 #### `getMessageDeliveryStatus(messageId: string): WAMessageDelivery | null`
@@ -234,20 +350,6 @@ Gets the delivery status of a specific message.
 ```typescript
 const status = instance.getMessageDeliveryStatus('message-id');
 console.log(status?.status); // 'PENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'ERROR'
-```
-
-#### `recoverFromMacError(): Promise<boolean>`
-Manually triggers MAC error recovery.
-
-```typescript
-const recovered = await instance.recoverFromMacError();
-```
-
-#### `recoverFromDecryptError(): Promise<boolean>`
-Manually triggers decryption error recovery.
-
-```typescript
-const recovered = await instance.recoverFromDecryptError();
 ```
 
 ## 💬 Message Types
@@ -288,7 +390,12 @@ await instance.send('1234567890', {
 await instance.send('1234567890', {
   type: 'audio',
   data: audioBuffer,
-  mimetype: 'audio/mpeg'
+  caption: 'Audio message',
+  mimetype: 'audio/ogg; codecs=opus',
+  ptt: true, // Push-to-talk (voice message)
+  seconds: 30, // Duration in seconds
+  duration: 30, // Alternative duration field
+  text: 'Optional text content'
 });
 
 // Document
@@ -308,9 +415,10 @@ await instance.send('1234567890', {
 ```typescript
 const instance = new WhatsappInstance('1234567890', {
   // ... other config
-  onIncomingMessage: async (message, raw) => {
+  onIncomingMessage: async (message, raw, messageId) => {
     console.log(`From: ${message.fromNumber}`);
     console.log(`Text: ${message.text}`);
+    console.log(`Message ID: ${messageId}`);
     console.log(`Timestamp: ${raw.messageTimestamp}`);
     
     // Auto-reply example
@@ -324,10 +432,10 @@ const instance = new WhatsappInstance('1234567890', {
 ### Outgoing Messages
 
 ```typescript
-onOutgoingMessage: async (message, raw, info, deliveryStatus) => {
+onOutgoingMessage: async (message, raw, deliveryStatus) => {
   console.log(`Sent to: ${message.toNumber}`);
   console.log(`Message: ${message.text}`);
-  console.log(`Message ID: ${info?.key?.id}`);
+  console.log(`Message ID: ${raw?.key?.id}`);
   
   if (deliveryStatus) {
     console.log(`Delivery Status: ${deliveryStatus.status}`);
@@ -375,6 +483,48 @@ onMessageBlocked: async (fromNumber, toNumber, blockReason) => {
 }
 ```
 
+### Message Update Events
+
+```typescript
+onMessageUpdate: async (messageId, deliveryStatus) => {
+  console.log(`Message ${messageId} status updated: ${deliveryStatus.status}`);
+  
+  if (deliveryStatus.status === 'DELIVERED') {
+    console.log(`Message delivered at: ${deliveryStatus.deliveredAt}`);
+  } else if (deliveryStatus.status === 'READ') {
+    console.log(`Message read at: ${deliveryStatus.readAt}`);
+  }
+}
+```
+
+### Sending Message Events
+
+```typescript
+onSendingMessage: async (instance, toNumber) => {
+  console.log(`About to send message to: ${toNumber}`);
+  // This is called before each message is sent
+}
+```
+
+### Instance State Events
+
+```typescript
+onUpdate: async (state) => {
+  console.log('Instance state updated:', state);
+  // This is called whenever the instance state changes
+},
+
+onRemove: async (phoneNumber) => {
+  console.log(`Instance removed: ${phoneNumber}`);
+  // This is called when the instance is removed
+},
+
+onRegistered: async (phoneNumber) => {
+  console.log(`Instance registered: ${phoneNumber}`);
+  // This is called when registration is complete
+}
+```
+
 ## 🚨 Error Handling
 
 ### Automatic Error Recovery
@@ -388,12 +538,13 @@ The service includes sophisticated error recovery mechanisms:
 // 2. Reconnect without logout
 // 3. Clear credentials and require re-registration (if needed)
 
-// Manual recovery
-const recovered = await instance.recoverFromMacError();
-if (recovered) {
-  console.log('Recovery successful!');
+// The recovery is handled automatically in the onError callback
+// You can also manually refresh the session:
+const isAlive = await instance.refresh();
+if (isAlive) {
+  console.log('Session is alive!');
 } else {
-  console.log('Recovery failed, manual intervention required');
+  console.log('Session needs reconnection');
 }
 ```
 
@@ -426,11 +577,13 @@ const result = await instance.send('1234567890', 'Hello!', {
   deliveryTrackingTimeout: 30000,
   waitTimeout: 30000,
   throwOnDeliveryError: false,
-  onDelivered: (messageId, toNumber, timestamp) => {
-    console.log(`Message ${messageId} delivered to ${toNumber}`);
-  },
-  onRead: (messageId, toNumber, timestamp) => {
-    console.log(`Message ${messageId} read by ${toNumber}`);
+  onUpdate: (messageId, deliveryStatus) => {
+    console.log(`Message ${messageId} status: ${deliveryStatus.status}`);
+    if (deliveryStatus.status === 'DELIVERED') {
+      console.log(`Message delivered at: ${deliveryStatus.deliveredAt}`);
+    } else if (deliveryStatus.status === 'READ') {
+      console.log(`Message read at: ${deliveryStatus.readAt}`);
+    }
   }
 });
 
@@ -457,6 +610,50 @@ Privacy settings are automatically configured:
 // - Last seen: Invisible (nobody)
 // - Online status: Match last seen
 // - Group additions: Contacts only
+```
+
+### Proxy Support
+
+The service supports both HTTP and SOCKS5 proxies:
+
+```typescript
+// Configure proxy in your database
+await instance.update({
+  proxy: {
+    type: 'HTTP', // or 'SOCKS5'
+    host: 'proxy.example.com',
+    port: 8080,
+    username: 'user',
+    password: 'pass'
+  }
+} as WAAppAuth<T>);
+```
+
+### Health Monitoring
+
+The service includes built-in health monitoring:
+
+```typescript
+// Automatic health checks every 60 seconds
+// Keep-alive presence updates every 30 seconds
+// Automatic reconnection on connection loss
+```
+
+### State Management
+
+The service provides comprehensive state management:
+
+```typescript
+// Get current state
+const state = instance.get();
+const isActive = instance.get('isActive');
+
+// Update state
+await instance.update({ 
+  isActive: true, 
+  statusCode: 200,
+  lastIpAddress: '192.168.1.1'
+});
 ```
 
 ### Retry Mechanisms
@@ -507,7 +704,7 @@ class WhatsAppBot {
     }
   }
   
-  private async handleMessage(message: any, raw: any) {
+  private async handleMessage(message: any, raw: any, messageId: string) {
     const { fromNumber, text } = message;
     
     // Echo bot
@@ -534,24 +731,29 @@ class WhatsAppBot {
   }
   
   // Database methods (implement according to your database)
-  private async getAuth(phoneNumber: string) {
+  private async getAuth(phoneNumber: string): Promise<WAAppAuth<any> | null> {
     // Return stored auth data
+    return await database.getAuth(phoneNumber);
   }
   
-  private async updateAuth(phoneNumber: string, data: any) {
+  private async updateAuth(phoneNumber: string, data: Partial<WAAppAuth<any>>): Promise<WAAppAuth<any>> {
     // Update auth data
+    return await database.updateAuth(phoneNumber, data);
   }
   
-  private async deleteAuth(phoneNumber: string) {
+  private async deleteAuth(phoneNumber: string): Promise<void> {
     // Delete auth data
+    await database.deleteAuth(phoneNumber);
   }
   
-  private async updateKey(phoneNumber: string, keyType: string, keyId: string, data: any) {
+  private async updateKey(phoneNumber: string, keyType: string, keyId: string, data: Partial<any>): Promise<void> {
     // Update encryption key
+    await database.updateKey(phoneNumber, keyType, keyId, data);
   }
   
-  private async getKeys(phoneNumber: string) {
+  private async getKeys(phoneNumber: string): Promise<any[]> {
     // Get all encryption keys
+    return await database.getKeys(phoneNumber);
   }
 }
 
