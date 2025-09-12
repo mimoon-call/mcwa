@@ -38,7 +38,6 @@ export const liveUpdateHandler = <T extends object>(
       updateCallback(tempData);
 
       const timeoutId = setTimeout(() => {
-        console.log(`Timeout executing for key: ${timeoutKey}`);
         timeoutMap.delete(timeoutKey);
 
         // Apply final update with original value
@@ -46,7 +45,6 @@ export const liveUpdateHandler = <T extends object>(
       }, delay);
 
       timeoutMap.set(timeoutKey, timeoutId);
-      console.log(`Timeout set for key: ${timeoutKey}, delay: ${delay}ms`);
     });
   };
 };
