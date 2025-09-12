@@ -125,7 +125,7 @@ export const useInfiniteScroll = ({ phoneNumber, withPhoneNumber, hasMore, loadi
     }, 0);
 
     return () => clearTimeout(timeoutId);
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, scrollToBottom, loadMoreMessages]);
 
   return {
     scrollContainerRef,
