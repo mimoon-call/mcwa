@@ -2,7 +2,7 @@ import type { Pagination } from '@models';
 import {
   GetConversationRes,
   SearchConversationRes,
-  GetAllConversationPairsRes,
+  SearchAllConversationsRes,
   ConversationPairItem,
   DeleteConversationRes,
 } from '@server/api/conversation/conversation.types';
@@ -43,16 +43,21 @@ export const conversationService = {
     ]);
   },
 
-  [SEARCH_CONVERSATIONS]: async (phoneNumber: string, page: Pagination, searchValue?: string): Promise<SearchConversationRes> => {
+  [SEARCH_CONVERSATIONS]: async (
+    phoneNumber: string,
+    page: Pagination,
+    searchValue?: string,
+    externalFlag?: boolean
+  ): Promise<SearchConversationRes> => {
     const pipeline: PipelineStage[] = [
       // only messages where myNumber is involved
       {
         $match: {
           $and: [
             { $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] },
-            { internalFlag: false },
             { text: { $ne: '' } },
             { text: { $ne: null } },
+            ...(externalFlag === true ? [{ $match: { internalFlag: false } }] : []),
           ],
         },
       },
@@ -98,7 +103,7 @@ export const conversationService = {
           lastMessage: { $first: '$text' },
           lastMessageAt: { $first: '$createdAt' },
           messageCount: { $sum: 1 },
-          internalFlag: { $first: '$internalFlag' }, // in case we want to use it later
+          internalFlag: { $first: '$internalFlag' },
         },
       },
 
@@ -125,7 +130,7 @@ export const conversationService = {
     };
   },
 
-  [SEARCH_ALL_CONVERSATIONS]: async (page: Pagination, searchValue?: string): Promise<GetAllConversationPairsRes> => {
+  [SEARCH_ALL_CONVERSATIONS]: async (page: Pagination, searchValue?: string): Promise<SearchAllConversationsRes> => {
     const pipeline: PipelineStage[] = [
       // Filter out internal messages and empty text
       { $match: { $and: [{ internalFlag: false }, { text: { $ne: '' } }, { text: { $ne: null } }] } },

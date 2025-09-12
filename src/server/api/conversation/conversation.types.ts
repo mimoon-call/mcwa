@@ -4,7 +4,7 @@ import { InterestResult } from '@server/api/message-queue/reply/interest.classif
 
 export type SearchConversationItem = { phoneNumber: string; name: string | null; lastMessage: string; lastMessageAt: string; messageCount: number };
 
-export type SearchConversationReq = { searchValue?: string; page: Pagination };
+export type SearchConversationReq = { searchValue?: string; externalFlag?: boolean; page: Pagination };
 
 export type SearchConversationRes = EntityList<
   SearchConversationItem,
@@ -40,9 +40,9 @@ export type ConversationPairItem = {
   intent?: InterestResult['intent'];
 };
 
-export type GetAllConversationPairsReq = { page: Pagination; searchValue?: string };
+export type SearchAllConversationsReq = { page: Pagination; searchValue?: string };
 
-export type GetAllConversationPairsRes = EntityList<ConversationPairItem>;
+export type SearchAllConversationsRes = EntityList<ConversationPairItem>;
 
 export type SendMessageReq = { textMessage: string };
 
