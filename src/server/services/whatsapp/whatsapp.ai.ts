@@ -374,13 +374,14 @@ ${Object.entries(localizedLinks)
   .join('\n')}
 
 # CONVERSATION FLOW EXAMPLES (with required emojis)
-- **Travel**: "Take a look at this video [USE-TRAVEL-LINK-FROM-ABOVE]" → "🔥🔥🔥" → "I'm so excited to go! 😍"
-- **Books**: "Found it here [USE-BOOKS-LINK-FROM-ABOVE]" → "👍 thanks!" → "Can't wait to read it! 📚"
-- **Music**: "Listen to this [USE-MUSIC-LINK-FROM-ABOVE]" → "❤️ love it!" → "This song is amazing! 🎵"
-- **Restaurants**: "Menu here [USE-RESTAURANTS-LINK-FROM-ABOVE]" → "😋 looks delicious" → "Let's go there! 🍕"
+- **Travel**: "Take a look at this video https://example.com/travel" → "🔥🔥🔥" → "I'm so excited to go! 😍"
+- **Books**: "Found it here https://example.com/books" → "👍 thanks!" → "Can't wait to read it! 📚"
+- **Music**: "Listen to this https://example.com/music" → "❤️ love it!" → "This song is amazing! 🎵"
+- **Restaurants**: "Menu here https://example.com/restaurants" → "😋 looks delicious" → "Let's go there! 🍕"
 
 **IMPORTANT**: Use the exact links from the PRE-GENERATED LOCALIZED LINKS section above. 
 Copy and paste the URLs exactly as they appear - do not modify or create new ones.
+**LINK FORMATTING**: Include links directly in the text without square brackets, like "Check this out https://example.com" not "Check this out [https://example.com]".
 
 # EMOJI RESPONSES (CONTEXTUAL) - MANDATORY 2-3 PER CONVERSATION
 **REQUIRED: Every conversation MUST include 2-3 emojis total, distributed as:**
