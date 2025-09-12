@@ -41,7 +41,7 @@ export class WhatsappAiService {
       - Movies: Streaming services, local cinema websites, review sites
       - Shopping: Popular e-commerce sites, local stores, comparison platforms
       
-      Return only valid URLs, one per line, no explanations.`;
+      Return only valid URLs, REAL LINK IF CLICK ON LINK REFER TO REAL PAGE WITH CONTENT AND NOT 404, one per line, no explanations.`;
 
       const response = await this.ai.request([this.ai.createUserMessage(prompt)], {
         max_tokens: 200,
