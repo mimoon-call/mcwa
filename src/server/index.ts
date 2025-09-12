@@ -69,13 +69,16 @@ export const wa = new WhatsappWarmService({
   wa.onRegister((phoneNumber) => app.socket.broadcast<{ phoneNumber: string }>(InstanceEventEnum.INSTANCE_REGISTERED, { phoneNumber }));
   wa.onUpdate((state) => app.socket.broadcast<Partial<WAAppAuth<WAPersona>>>(InstanceEventEnum.INSTANCE_UPDATE, state));
   app.socket.onConnected<{ nextWarmAt: Date | null }>(InstanceEventEnum.INSTANCE_NEXT_WARM_AT, () => ({ nextWarmAt: wa.nextWarmUp }));
-
   app.socket.onConnected<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState);
 
   // Register conversation socket handlers
   registerConversationSocketHandlers(app.socket);
 
   wa.onReady(() => {
+    app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState());
+  });
+
+  wa.onDisconnect(() => {
     app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState());
   });
 

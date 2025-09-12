@@ -43,6 +43,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
   // Global callbacks
   private readonly messageCallback: WAMessageIncomingCallback[] = [];
   private readonly updateCallback: WAServiceConfig<T>['onUpdate'][] = [];
+  private disconnectCallback?: WAServiceConfig<T>['onDisconnect'] | undefined;
   private registeredCallback?: WAServiceConfig<T>['onRegistered'];
   private readyCallback?: () => Promise<void> | void;
 
@@ -250,6 +251,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
       onRegistered: this.registeredCallback,
       onUpdate: (state: Partial<WAAppAuth<T>>) => Promise.allSettled(this.updateCallback.map((cb) => cb?.(state))),
       onRemove: (phoneNumber) => this.instances.delete(phoneNumber),
+      onDisconnect: (phoneNumber, reason) => this.disconnectCallback?.(phoneNumber, reason),
     };
 
     const instance = new WhatsappInstance(phoneNumber, config);
@@ -355,6 +357,10 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
   onReady(callback: () => Promise<void> | void) {
     this.readyCallback = () => callback?.();
+  }
+
+  onDisconnect(callback: () => void) {
+    this.disconnectCallback = callback;
   }
 
   onRegister(callback: (phoneNumber: string) => Promise<void> | void) {

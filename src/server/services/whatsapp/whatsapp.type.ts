@@ -17,7 +17,7 @@ export type WAPersona = {
   children: { name: string; age: number }[];
 };
 
-export type WAServiceConfig<T extends object> = Omit<WAInstanceConfig<T>, 'tempDir' | 'onReady' | 'onDisconnect' | 'onError' | 'onRemove'> & {
+export type WAServiceConfig<T extends object> = Omit<WAInstanceConfig<T>, 'tempDir' | 'onReady' | 'onError' | 'onRemove'> & {
   listAppAuth: () => Promise<WAAppAuth<T>[]>;
 };
 
