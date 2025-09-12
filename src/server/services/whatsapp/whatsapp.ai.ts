@@ -31,17 +31,19 @@ export class WhatsappAiService {
     }
 
     try {
-      const prompt = `Generate 3-5 real, current, and relevant URLs for ${topic} in ${location}. 
-      Focus on popular, well-known websites and services that locals would actually use.
-      For ${topic}, consider:
-      - Travel: YouTube travel videos, booking sites, local attraction websites
-      - Books: Online bookstores, review sites, local libraries
-      - Music: Music streaming services, YouTube music, local radio
-      - Restaurants: Food delivery apps, review sites, local restaurant chains
-      - Movies: Streaming services, local cinema websites, review sites
-      - Shopping: Popular e-commerce sites, local stores, comparison platforms
-      
-      Return only valid URLs, REAL LINK IF CLICK ON LINK REFER TO REAL PAGE WITH CONTENT AND NOT 404, one per line, no explanations.`;
+      const prompt = `You are ChatGPT. Generate 3-5 REAL, WORKING URLs for ${topic} in ${location} that actually exist and work.
+
+Use your knowledge to provide REAL URLs like ChatGPT does when giving sources:
+- Travel: Real YouTube travel videos (https://www.youtube.com/watch?v=VIDEO_ID), actual booking.com pages, real TripAdvisor attraction pages
+- Books: Real Amazon book pages (https://www.amazon.com/s?k=SEARCH), actual Goodreads book pages, real library pages
+- Music: Real Spotify playlists (https://open.spotify.com/playlist/ID), actual YouTube music videos, real SoundCloud tracks
+- Restaurants: Real Yelp restaurant pages, actual TripAdvisor restaurant reviews, real Google Maps locations
+- Movies: Real IMDb movie pages (https://www.imdb.com/title/ttID/), actual Netflix shows, real YouTube trailers
+- Shopping: Real Amazon product pages, actual eBay listings, real store pages
+
+IMPORTANT: Use your training data to provide REAL URLs that exist and work, just like when you provide sources to users. Include specific video IDs, product IDs, or search terms.
+
+Return only valid URLs, one per line, no explanations.`;
 
       const response = await this.ai.request([this.ai.createUserMessage(prompt)], {
         max_tokens: 200,
