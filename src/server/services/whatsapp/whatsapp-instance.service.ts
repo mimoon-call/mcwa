@@ -547,11 +547,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           try {
             const creds = await readJsonFile<AuthenticationCreds>('creds.json');
             const credsForStorage = convertBufferToPlain(creds);
-
-            await this.updateAppAuth({
-              creds: credsForStorage,
-              ...(this.connected ? { statusCode: 200, errorMessage: null, lastErrorAt: null } : {}),
-            } as WAAppAuth<T>);
+            await this.updateAppAuth({ creds: credsForStorage } as WAAppAuth<T>);
 
             this.log('info', 'creds.json has been updated');
           } catch (error) {
@@ -771,8 +767,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
           await this.update({ lastIpAddress } as WAAppAuth<T>);
 
-          // Trigger ready callback
-          await this.onReady(this);
+          if (this.appState?.creds?.me || this.appState?.creds?.registered) {
+            // Trigger ready callback
+            await this.onReady(this);
+
+            // Immediately update status to 200 when connection is successful
+            await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
+          }
         } else {
           this.log('info', 'Connection open but session not ready (no valid credentials)');
         }
@@ -1095,7 +1096,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         if (this.socket?.user && this.socket.user.id) {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-          if (this.connected) await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
         }
       } catch (error) {
         this.log('error', `Keep-alive failed:`, error);
@@ -1362,11 +1362,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         // Try to send a presence update to check if connection is still alive
         if (this.socket?.user?.id) {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-
-          // Check if socket is healthy and update status code if needed
-          if (this.connected) {
-            await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
-          }
         }
       } catch (error) {
         this.log('error', 'Health check failed, connection may be dead:', error);
@@ -1622,9 +1617,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.updateProfile();
           this.connected = true;
 
-          // Immediately update status to 200 when connection is successful
-          await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
-
           // Start keep-alive and health check
           this.startKeepAlive();
           this.startHealthCheck();
@@ -1634,6 +1626,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             // Trigger ready callback
             this.appState = await this.getAppAuth();
             await this.onReady(this);
+
+            // Immediately update status to 200 when connection is successful
+            await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
           } else {
             this.log('warn', 'Connection open but session not ready (no valid credentials)');
           }
@@ -1745,9 +1740,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       if (this.connected) {
         this.hasManualDisconnected = false;
         this.log('info', 'Session restored successfully');
-
-        // Immediately update status to 200 when connection is successful
-        await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
       } else {
         throw new Error('Failed to restore session');
       }
@@ -2068,9 +2060,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   public async update(data: Partial<WAAppAuth<T>>): Promise<void> {
-    this.log('debug', 'Updating instance state:', data);
-    const hasChanges = Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value);
-    this.log('debug', 'State has been changed:', hasChanges);
+    const hasChanges = Object.entries(data).some(([key, value]) => {
+      const hasValueChanged = this.appState?.[key as keyof typeof this.appState] !== value;
+      this.log('debug', `State changed: ${hasValueChanged}`, `[${key}]`, this.appState?.[key as keyof typeof this.appState], '->', value);
+
+      return hasValueChanged;
+    });
 
     if (hasChanges) {
       this.set(data);
