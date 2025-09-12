@@ -1095,7 +1095,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         if (this.socket?.user && this.socket.user.id) {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-          if (this.connected) await this.update({ statusCode: 200, errorMessage: null } as WAAppAuth<T>);
+          if (this.connected) await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
         }
       } catch (error) {
         this.log('error', `Keep-alive failed:`, error);
@@ -1622,6 +1622,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.updateProfile();
           this.connected = true;
 
+          // Immediately update status to 200 when connection is successful
+          await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
+
           // Start keep-alive and health check
           this.startKeepAlive();
           this.startHealthCheck();
@@ -1742,6 +1745,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       if (this.connected) {
         this.hasManualDisconnected = false;
         this.log('info', 'Session restored successfully');
+
+        // Immediately update status to 200 when connection is successful
+        await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
       } else {
         throw new Error('Failed to restore session');
       }
@@ -2064,7 +2070,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   public async update(data: Partial<WAAppAuth<T>>): Promise<void> {
+    this.log('debug', 'Updating instance state:', data);
     const hasChanges = Object.entries(data).some(([key, value]) => this.appState?.[key as keyof typeof this.appState] !== value);
+    this.log('debug', 'State has been changed:', hasChanges);
 
     if (hasChanges) {
       this.set(data);
