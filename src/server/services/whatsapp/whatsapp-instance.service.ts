@@ -616,9 +616,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private jidToNumber(jidOrPhone: string): string {
-    if (jidOrPhone?.endsWith('@s.whatsapp.net')) return jidOrPhone.split('@')[0];
+    let phoneNumber = jidOrPhone;
+    if (phoneNumber?.endsWith('@s.whatsapp.net')) phoneNumber = jidOrPhone.split('@')[0];
 
-    return jidOrPhone;
+    return phoneNumber?.replace(/:\d+/g, '');
   }
 
   private getTodayDate(): string {
@@ -937,19 +938,19 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             case MessageStatusEnum.DELIVERED: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.DELIVERED, timestamp);
               const delivery = this.messageDeliveries.get(key.id);
-              if (delivery) this.log('info', `✅  Message ${key.id} delivered to ${delivery.toNumber}`);
+              if (delivery) this.log('info', `✅  Message ${key.id} delivered`);
               break;
             }
             case MessageStatusEnum.READ: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.READ, timestamp);
               const readDelivery = this.messageDeliveries.get(key.id);
-              if (readDelivery) this.log('info', `👁️ Message ${key.id} read by ${readDelivery.toNumber}`);
+              if (readDelivery) this.log('info', `👁️ Message ${key.id} read`);
               break;
             }
             case MessageStatusEnum.PLAYED: {
               this.updateMessageDeliveryStatus(key.id, MessageStatusEnum.PLAYED, timestamp);
               const playedDelivery = this.messageDeliveries.get(key.id);
-              if (playedDelivery) this.log('info', `🎵 Audio message ${key.id} played by ${playedDelivery.toNumber}`);
+              if (playedDelivery) this.log('info', `🎵 Audio message ${key.id} played`);
               break;
             }
             case MessageStatusEnum.ERROR: {
@@ -1026,14 +1027,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
                 break;
             }
 
-            // Get the phone number from the remote JID
-            const toNumber = this.jidToNumber(key.remoteJid!);
-
             // Call the global callback with proper parameters
             await this.onMessageUpdate(key.id, {
               messageId: key.id,
-              fromNumber: this.phoneNumber,
-              toNumber,
               status,
               sentAt,
               deliveredAt,
@@ -1117,7 +1113,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     this.log('info', `📱 Starting delivery tracking for message ${messageId} from ${fromNumber} to ${toNumber}`);
 
-    const delivery: WAMessageDelivery = { messageId, fromNumber, toNumber, status: 'PENDING', sentAt: getLocalTime() };
+    const delivery: WAMessageDelivery = { messageId, status: MessageStatusEnum.PENDING, sentAt: getLocalTime() };
     this.messageDeliveries.set(messageId, delivery);
     this.log('debug', `📱 Delivery tracking started for message ${messageId}, total tracked: ${this.messageDeliveries.size}`);
 
@@ -1876,14 +1872,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         onSuccess?.(record, raw, deliveryStatus || undefined);
 
-        return {
-          fromNumber: this.phoneNumber,
-          toNumber,
-          messageId: raw!.key.id,
-          sentAt: getLocalTime(),
-          ...raw,
-          ...(deliveryStatus || {}),
-        } as WebMessageInfo & Partial<WAMessageDelivery>;
+        return { messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 

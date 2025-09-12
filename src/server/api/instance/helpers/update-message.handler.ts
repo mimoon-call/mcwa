@@ -12,8 +12,12 @@ export const updateMessageHandler: WAMessageUpdateCallback = async (messageId, d
 
   if (lastStatus === data.status) return;
 
-  await WhatsAppMessage.updateOne({ messageId }, { $set: data });
+  const updatedMessage = await WhatsAppMessage.findOneAndUpdate(
+    { messageId },
+    { $set: data },
+    { new: true, returnDocument: 'after', select: '-_id -__v -raw' }
+  );
 
   // Broadcast status update to connected clients
-  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { ...data, messageId });
+  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { ...updatedMessage, messageId });
 };
