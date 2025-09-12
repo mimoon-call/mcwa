@@ -721,7 +721,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       await this.socket?.updateProfileName(name);
       this.log('info', `Name: Profile name set to ${name}`);
     } catch (_error) {
-      this.log('warn', 'Failed to set profile settings');
+      this.log('error', 'Failed to set profile settings');
     }
   }
 
@@ -741,7 +741,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       await this.update({ hasPrivacyUpdated: true } as WAAppAuth<T>);
     } catch (_error) {
-      this.log('warn', 'Failed to set privacy settings');
+      this.log('error', 'Failed to set privacy settings');
     }
   }
 
@@ -767,14 +767,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           }
 
           const lastIpAddress = await getPublicIpThroughAgent(this.agent);
-          this.log('info', 'IP ADDRESS', lastIpAddress);
+          this.log('info', 'Assigned ip address', lastIpAddress);
 
           await this.update({ lastIpAddress } as WAAppAuth<T>);
 
           // Trigger ready callback
           await this.onReady(this);
         } else {
-          this.log('warn', 'Connection open but session not ready (no valid credentials)');
+          this.log('info', 'Connection open but session not ready (no valid credentials)');
         }
       }
 
@@ -854,7 +854,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             if (refreshed) {
               this.log('info', '✅ Session synchronized due to decryption issues');
             } else {
-              this.log('warn', '❌ Session sync failed, attempting aggressive recovery…');
+              this.log('error', '❌ Session sync failed, attempting aggressive recovery…');
               const recovered = await this.handleDecryptionError({
                 message: 'Null/undefined message detected',
                 details: { messageId: message.key?.id, from: message.key?.remoteJid },
@@ -976,7 +976,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             }
             default:
               // Log all status codes to help determine correct mappings
-              this.log('info', `🔍 STATUS DEBUG: Message ${key.id} received status code ${updateData.status} (type: ${typeof updateData.status})`);
+              this.log('debug', `🔍 Message ${key.id} received status code ${updateData.status} (type: ${typeof updateData.status})`);
               break;
           }
         }
@@ -1600,7 +1600,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.saveCreds = saveCreds;
 
     const { version } = await fetchLatestBaileysVersion();
-    this.log('info', `Using Baileys version: ${version}`);
+    this.log('debug', `Using Baileys version: ${version}`);
 
     await saveCreds();
     this.log('info', 'Initial credentials saved');
@@ -1933,7 +1933,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           throw new Error(`Message blocked: Rate limited`);
         }
 
-        this.log('error', `Send attempt ${attempt} failed:`, error.message);
+        this.log(attempt < maxRetries ? 'debug' : 'error', `Send attempt ${attempt} failed:`, error.message);
 
         if (attempt < maxRetries) {
           const delay = Math.min(retryDelay * Math.pow(2, attempt - 1), 5000);
@@ -1943,8 +1943,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       }
     }
-
-    this.log('error', `All retry attempts failed for message to ${jid}`);
 
     options?.onFailure?.(lastError, attempts);
     throw lastError;
@@ -2080,7 +2078,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.set((await this.updateAppAuth(data)) || this.appState);
       this.onUpdate(data);
     } else if (data.outgoingMessageCount !== undefined) {
-      this.log('warn', `📱 Update skipped for outgoingMessageCount: no changes detected`);
+      this.log('debug', `📱 Update skipped for outgoingMessageCount: no changes detected`);
     }
   }
 

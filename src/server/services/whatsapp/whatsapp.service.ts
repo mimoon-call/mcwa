@@ -163,7 +163,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
         if (result.status === 'rejected') {
           const phoneNumber = sessions[index];
 
-          this.log('warn', `[${phoneNumber}]`, result.reason);
+          this.log('info', `[${phoneNumber}]`, result.reason);
         }
       });
     });

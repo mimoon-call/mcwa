@@ -435,7 +435,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           }
 
           if (this.isEmulation) {
-            this.log('info', `[${conversationKey.split(':').join(' -> ')}] Emulator mode (${seconds}s)`, currentMessage.text);
+            this.log('debug', `[${conversationKey.split(':').join(' -> ')}] Emulator mode (${seconds}s)`, currentMessage.text);
 
             if (Math.random() > 0.8) throw new Error('Emulate error');
 
