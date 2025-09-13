@@ -1681,9 +1681,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public async connect(): Promise<void> {
     this.appState ??= await this.getAppAuth();
 
-    if (this.connected) throw new Error('Already connected, skipping restore');
-    if (this.appState?.isActive === false) return;
+    if (this.connected) {
+      this.log('info', 'Instance is already connected');
+      return;
+    }
 
+    await this.update({ isActive: true } as Partial<WAAppAuth<T>>);
     this.log('info', 'Restoring session...');
 
     try {
@@ -1950,7 +1953,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  public async remove(clearData: boolean = false, delay: number = 5000): Promise<void> {
+  public async remove(): Promise<void> {
     try {
       // Check if this was an incomplete registration that should be cleaned up
       try {
@@ -1984,25 +1987,23 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       }
 
       // Clear data if requested
-      if (clearData) {
-        this.log('info', 'Clearing session data from database...');
-        await this.cleanupAndRemoveTempDir();
-        await this.deleteAppAuth();
-        this.log('info', 'Session data cleared successfully');
-      }
+      this.log('info', 'Clearing session data from database...');
+      await this.cleanupAndRemoveTempDir();
+      await this.deleteAppAuth();
+      this.log('info', 'Session data cleared successfully');
 
       this.connected = false;
       this.socket = null;
       this.saveCreds = null;
 
       await this.onRemove();
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     } catch (error) {
       this.log('warn', 'Failed to cleanup instance:', error);
     }
   }
 
-  public async disconnect(logout: boolean = true, clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
+  public async disconnect(clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
     try {
       this.log('info', '🔄 Initiating manual disconnect...');
 
@@ -2010,22 +2011,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.stopKeepAlive();
       this.stopHealthCheck();
       this.hasManualDisconnected = true;
-
-      // Logout if requested and socket is valid
-      if (logout && this.socket && typeof this.socket.logout === 'function') {
-        try {
-          await this.socket.logout();
-          this.log('info', '✅ Successfully logged out from WhatsApp');
-        } catch (logoutError: any) {
-          if (logoutError?.output?.payload?.message === 'Connection Closed') {
-            this.log('debug', 'Socket already closed, skipping logout');
-          } else {
-            this.log('warn', '⚠️ Logout failed:', logoutError);
-          }
-        }
-      } else if (!logout) {
-        this.log('info', ' ℹ️Skipping logout as requested');
-      }
 
       this.connected = false;
       if (clearSocket) this.socket = null;
@@ -2045,7 +2030,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   public async disable(): Promise<void> {
     await this.update({ isActive: false } as WAAppAuth<T>);
-    await this.disconnect(false);
+    await this.disconnect();
   }
 
   public async update(data: Partial<WAAppAuth<T>>): Promise<void> {
