@@ -68,7 +68,7 @@ export const instanceService = {
   [DELETE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
     const instance = wa.getInstance(phoneNumber);
 
-    await instance?.remove(true);
+    await instance?.remove();
     await WhatsAppAuth.deleteOne({ phoneNumber });
     await WhatsAppKey.deleteMany({ phoneNumber });
   },
@@ -95,6 +95,6 @@ export const instanceService = {
       throw new ServerError('INSTANCE.NOT_FOUND');
     }
 
-    await instance.refresh();
+    await instance.connect();
   },
 };
