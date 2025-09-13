@@ -626,13 +626,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return getLocalTime().toISOString().split('T')[0];
   }
 
-  private shouldSkipRetry(errorCode?: number, reason?: string): boolean {
-    // Skip retry for authentication/authorization errors or disabled
-    if (errorCode === 401 || errorCode === 403 || this.appState?.isActive === false || this.hasManualDisconnected) return true;
+  private shouldSkipRetry(reason?: string): boolean {
+    // Skip retry only for disabled instances or manual disconnects
+    // DO NOT skip retry for 401/403 errors - these should be handled gracefully without logout
+    if (this.appState?.isActive === false || this.hasManualDisconnected) return true;
 
+    // For 401/403 errors, we should still attempt reconnection to handle device unlink scenarios
+    // Only skip retry if the error is explicitly about logout (DisconnectReason.loggedOut)
     if (reason) {
       const lowerReason = reason.toLowerCase();
-      return lowerReason.includes('401') || lowerReason.includes('403') || lowerReason.includes('unauthorized') || lowerReason.includes('forbidden');
+      return lowerReason.includes('logged out') || lowerReason.includes('logout');
     }
 
     return false;
@@ -795,9 +798,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Log specific error types for better debugging
         if (code === 401) {
-          this.log('error', '🚫 Unauthorized (401) - Authentication failed, this usually means invalid credentials');
+          this.log('info', '⚠️ Unauthorized (401) - Device may have been unlinked, attempting graceful reconnection');
         } else if (code === 403) {
-          this.log('error', '🚫 Forbidden (403) - Access denied, this usually means insufficient permissions');
+          this.log('info', '⚠️ Forbidden (403) - Access denied, this usually means insufficient permissions');
         }
 
         // Stop intervals
@@ -1060,28 +1063,46 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
-    // Check if this is an authentication/authorization error that shouldn't be retried
-    if (this.shouldSkipRetry(undefined, reason)) {
+    // Check if this is a logout scenario that shouldn't be retried
+    if (this.shouldSkipRetry(reason)) {
+      this.log('info', 'Logout detected, not attempting reconnection');
       this.onDisconnect(reason);
-
       return;
     }
 
-    if (attempts < maxRetry) {
-      const delay = 15000; // 15 seconds
+    // For 401 errors (device unlink), try more aggressive reconnection
+    const isDeviceUnlink = reason.includes('401') || reason.includes('Unauthorized');
+    const maxRetriesForUnlink = isDeviceUnlink ? 5 : maxRetry;
+    const delayForUnlink = isDeviceUnlink ? 30000 : 15000; // 30 seconds for device unlink, 15 for others
+
+    if (attempts < maxRetriesForUnlink) {
+      const delay = delayForUnlink;
+      this.log('info', `🔄 Attempting reconnection (${attempts}/${maxRetriesForUnlink}) - ${reason}`);
+
       setTimeout(async () => {
         try {
           await this.connect();
+          this.log('info', '✅ Reconnection successful');
         } catch (_error) {
-          this.log('warn', '🔄 Instance reconnect attempt', `${attempts + 1}/${maxRetry}`);
+          this.log('warn', `🔄 Reconnection attempt ${attempts} failed, retrying...`);
 
-          await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
+          await this.handleInstanceDisconnect(reason, attempts + 1, maxRetriesForUnlink);
         }
       }, delay);
     } else {
-      this.log('error', '🚫 Max reconnection attempts reached', `${attempts}/${maxRetry}`, reason);
+      this.log('info', `⚠️ Max reconnection attempts reached (${attempts}/${maxRetriesForUnlink})`, reason);
 
-      this.onDisconnect(reason);
+      // Don't call onDisconnect for 401 errors - just log and let the instance stay in disconnected state
+      if (isDeviceUnlink) {
+        this.log('info', 'Device appears to be unlinked, instance will remain disconnected until manual intervention');
+        await this.update({
+          statusCode: 401,
+          errorMessage: 'Device unlinked - manual re-authentication required',
+          lastErrorAt: getLocalTime(),
+        } as WAAppAuth<T>);
+      } else {
+        this.onDisconnect(reason);
+      }
     }
   }
 
@@ -1635,7 +1656,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (connection === 'close') {
           const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const reason = (lastDisconnect?.error as Boom)?.message || 'Unknown';
-          const shouldReconnect = code !== DisconnectReason.loggedOut && !this.shouldSkipRetry(code, reason);
+          const shouldReconnect = code !== DisconnectReason.loggedOut && !this.shouldSkipRetry(reason);
 
           this.log('info', `Disconnected during QR (${reason})`);
 
@@ -1651,8 +1672,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             this.log('info', 'Logged out');
           }
 
-          if (this.shouldSkipRetry(code, reason)) {
-            this.log('error', '🚫 Authentication/Authorization error during registration, skipping reconnection');
+          if (this.shouldSkipRetry(reason)) {
+            this.log('info', '⚠️ Logout detected during registration, skipping reconnection');
           } else if (shouldReconnect) {
             this.log('info', 'Registration completed but connection closed - attempting to restore connection...');
             this.onRegister();
@@ -1681,8 +1702,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public async connect(): Promise<void> {
     this.appState ??= await this.getAppAuth();
 
-    if (this.connected) throw new Error('Already connected, skipping restore');
-    if (this.appState?.isActive === false) return;
+    if (this.connected) {
+      this.log('info', 'Instance is already connected');
+      return;
+    }
+
+    if (this.appState?.isActive === false) {
+      this.log('warn', 'Instance is disabled, cannot connect');
+      return;
+    }
 
     this.log('info', 'Restoring session...');
 
@@ -1969,11 +1997,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.stopKeepAlive();
       this.stopHealthCheck();
 
-      // Logout if socket is valid
-      if (this.socket && typeof this.socket.logout === 'function') {
+      // Only logout if explicitly clearing data (manual removal)
+      if (clearData && this.socket && typeof this.socket.logout === 'function') {
         try {
           await this.socket.logout();
-          this.log('info', 'Successfully logged out');
+          this.log('info', 'Successfully logged out during manual removal');
         } catch (logoutError: any) {
           if (logoutError?.output?.payload?.message === 'Connection Closed') {
             this.log('debug', 'Socket already closed, skipping logout');
@@ -1981,6 +2009,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             this.log('warn', 'Logout failed:', logoutError);
           }
         }
+      } else {
+        this.log('info', 'Skipping logout - instance will remain connected');
       }
 
       // Clear data if requested
