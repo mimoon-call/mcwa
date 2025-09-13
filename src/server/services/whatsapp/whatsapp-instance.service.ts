@@ -113,6 +113,22 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return base + jitter; // 1–5s typical
   }
 
+  private retryFn = async <T>(fn: () => Promise<T>, retries: number = 5, delayMs: number = 2000): Promise<T> => {
+    let lastError: any;
+
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        this.log('warn', `Async retry attempt ${attempt + 1} failed:`, error);
+        if (attempt < retries - 1) await this.delay(delayMs);
+      }
+    }
+
+    throw lastError;
+  };
+
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
     const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
 
@@ -1060,25 +1076,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
-    // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
 
       return;
     }
 
-    if (attempts < maxRetry) {
-      const delay = 15000; // 15 seconds
-      setTimeout(async () => {
-        try {
-          await this.connect();
-        } catch (_error) {
-          this.log('warn', '🔄 Instance reconnect attempt', `${attempts + 1}/${maxRetry}`);
-
-          await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
-        }
-      }, delay);
-    } else {
+    try {
+      await this.retryFn(this.connect, 3, 15000);
+    } catch {
       this.log('error', '🚫 Max reconnection attempts reached', `${attempts}/${maxRetry}`, reason);
 
       this.onDisconnect(reason);
@@ -1418,142 +1424,122 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const isMacError = errorMessage.includes('Bad MAC') || errorMessage.includes('decrypt') || errorMessage.includes('MAC');
     const isUnsupportedStateError = errorMessage.includes('Unsupported state') || errorMessage.includes('unable to authenticate data');
     const isDecryptError = errorMessage.includes('Failed to decrypt message') || errorMessage.includes('decrypt message');
+
     if (!isMacError && !isUnsupportedStateError && !isDecryptError) return false;
 
-    this.log(
-      'warn',
-      `🔐 Detected ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error, attempting session refresh...`
-    );
+    const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
 
-    try {
-      if (isUnsupportedStateError) {
-        this.log('info', '🔄 Unsupported state error detected, attempting aggressive session reset...');
+    this.log('warn', `🔐 Detected ${errorType} error, attempting session recovery...`);
 
-        try {
-          await this.cleanupAndRemoveTempDir(true);
-          this.log('info', '🧹 Temporary files cleared for unsupported state recovery');
-        } catch (cleanupError) {
-          this.log('warn', '⚠️ Could not clear temp files, continuing with recovery:', cleanupError);
-        }
+    // Recursive recovery method with configurable strategies
+    const attemptRecovery = async (errorType: string, attempt: number): Promise<boolean> => {
+      const MAX_ATTEMPTS = 3;
+      const strategies = [
+        { name: 'simple refresh', action: () => attemptSimpleRefresh() },
+        { name: 'session reconnection', action: () => attemptSessionReconnection(2000) },
+        { name: 'fresh socket reconnection', action: () => attemptSessionReconnection(3000) },
+      ];
+
+      if (attempt >= MAX_ATTEMPTS) {
+        this.log('error', `❌ All recovery attempts failed for ${errorType} error`);
+        return await handleRecoveryFailure(errorType);
       }
 
-      this.log('info', '🔄 Attempting simple session refresh...');
-      const refreshSuccess = await this.refresh();
-
-      if (refreshSuccess) {
-        this.log(
-          'info',
-          `✅ Session refresh successful, ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error resolved`
-        );
-        return true;
-      }
-
-      // If simple refresh fails, try a more aggressive approach, Try to reconnect without logging out first
-      this.log('warn', '🔄 Simple refresh failed, attempting session reconnection...');
-      this.log('info', '🔄 Attempting to reconnect without logout...');
+      const strategy = strategies[attempt];
+      this.log('info', `🔄 Attempt ${attempt + 1}/${MAX_ATTEMPTS}: ${strategy.name}...`);
 
       try {
-        // Clear socket reference but keep credentials
-        this.socket = null;
-        this.connected = false;
-
-        // Wait a bit before attempting restore
-        this.log('debug', 'Waiting 2 seconds before restore attempt...');
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        this.log('info', '🔄 Attempting session restore...');
-        await this.connect();
-        this.log(
-          'info',
-          `✅ Session reconnection successful after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error`
-        );
-        return true;
-      } catch (restoreError) {
-        this.log(
-          'error',
-          `❌ Session reconnection failed after ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
-          restoreError
-        );
-
-        // If restore fails, try one more time with a fresh socket
-        this.log('info', '🔄 First restore failed, trying with fresh socket...');
-        try {
-          this.socket = null;
-          this.connected = false;
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-
-          await this.connect();
-          this.log('info', `✅ Session reconnection successful on second attempt`);
-          return true;
-        } catch (secondRestoreError) {
-          this.log('error', '❌ Second restore attempt also failed:', secondRestoreError);
-
-          // For unsupported state or decrypt errors, try to clear credentials and re-register
-          if (isUnsupportedStateError || isDecryptError) {
-            this.log('warn', `🔄 ${isDecryptError ? 'Decrypt' : 'Unsupported state'} error persists, attempting credential reset...`);
-            try {
-              // Clear credentials and force re-registration
-              await this.deleteAppAuth();
-              await this.cleanupAndRemoveTempDir(false);
-
-              this.log('info', '🧹 Credentials cleared, instance will need re-registration');
-
-              // Update status to indicate need for re-authentication
-              const errorType = isDecryptError ? 'decrypt' : 'unsupported state';
-              if (this.appState?.statusCode !== 401) {
-                await this.update({
-                  statusCode: 401,
-                  errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
-                  lastErrorAt: getLocalTime(),
-                } as Partial<WAAppAuth<T>>);
-              }
-
-              // Disable the instance
-              await this.disable();
-
-              return false;
-            } catch (resetError) {
-              this.log('error', '❌ Failed to reset credentials:', resetError);
-            }
-          }
-
-          // Clear everything and try to register again
-          this.socket = null;
-          this.connected = false;
-
-          if (this.appState?.statusCode !== 500) {
-            await this.update({
-              statusCode: 500,
-              errorMessage: `Recovery failed: ${(secondRestoreError as any)?.message || 'Unknown error'}`,
-              lastErrorAt: getLocalTime(),
-            } as Partial<WAAppAuth<T>>);
-          }
-
-          await this.disable();
-
-          return false;
+        // Special handling for unsupported state errors
+        if (errorType === 'unsupported state' && attempt === 0) {
+          await this.cleanupAndRemoveTempDir(true);
+          this.log('info', '🧹 Temporary files cleared for unsupported state recovery');
         }
-      }
-    } catch (refreshError) {
-      this.log(
-        'error',
-        `❌ Failed to handle ${isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC'} error:`,
-        refreshError
-      );
 
-      // Update status to indicate recovery failure
-      const errorType = isUnsupportedStateError ? 'unsupported state' : isDecryptError ? 'decrypt' : 'MAC';
+        const success = await strategy.action();
+
+        if (success) {
+          this.log('info', `✅ ${strategy.name} successful, ${errorType} error resolved`);
+          return true;
+        }
+
+        // If this strategy failed, try the next one
+        return await attemptRecovery(errorType, attempt + 1);
+      } catch (error) {
+        this.log('warn', `⚠️ ${strategy.name} failed:`, error);
+
+        // For unsupported state or decrypt errors on final attempt, try credential reset
+        if (attempt === MAX_ATTEMPTS - 1 && (errorType === 'unsupported state' || errorType === 'decrypt')) {
+          return await attemptCredentialReset(errorType);
+        }
+
+        // Try next strategy
+        return await attemptRecovery(errorType, attempt + 1);
+      }
+    };
+
+    // Simple refresh strategy
+    const attemptSimpleRefresh = async (): Promise<boolean> => {
+      return await this.refresh();
+    };
+
+    // Session reconnection strategy
+    const attemptSessionReconnection = async (delayMs: number): Promise<boolean> => {
+      this.socket = null;
+      this.connected = false;
+
+      if (delayMs > 0) {
+        this.log('debug', `Waiting ${delayMs}ms before restore attempt...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+
+      await this.connect();
+      return true;
+    };
+
+    // Credential reset strategy for persistent errors
+    const attemptCredentialReset = async (errorType: string): Promise<boolean> => {
+      this.log('warn', `🔄 ${errorType} error persists, attempting credential reset...`);
+
+      try {
+        await this.deleteAppAuth();
+        await this.cleanupAndRemoveTempDir(false);
+
+        this.log('info', '🧹 Credentials cleared, instance will need re-registration');
+
+        if (this.appState?.statusCode !== 401) {
+          await this.update({
+            statusCode: 401,
+            errorMessage: `Session corrupted (${errorType}), please re-authenticate`,
+            lastErrorAt: getLocalTime(),
+          } as Partial<WAAppAuth<T>>);
+        }
+
+        await this.disable();
+        return false;
+      } catch (resetError) {
+        this.log('error', '❌ Failed to reset credentials:', resetError);
+        return await handleRecoveryFailure(errorType);
+      }
+    };
+
+    // Handle complete recovery failure
+    const handleRecoveryFailure = async (errorType: string): Promise<boolean> => {
+      this.socket = null;
+      this.connected = false;
 
       if (this.appState?.statusCode !== 500) {
         await this.update({
           statusCode: 500,
-          errorMessage: `${errorType} error recovery failed: ${(refreshError as any)?.message || 'Unknown error'}`,
+          errorMessage: `${errorType} error recovery failed`,
           lastErrorAt: getLocalTime(),
         } as Partial<WAAppAuth<T>>);
       }
 
+      await this.disable();
       return false;
-    }
+    };
+
+    return await attemptRecovery(errorType, 0);
   }
 
   // Public method to check message delivery status
