@@ -24,6 +24,7 @@ type RightPanelProps = {
   onSendMessage: (phoneNumber: string, withPhoneNumber: string, text: string) => void;
   onRetry?: (tempId: string) => void;
   retryCooldowns?: Record<string, number>;
+  internalFlag?: boolean;
 };
 
 const ChatRightPanel: React.FC<RightPanelProps> = ({
@@ -40,6 +41,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   retryCooldowns = {},
   className,
   menuItems,
+  internalFlag,
 }) => {
   const toast = useToast({ y: 'top' });
   const { t } = useTranslation();
@@ -84,6 +86,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
             )}
 
             <ChatMessages
+              internalFlag={internalFlag}
               messages={messages}
               loading={loading}
               error={error}

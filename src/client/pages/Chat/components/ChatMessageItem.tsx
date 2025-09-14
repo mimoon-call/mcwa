@@ -17,11 +17,14 @@ type MessageItemProps = {
   className?: string;
   onRetry?: (tempId: string) => void;
   retryCooldowns?: Record<string, number>;
+  internalFlag?: boolean;
 };
 
 type RetryProps = Pick<ChatMessage, 'status' | 'tempId' | 'messageId'> & Pick<MessageItemProps, 'onRetry' | 'retryCooldowns'>;
 
-const ReadIndicator = ({ status }: Pick<ChatMessage, 'status'>) => {
+const ReadIndicator = ({ status, visible }: Pick<ChatMessage, 'status'> & { visible: boolean }) => {
+  if (!visible) return null;
+
   const [className1, className2] = ((): [string, string | null] => {
     if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
     if (status === MessageStatusEnum.ERROR) return ['text-red-500', null];
@@ -105,7 +108,15 @@ const RetryElement = ({ status, tempId, messageId, retryCooldowns, onRetry }: Re
   );
 };
 
-const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className, onRetry, retryCooldowns = {} }) => {
+const ChatMessageItem: React.FC<MessageItemProps> = ({
+  message,
+  isFromUser,
+  internalFlag,
+  showFullDateTime = false,
+  className,
+  onRetry,
+  retryCooldowns = {},
+}) => {
   const { t } = useTranslation();
 
   const formatMessageText = (text: string | null | undefined) => {
@@ -152,7 +163,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
                   onRetry={onRetry}
                 />
               ) : (
-                <ReadIndicator status={message.status} />
+                <ReadIndicator visible={isFromUser || !!internalFlag} status={message.status} />
               )}
               <div className="text-xs text-gray-500">{formatTime(message.createdAt, t, showFullDateTime)}</div>
             </div>

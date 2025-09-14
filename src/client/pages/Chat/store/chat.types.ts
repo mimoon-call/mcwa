@@ -65,18 +65,20 @@ export type ConversationPairItem = Omit<GlobalChatContact, 'instanceNumber'> & {
 };
 
 // Instance-specific types
-export type ChatContact = Pick<GlobalChatContact, 'phoneNumber' | 'name' | 'lastMessage' | 'lastMessageAt' | 'profilePictureUrl'>;
+export type ChatContact = Pick<GlobalChatContact, 'phoneNumber' | 'name' | 'lastMessage' | 'lastMessageAt' | 'profilePictureUrl'> & {
+  internalFlag?: boolean;
+};
 
 export type SearchConversationsReq = SearchAllConversationsReq & {
   phoneNumber: string;
   externalFlag?: boolean;
 };
 
-export type InstanceChat = { 
-  isConnected: boolean; 
-  statusCode: number | null; 
-  errorMessage: string | null; 
-  profilePictureUrl: string | null 
+export type InstanceChat = {
+  isConnected: boolean;
+  statusCode: number | null;
+  errorMessage: string | null;
+  profilePictureUrl: string | null;
 };
 
 export type SearchConversationsRes = EntityList<ChatContact, InstanceChat>;

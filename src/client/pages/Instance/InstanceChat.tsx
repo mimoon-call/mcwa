@@ -66,7 +66,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.chat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_ERROR]) !== null;
-  
+
   // Get active instances from global store
   const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
@@ -258,6 +258,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     );
   }
 
+  const internalFlag = selectedContact && 'internalFlag' in selectedContact ? selectedContact.internalFlag === true : false;
+
   return (
     <div className={cn('flex h-full bg-gray-100', className)}>
       <ChatLeftPanel
@@ -274,6 +276,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         isItemSelected={(contact, selectedContact) => selectedContact?.phoneNumber === contact.phoneNumber}
       />
       <ChatRightPanel
+        internalFlag={internalFlag}
         selectedContact={selectedContact}
         messages={messages}
         disabled={!isInstanceConnected}
