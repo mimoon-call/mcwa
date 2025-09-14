@@ -11,7 +11,7 @@ const router: RouteObject[] = [
   { path: '/', element: <Home /> },
   { path: `/${RouteName.queue}`, element: <Queue /> },
   { path: `/${RouteName.instance}/:phoneNumber?/:withPhoneNumber?`, element: <Instance /> },
-  { path: `/${RouteName.chat}/:instanceNumber?/:phoneNumber?\``, element: <Chat /> },
+  { path: `/${RouteName.chat}/:instanceNumber?/:phoneNumber?`, element: <Chat /> },
 ];
 
 export default router;
