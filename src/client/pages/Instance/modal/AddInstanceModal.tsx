@@ -27,8 +27,8 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
       throw new ServerError('Phone number is required');
     }
 
-    const qrBase64 = await instanceQr(phoneNumber);
-    setQrData(qrBase64);
+    const res = await dispatch(instanceQr(phoneNumber));
+    setQrData(res.payload as string);
   };
 
   const InstancePhone = (

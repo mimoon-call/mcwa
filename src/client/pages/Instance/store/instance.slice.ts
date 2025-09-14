@@ -64,10 +64,11 @@ const searchInstance = createAsyncThunk(
   }
 );
 
-const instanceQr = async (phoneNumber: string) => {
+const instanceQr = createAsyncThunk(`${StoreEnum.instance}/${ADD_INSTANCE}`, async (phoneNumber: string) => {
   const { image } = await Http.get<AddInstanceRes>(`${StoreEnum.instance}/${ADD_INSTANCE}/${phoneNumber}`);
+
   return image;
-};
+});
 
 const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
   await Http.delete<void>(`${StoreEnum.instance}/${DELETE_INSTANCE}/${phoneNumber}`);

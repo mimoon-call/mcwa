@@ -35,7 +35,7 @@ export type WAAppAuth<T extends object> = T & {
   outgoingPlayCount: number;
   lastSentMessage: string; // Date of last sent message (YYYY-MM-DD)
   hasPrivacyUpdated?: boolean;
-  profilePictureUrl?: string | null;
+  profilePictureUrl?: string;
   lastIpAddress?: string;
   // warm up
   warmUpDay: number;
