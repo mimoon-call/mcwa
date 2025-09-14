@@ -19,6 +19,92 @@ type MessageItemProps = {
   retryCooldowns?: Record<string, number>;
 };
 
+type RetryProps = Pick<ChatMessage, 'status' | 'tempId' | 'messageId'> & Pick<MessageItemProps, 'onRetry' | 'retryCooldowns'>;
+
+const ReadIndicator = ({ status }: Pick<ChatMessage, 'status'>) => {
+  const [className1, className2] = ((): [string, string | null] => {
+    if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
+    if (status === MessageStatusEnum.ERROR) return ['text-red-500', null];
+    if (status === MessageStatusEnum.DELIVERED) return ['text-gray-500', 'text-gray-500'];
+    if (status === MessageStatusEnum.READ || status === MessageStatusEnum.PLAYED) return ['text-green-500', 'text-green-500'];
+
+    return ['text-green-500', 'text-green-500'];
+  })();
+
+  return (
+    <div className="pe-1 flex">
+      <Icon name="svg:check" size="0.625rem" className={className1} />
+      {className2 && <Icon name="svg:check" size="0.625rem" className={cn(className2, 'ltr:-ml-1.5 rtl:-mr-1.5')} />}
+    </div>
+  );
+};
+
+const RetryElement = ({ status, tempId, messageId, retryCooldowns, onRetry }: RetryProps) => {
+  if (!onRetry || (!tempId && status !== MessageStatusEnum.ERROR)) return null;
+
+  const { t } = useTranslation();
+  const id = tempId || messageId;
+  const [iconName, setIconName] = useState<IconName>('svg:warning');
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+  const [isRetryDisabled, setIsRetryDisabled] = useState<boolean>(false);
+
+  // Check if this message has a retry cooldown
+  const cooldownTimestamp = retryCooldowns?.[id!];
+  const isOnCooldown = cooldownTimestamp && cooldownTimestamp > Date.now();
+
+  // Update cooldown timer
+  useEffect(() => {
+    if (!isOnCooldown) {
+      setIsRetryDisabled(false);
+      setCooldownSeconds(0);
+      return;
+    }
+
+    setIsRetryDisabled(true);
+
+    const updateCooldown = () => {
+      const remaining = Math.ceil((cooldownTimestamp - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setIsRetryDisabled(false);
+        setCooldownSeconds(0);
+      } else {
+        setCooldownSeconds(remaining);
+      }
+    };
+
+    updateCooldown();
+    const interval = setInterval(updateCooldown, 1000);
+
+    return () => clearInterval(interval);
+  }, [cooldownTimestamp, isOnCooldown]);
+
+  const getTooltipText = () => {
+    if (isRetryDisabled && cooldownSeconds > 0) {
+      return t('GENERAL.RETRY_COOLDOWN', { seconds: cooldownSeconds });
+    }
+    return t('GENERAL.RETRY');
+  };
+
+  const retryRef = useTooltip<HTMLDivElement>({ text: getTooltipText() });
+
+  const handleRetryClick = () => {
+    if (!isRetryDisabled && onRetry) {
+      onRetry(id!);
+    }
+  };
+
+  return (
+    <div
+      ref={retryRef}
+      className={cn('pt-0.5 px-1', isRetryDisabled && 'cursor-not-allowed opacity-50')}
+      onMouseOver={() => !isRetryDisabled && setIconName('svg:sync')}
+      onMouseLeave={() => setIconName('svg:warning')}
+    >
+      <Icon name={iconName} size="0.75rem" className={cn('text-red-600', isRetryDisabled && 'cursor-not-allowed')} onClick={handleRetryClick} />
+    </div>
+  );
+};
+
 const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className, onRetry, retryCooldowns = {} }) => {
   const { t } = useTranslation();
 
@@ -44,85 +130,6 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     });
   };
 
-  const getCheckmarkStyle = (status?: string): [string, string | null] => {
-    if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
-    if (status === MessageStatusEnum.ERROR) return ['text-red-500', null];
-    if (status === MessageStatusEnum.DELIVERED) return ['text-gray-500', 'text-gray-500'];
-    if (status === MessageStatusEnum.READ || status === MessageStatusEnum.PLAYED) return ['text-green-500', 'text-green-500'];
-
-    return ['text-green-500', 'text-green-500'];
-  };
-
-  const retryElement = (() => {
-    if (!onRetry || (!message.tempId && message.status !== MessageStatusEnum.ERROR)) return null;
-
-    const id = message.tempId || message.messageId;
-    const [iconName, setIconName] = useState<IconName>('svg:warning');
-    const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
-    const [isRetryDisabled, setIsRetryDisabled] = useState<boolean>(false);
-
-    // Check if this message has a retry cooldown
-    const cooldownTimestamp = retryCooldowns[id!];
-    const isOnCooldown = cooldownTimestamp && cooldownTimestamp > Date.now();
-
-    // Update cooldown timer
-    useEffect(() => {
-      if (!isOnCooldown) {
-        setIsRetryDisabled(false);
-        setCooldownSeconds(0);
-        return;
-      }
-
-      setIsRetryDisabled(true);
-      
-      const updateCooldown = () => {
-        const remaining = Math.ceil((cooldownTimestamp - Date.now()) / 1000);
-        if (remaining <= 0) {
-          setIsRetryDisabled(false);
-          setCooldownSeconds(0);
-        } else {
-          setCooldownSeconds(remaining);
-        }
-      };
-
-      updateCooldown();
-      const interval = setInterval(updateCooldown, 1000);
-
-      return () => clearInterval(interval);
-    }, [cooldownTimestamp, isOnCooldown]);
-
-    const getTooltipText = () => {
-      if (isRetryDisabled && cooldownSeconds > 0) {
-        return t('GENERAL.RETRY_COOLDOWN', { seconds: cooldownSeconds });
-      }
-      return t('GENERAL.RETRY');
-    };
-
-    const retryRef = useTooltip<HTMLDivElement>({ text: getTooltipText() });
-
-    const handleRetryClick = () => {
-      if (!isRetryDisabled && onRetry) {
-        onRetry(id!);
-      }
-    };
-
-    return (
-      <div 
-        ref={retryRef} 
-        className={cn("pt-0.5 px-1", isRetryDisabled && "cursor-not-allowed opacity-50")} 
-        onMouseOver={() => !isRetryDisabled && setIconName('svg:sync')} 
-        onMouseLeave={() => setIconName('svg:warning')}
-      >
-        <Icon 
-          name={iconName} 
-          size="0.75rem" 
-          className={cn("text-red-600", isRetryDisabled && "cursor-not-allowed")} 
-          onClick={handleRetryClick} 
-        />
-      </div>
-    );
-  })();
-
   return !message.text ? null : (
     <div className={cn('', className)} data-message-id={message.messageId || message.tempId}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
@@ -136,21 +143,16 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
             )}
             <div className="text-sm text-gray-900 whitespace-pre-wrap">{formatMessageText(message.text)}</div>
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
-              {isFromUser && (
-                <div className="flex space-x-1">
-                  {(message.status === MessageStatusEnum.ERROR || message.tempId) && onRetry
-                    ? retryElement
-                    : (() => {
-                        const checkStyle = getCheckmarkStyle(message.status);
-
-                        return (
-                          <div className="pe-1 flex">
-                            <Icon name="svg:check" size="0.625rem" className={checkStyle[0]} />
-                            {checkStyle[1] && <Icon name="svg:check" size="0.625rem" className={cn(checkStyle[1], 'ltr:-ml-1.5 rtl:-mr-1.5')} />}
-                          </div>
-                        );
-                      })()}
-                </div>
+              {isFromUser && (message.status === MessageStatusEnum.ERROR || message.tempId) && onRetry ? (
+                <RetryElement
+                  status={message.status}
+                  messageId={message.messageId}
+                  tempId={message.tempId}
+                  retryCooldowns={retryCooldowns}
+                  onRetry={onRetry}
+                />
+              ) : (
+                <ReadIndicator status={message.status} />
               )}
               <div className="text-xs text-gray-500">{formatTime(message.createdAt, t, showFullDateTime)}</div>
             </div>
