@@ -143,7 +143,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
             )}
             <div className="text-sm text-gray-900 whitespace-pre-wrap">{formatMessageText(message.text)}</div>
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
-              {isFromUser && (message.status === MessageStatusEnum.ERROR || message.tempId) && onRetry ? (
+              {isFromUser && message.status === MessageStatusEnum.ERROR && message.tempId && onRetry ? (
                 <RetryElement
                   status={message.status}
                   messageId={message.messageId}
