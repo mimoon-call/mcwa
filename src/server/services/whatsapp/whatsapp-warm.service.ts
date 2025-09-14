@@ -8,12 +8,11 @@ import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 
-type Config<T extends object> = WAServiceConfig<T> & { isEmulation?: boolean; warmUpOnReady?: boolean };
+type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
 export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly ai = new WhatsappAiService();
   private readonly warmUpOnReady: boolean = false;
-  private readonly isEmulation: boolean = false;
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
@@ -33,7 +32,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private warmUpTimeout: NodeJS.Timeout | undefined;
   public nextWarmUp: Date | null = null;
 
-  constructor({ isEmulation, warmUpOnReady, ...config }: Config<WAPersona>) {
+  constructor({ warmUpOnReady, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
     const onIncomingMessage: WAMessageIncomingCallback = (message, raw, messageId) => {
       const warmingFlag =
@@ -54,7 +53,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     super({ ...config, onIncomingMessage, onOutgoingMessage });
 
-    this.isEmulation = !!isEmulation;
     this.warmUpOnReady = !!warmUpOnReady;
   }
 
@@ -430,27 +428,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           if (!currentState || !currentMessage || currentIndex === undefined) {
             await this.cleanupConversation(conversationKey);
-
-            return;
-          }
-
-          if (this.isEmulation) {
-            this.log('debug', `[${conversationKey.split(':').join(' -> ')}] Emulator mode (${seconds}s)`, currentMessage.text);
-
-            if (Math.random() > 0.8) throw new Error('Emulate error');
-
-            currentMessage.sentAt = getLocalTime();
-            const remainingMessages = currentState.filter((msg) => !msg.sentAt);
-
-            if (remainingMessages.length === 0) {
-              this.log('debug', `[${conversationKey}]`, 'Conversation completed, cleaning up...');
-              await this.cleanupConversation(conversationKey);
-
-              return;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, delay + 1000));
-            await this.handleConversationMessage(conversationKey);
 
             return;
           }
