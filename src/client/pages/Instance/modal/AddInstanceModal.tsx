@@ -5,7 +5,6 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import StepperModal from '@components/StepperModal/StepperModal';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '@client/store';
-import ServerError from '@services/http/server-error';
 import TextField from '@components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import instanceSlice from '@client/pages/Instance/store/instance.slice';
@@ -22,12 +21,10 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
 
   const { [ADD_INSTANCE]: instanceQr, [SEARCH_INSTANCE]: searchInstance } = instanceSlice;
 
-  const addInstanceQr = async () => {
-    if (!phoneNumber) {
-      throw new ServerError('Phone number is required');
-    }
+  const addInstanceQr = async (phone?: string) => {
+    const phoneToUse = phone || phoneNumber;
 
-    const qrBase64 = await instanceQr(phoneNumber);
+    const qrBase64 = await instanceQr(phoneToUse);
     setQrData(qrBase64);
   };
 
@@ -55,11 +52,6 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
     </div>
   ) : null;
 
-  const steps: StepperModalProps['steps'] = [
-    ...(!isNumberInjected ? [{ title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr }] : []),
-    { component: InstanceQr, hideBack: true },
-  ];
-
   useImperativeHandle(ref, () => ({
     open: async (instanceNumber?: string): Promise<void> => {
       setQrData(null);
@@ -67,14 +59,19 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
       setPhoneNumber(instanceNumber || '');
 
       if (instanceNumber) {
-        await addInstanceQr();
+        await addInstanceQr(instanceNumber);
       }
 
-      modalRef.current?.open();
+      await modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
+
+  const steps: StepperModalProps['steps'] = [
+    ...(!isNumberInjected ? [{ title: 'INSTANCE.ADD_NEW_INSTANCE', component: InstancePhone, onSubmit: addInstanceQr }] : []),
+    { component: InstanceQr, hideBack: true },
+  ];
 
   return (
     <StepperModal

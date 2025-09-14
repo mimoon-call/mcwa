@@ -18,7 +18,7 @@ export type ModalProps = Omit<OverlayProps, 'loading'> & {
 };
 
 export type ModalRef = {
-  open: (...arg: unknown[]) => void;
-  close: (...arg: unknown[]) => void;
+  open: (...arg: unknown[]) => Promise<unknown> | unknown;
+  close: (...arg: unknown[]) => Promise<unknown> | unknown;
   validate: FormRef['validate'];
 };

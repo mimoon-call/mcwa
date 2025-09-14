@@ -20,6 +20,6 @@ export type OverlayProps = Partial<{
 }>;
 
 export type OverlayRef = {
-  open: (...arg: unknown[]) => void;
-  close: (...arg: unknown[]) => void;
+  open: (...arg: unknown[]) => Promise<unknown> | unknown;
+  close: (...arg: unknown[]) => Promise<unknown> | unknown;
 };

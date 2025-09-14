@@ -49,18 +49,18 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
   const formRef = useRef<FormRef>(null);
 
   useImperativeHandle(ref, () => ({
-    open: (...args: unknown[]) => {
+    open: async (...args: unknown[]) => {
       if (openEvent) {
         emitter.emit(openEvent, ...args);
       } else {
-        overlayRef.current?.open(...args);
+        await overlayRef.current?.open(...args);
       }
     },
-    close: (...args: unknown[]) => {
+    close: async (...args: unknown[]) => {
       if (closeEvent) {
         emitter.emit(closeEvent, ...args);
       } else {
-        overlayRef.current?.close(...args);
+        await overlayRef.current?.close(...args);
       }
     },
     validate: () => !!formRef.current?.validate(),
@@ -82,11 +82,7 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
             </div>
           )}
 
-          <Form 
-            ref={formRef} 
-            className="flex-grow overflow-y-auto" 
-            onSubmit={onSubmit}
-          >
+          <Form ref={formRef} className="flex-grow overflow-y-auto" onSubmit={onSubmit}>
             {children}
           </Form>
 
