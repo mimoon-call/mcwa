@@ -27,7 +27,6 @@ export const instanceService = {
       $project: {
         phoneNumber: 1,
         isActive: 1,
-        profilePictureUrl: 1,
         dailyMessageCount: { $cond: [{ $eq: ['$lastSentMessage', today] }, '$dailyMessageCount', 0] },
         outgoingErrorCount: { $ifNull: ['$outgoingErrorCount', 0] },
         outgoingMessageCount: 1,
