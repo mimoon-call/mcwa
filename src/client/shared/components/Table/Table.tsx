@@ -257,8 +257,6 @@ const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; it
   const { t } = useTranslation();
   const { call, loading } = useAsyncFn(action.onClick);
 
-  if (action.hidden instanceof Function ? action.hidden(item) : action.hidden) return null;
-
   const label = action.label instanceof Function ? action.label(item) : action.label;
   const iconName = action.iconName instanceof Function ? action.iconName(item) : action.iconName;
 
@@ -269,6 +267,11 @@ const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; it
     ev.stopPropagation();
     await call(item);
   };
+
+  // Check if action should be hidden after all hooks are called
+  if (action.hidden instanceof Function ? action.hidden(item) : action.hidden) {
+    return null;
+  }
 
   return (
     <div ref={ref} key={`action-${actionIndex}-${action.label}`} className="relative">
