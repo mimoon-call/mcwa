@@ -121,7 +121,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         return await fn();
       } catch (error) {
         lastError = error;
-
+        this.log('warn', `Async retry attempt ${attempt + 1} failed:`, error);
         if (attempt < retries - 1) await this.delay(delayMs);
       }
     }
@@ -1075,7 +1075,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  private async handleInstanceDisconnect(reason: string): Promise<void> {
+  private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
 
@@ -1085,7 +1085,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     try {
       await this.retryFn(this.connect, 3, 15000);
     } catch {
-      this.log('error', '🚫 Max reconnection attempts reached', reason);
+      this.log('error', '🚫 Max reconnection attempts reached', `${attempts}/${maxRetry}`, reason);
 
       this.onDisconnect(reason);
     }
@@ -1207,74 +1207,105 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   // Wait for message to reach specific status
   private async waitForMessageStatus(messageId: string, options: WASendOptions): Promise<void> {
-    const timeout = options.waitTimeout || 30000;
-    const targetStatus = options.waitForRead ? MessageStatusEnum.READ : MessageStatusEnum.DELIVERED;
-    const maxAttempts = Math.floor(timeout / 1000); // Convert timeout to seconds for retry attempts
+    return new Promise((resolve, reject) => {
+      const timeout = options.waitTimeout || 30000;
+      const targetStatus = options.waitForRead ? MessageStatusEnum.READ : MessageStatusEnum.DELIVERED;
+      let callbackDebounce: NodeJS.Timeout | undefined = undefined;
 
-    // Check if already at target status
-    const currentDelivery = this.messageDeliveries.get(messageId);
-    if (currentDelivery) {
-      if (currentDelivery.status === targetStatus) {
-        return;
-      }
+      // Set timeout for waiting
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Timeout waiting for ${targetStatus} status after ${timeout}ms`));
+      }, timeout);
 
-      // Check if we've already passed the target status
-      if (targetStatus === MessageStatusEnum.DELIVERED && currentDelivery.status === MessageStatusEnum.READ) {
-        return;
-      }
-    }
+      // Check if already at target status
+      const currentDelivery = this.messageDeliveries.get(messageId);
+      if (currentDelivery) {
+        if (currentDelivery.status === targetStatus) {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
 
-    // Status checker function for retryFn
-    const checkMessageStatus = async (): Promise<void> => {
-      const delivery = this.messageDeliveries.get(messageId);
-
-      if (!delivery) {
-        throw new Error('Message delivery not found');
-      }
-
-      // Trigger message update callbacks if provided
-      try {
-        options.onUpdate?.(messageId, delivery);
-        this.onMessageUpdate?.(messageId, delivery);
-      } catch (error) {
-        this.log('error', 'Error in message update callback:', error);
-      }
-
-      // Check if we've reached the target status
-      if (delivery.status === targetStatus) {
-        return;
-      }
-
-      // Check if we've already passed the target status
-      if (targetStatus === MessageStatusEnum.DELIVERED && delivery.status === MessageStatusEnum.READ) {
-        return;
-      }
-
-      // Check if there was an error
-      if (delivery.status === MessageStatusEnum.ERROR) {
-        const errorMessage = `Message delivery failed: ${delivery.errorMessage}`;
-
-        if (options.throwOnDeliveryError) {
-          throw new Error(errorMessage);
-        } else {
-          // Log error but don't throw
-          this.log('warn', `Delivery failed for message ${messageId}: ${errorMessage}`);
+        // Check if we've already passed the target status
+        if (targetStatus === MessageStatusEnum.DELIVERED && currentDelivery.status === MessageStatusEnum.READ) {
+          clearTimeout(timeoutId);
+          resolve();
           return;
         }
       }
 
-      // If we get here, status hasn't been reached yet
-      throw new Error(`Status not yet reached: ${delivery.status}`);
-    };
+      // Create a one-time status checker
+      const checkStatus = () => {
+        const delivery = this.messageDeliveries.get(messageId);
+        if (!delivery) return;
 
-    try {
-      await this.retryFn(checkMessageStatus, maxAttempts, 1000);
-    } catch (error: any) {
-      if (error.message.includes('Status not yet reached')) {
-        throw new Error(`Timeout waiting for ${targetStatus} status after ${timeout}ms`);
-      }
-      throw error;
-    }
+        clearTimeout(callbackDebounce);
+        callbackDebounce = undefined;
+
+        callbackDebounce = setTimeout(() => {
+          // Trigger message update callbacks if provided
+          try {
+            // Call message-specific callback
+            options.onUpdate?.(messageId, delivery);
+            // Call global callback
+            this.onMessageUpdate?.(messageId, delivery);
+          } catch (error) {
+            this.log('error', 'Error in message update callback:', error);
+          }
+        }, 5000);
+
+        if (delivery.status === targetStatus) {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+
+        // Check if we've already passed the target status
+        if (targetStatus === MessageStatusEnum.DELIVERED && delivery.status === MessageStatusEnum.READ) {
+          clearTimeout(timeoutId);
+          resolve();
+          return;
+        }
+
+        // Check if there was an error
+        if (delivery.status === MessageStatusEnum.ERROR) {
+          clearTimeout(timeoutId);
+          const errorMessage = `Message delivery failed: ${delivery.errorMessage}`;
+
+          if (options.throwOnDeliveryError) {
+            reject(new Error(errorMessage));
+          } else {
+            // Log error but don't throw
+            this.log('warn', `Delivery failed for message ${messageId}: ${errorMessage}`);
+            resolve();
+          }
+          return;
+        }
+      };
+
+      // Set up interval to check status
+      const checkInterval = setInterval(checkStatus, 1000); // Check every second
+
+      // Clean up interval when promise resolves/rejects
+      const cleanup = () => {
+        clearInterval(checkInterval);
+        clearTimeout(timeoutId);
+      };
+
+      // Override resolve/reject to clean up
+      const originalResolve = resolve;
+      const originalReject = reject;
+
+      resolve = ((value: void) => {
+        cleanup();
+        originalResolve(value);
+      }) as any;
+
+      reject = ((reason: any) => {
+        cleanup();
+        originalReject(reason);
+      }) as any;
+    });
   }
 
   // Set up message update callbacks for messages that don't use waitForDelivery/waitForRead
@@ -1282,19 +1313,27 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (!options.onUpdate && !this.hasGlobalMessageUpdateCallback) return;
 
     const timeout = options.waitTimeout || 30000;
-    const maxAttempts = Math.floor(timeout / 1000); // Convert timeout to seconds for retry attempts
+    let hasResolved = false;
 
-    // Status checker function for retryFn
-    const checkMessageStatus = async (): Promise<void> => {
+    // Set up timeout for cleanup
+    const timeoutId = setTimeout(() => {
+      if (hasResolved) return;
+      hasResolved = true;
+      clearInterval(checkInterval);
+    }, timeout);
+
+    // Set up status checker
+    const checkStatus = () => {
+      if (hasResolved) return;
+
       const delivery = this.messageDeliveries.get(messageId);
-
-      if (!delivery) {
-        throw new Error('Message delivery not found');
-      }
+      if (!delivery) return;
 
       // Trigger message update callbacks
       try {
+        // Call message-specific callback
         options.onUpdate?.(messageId, delivery);
+        // Call global callback
         this.onMessageUpdate?.(messageId, delivery);
       } catch (error) {
         this.log('error', 'Error in message update callback:', error);
@@ -1302,22 +1341,19 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       // Check if we should stop tracking (message reached final state)
       if (delivery.status === MessageStatusEnum.READ || delivery.status === MessageStatusEnum.ERROR) {
-        return; // Success - message reached final state
+        hasResolved = true;
+        clearTimeout(timeoutId);
+        clearInterval(checkInterval);
       }
-
-      // If we get here, status hasn't reached final state yet
-      throw new Error(`Status not final yet: ${delivery.status}`);
     };
 
-    // Use retryFn to check status periodically
-    this.retryFn(checkMessageStatus, maxAttempts, 1000).catch((error) => {
-      // Log timeout but don't throw - this is a background operation
-      if (error.message.includes('Status not final yet')) {
-        this.log('debug', `Message ${messageId} callback tracking timed out after ${timeout}ms`);
-      } else {
-        this.log('warn', `Message ${messageId} callback tracking failed:`, error);
-      }
-    });
+    // Set up interval to check status
+    const checkInterval = setInterval(checkStatus, 1000); // Check every second
+
+    // Clean up after timeout
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, timeout + 1000); // Give a bit of extra time for cleanup
   }
 
   private startHealthCheck(): void {
@@ -1325,18 +1361,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     this.healthCheckInterval = setInterval(async () => {
       try {
-        // Health check function for retryFn
-        const performHealthCheck = async (): Promise<void> => {
-          if (!this.socket?.user?.id) {
-            throw new Error('Socket or user not available');
-          }
+        // Try to send a presence update to check if connection is still alive
+        if (this.socket?.user?.id) {
           await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-        };
-
-        // Use retryFn for health check with 3 attempts and 2s delay
-        await this.retryFn(performHealthCheck, 3, 2000);
+        }
       } catch (error) {
-        this.log('error', 'Health check failed after retries, connection may be dead:', error);
+        this.log('error', 'Health check failed, connection may be dead:', error);
+
         this.onError(error);
       }
     }, 60000); // 60 seconds
@@ -1518,17 +1549,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   public async getProfilePicture(phoneNumber: string) {
     try {
-      // Profile picture fetching function for retryFn
-      const fetchProfilePicture = async (): Promise<string | null> => {
-        if (!this.socket) {
-          throw new Error('Socket not available');
-        }
-        const result = await this.socket.profilePictureUrl(this.numberToJid(phoneNumber), 'image');
-        return result || null;
-      };
-
-      // Use retryFn for profile picture fetching with 3 attempts and 1s delay
-      return await this.retryFn(fetchProfilePicture, 3, 1000);
+      return await this.socket?.profilePictureUrl(this.numberToJid(phoneNumber), 'image');
     } catch {
       return null;
     }
@@ -1666,28 +1687,40 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.socket = sock;
       this.setupEventHandlers(sock);
 
-      // Wait for connection to establish using retryFn
-      const establishConnection = async (): Promise<void> => {
-        if (this.connected) {
-          return; // Already connected
-        }
+      // Wait for connection to establish with better timeout handling
+      let connectionEstablished = false;
+      const connectionTimeout = setTimeout(() => {
+        if (!connectionEstablished) this.log('warn', 'Connection timeout, checking if session is valid...');
+      }, 10000);
 
-        if (this.socket?.user?.id) {
-          // Check if we have user data, which indicates successful connection
-          this.connected = true;
-          return;
-        }
+      // Wait for connection or timeout
+      await new Promise<void>((resolve, reject) => {
+        const checkConnection = () => {
+          if (this.connected) {
+            connectionEstablished = true;
+            clearTimeout(connectionTimeout);
+            resolve();
+          } else if (this.socket?.user?.id) {
+            // Check if we have user data, which indicates successful connection
+            connectionEstablished = true;
+            clearTimeout(connectionTimeout);
+            this.connected = true;
+            resolve();
+          } else {
+            setTimeout(checkConnection, 1000);
+          }
+        };
 
-        // If we get here, connection is not established yet
-        throw new Error('Connection not established yet');
-      };
+        checkConnection();
 
-      try {
-        // Use retryFn to wait for connection with 15 attempts and 1s delay (15 seconds total)
-        await this.retryFn(establishConnection, 15, 1000);
-      } catch (_error) {
-        throw new Error('Connection timeout after 15 seconds');
-      }
+        // Overall timeout after 15 seconds
+        setTimeout(() => {
+          if (!connectionEstablished) {
+            clearTimeout(connectionTimeout);
+            reject(new Error('Connection timeout after 15 seconds'));
+          }
+        }, 15000);
+      });
 
       if (this.connected) {
         this.hasManualDisconnected = false;
@@ -1732,6 +1765,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (this.appState?.isActive === false) throw new Error('Instance is not active');
 
     const { maxRetries = 3, retryDelay = 1000, onSuccess, onFailure } = options || {};
+    let lastError: any;
+    let attempts = 0;
     const { jid, content, record } = this.handleOutgoingMessage(this.phoneNumber, toNumber, payload);
 
     if ((typeof payload === 'object' && payload.type === 'text' && !payload.text) || (typeof payload === 'string' && !payload)) {
@@ -1740,137 +1775,147 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
     this.onSendingMessage(toNumber);
 
-    // Send message with retry logic
-    const sendMessage = async (): Promise<WebMessageInfo & Partial<WAMessageDelivery>> => {
-      this.log('info', `Sending message to ${jid}`);
-      const raw: WebMessageInfo | undefined = await (async () => {
-        if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      attempts = attempt;
+      try {
+        this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
 
-        const isAudio = typeof payload === 'object' && (payload as any).type === 'audio';
+        const raw: WebMessageInfo | undefined = await (async () => {
+          if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
-        // Ensure audio content has PTT + WhatsApp-friendly mimetype
-        if (isAudio && content && (content as any).audio) {
-          (content as any).ptt = (content as any).ptt ?? true;
-          (content as any).mimetype = (content as any).mimetype ?? 'audio/ogg; codecs=opus';
-        }
+          const isAudio = typeof payload === 'object' && (payload as any).type === 'audio';
 
-        await this.socket.presenceSubscribe(jid);
+          // Ensure audio content has PTT + WhatsApp-friendly mimetype
+          if (isAudio && content && (content as any).audio) {
+            (content as any).ptt = (content as any).ptt ?? true;
+            (content as any).mimetype = (content as any).mimetype ?? 'audio/ogg; codecs=opus';
+          }
 
-        if (isAudio) {
-          const seconds = (payload as any).duration || 0;
-          const ms = seconds * 1000; // Convert seconds to milliseconds
-          await this.emulateHuman(jid, 'recording', ms);
-        } else {
-          const text = typeof payload === 'string' ? payload : (payload as any)?.text || '';
-          const ms = this.humanDelayFor(text);
-          await this.emulateHuman(jid, 'composing', ms);
-        }
+          await this.socket.presenceSubscribe(jid);
 
-        const messageResult = await this.socket.sendMessage(jid, content); // Send the actual message
-        if (options?.trackDelivery && messageResult?.key?.id) this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options); // Track message delivery if enabled
+          if (isAudio) {
+            const seconds = (payload as any).duration || 0;
+            const ms = seconds * 1000; // Convert seconds to milliseconds
+            await this.emulateHuman(jid, 'recording', ms);
+          } else {
+            const text = typeof payload === 'string' ? payload : (payload as any)?.text || '';
+            const ms = this.humanDelayFor(text);
+            await this.emulateHuman(jid, 'composing', ms);
+          }
 
-        const idleTime = this.randomIdle(); // Add random idle time after sending
-        await new Promise((resolve) => setTimeout(resolve, idleTime));
+          const messageResult = await this.socket.sendMessage(jid, content); // Send the actual message
+          if (options?.trackDelivery && messageResult?.key?.id) this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options); // Track message delivery if enabled
 
-        return messageResult;
-      })();
+          const idleTime = this.randomIdle(); // Add random idle time after sending
+          await new Promise((resolve) => setTimeout(resolve, idleTime));
 
-      this.log('info', `Message sent successfully to ${jid}`);
+          return messageResult;
+        })();
 
-      // Track message delivery and set up callbacks if requested
-      const messageId = raw?.key?.id;
-      if (messageId) {
-        // Only set up callbacks if not already tracking (to avoid overwriting delivery status)
-        if ((options?.onUpdate || this.hasGlobalMessageUpdateCallback) && !options?.trackDelivery) {
-          this.trackMessageDelivery(messageId, this.phoneNumber, toNumber, options);
-        }
+        this.log('info', `Message sent successfully to ${jid}`);
 
-        this.setupMessageUpdateCallbacks?.(messageId, options || {});
-      }
-
-      // Wait for delivery confirmation if requested
-      let deliveryStatus: WAMessageDelivery | null = null;
-      if (options?.waitForDelivery || options?.waitForRead) {
+        // Track message delivery and set up callbacks if requested
+        const messageId = raw?.key?.id;
         if (messageId) {
-          this.log('info', `Waiting for delivery confirmation for message ${messageId}...`);
+          // Only set up callbacks if not already tracking (to avoid overwriting delivery status)
+          if ((options?.onUpdate || this.hasGlobalMessageUpdateCallback) && !options?.trackDelivery) {
+            this.trackMessageDelivery(messageId, this.phoneNumber, toNumber, options);
+          }
 
-          try {
-            await this.waitForMessageStatus(messageId, options);
-            this.log('info', `Message ${messageId} delivery confirmed`);
-            deliveryStatus = this.getMessageDeliveryStatus(messageId);
-          } catch (_error) {
-            this.log(options?.throwOnDeliveryError ? 'error' : 'info', `Delivery confirmation timeout for message (${messageId})`, toNumber);
-            deliveryStatus = this.getMessageDeliveryStatus(messageId);
+          this.setupMessageUpdateCallbacks?.(messageId, options || {});
+        }
 
-            // Check if we should throw on delivery error
-            if (options?.throwOnDeliveryError && deliveryStatus?.status === MessageStatusEnum.ERROR) {
-              throw new Error(`Message delivery failed: ${deliveryStatus.errorMessage || 'Unknown error'}`);
+        // Wait for delivery confirmation if requested
+        let deliveryStatus: WAMessageDelivery | null = null;
+        if (options?.waitForDelivery || options?.waitForRead) {
+          if (messageId) {
+            this.log('info', `Waiting for delivery confirmation for message ${messageId}...`);
+
+            try {
+              await this.waitForMessageStatus(messageId, options);
+              this.log('info', `Message ${messageId} delivery confirmed`);
+              deliveryStatus = this.getMessageDeliveryStatus(messageId);
+            } catch (_error) {
+              this.log('warn', `Delivery confirmation timeout for message (${messageId})`, toNumber);
+              deliveryStatus = this.getMessageDeliveryStatus(messageId);
+
+              // Check if we should throw on delivery error
+              if (options?.throwOnDeliveryError && deliveryStatus?.status === MessageStatusEnum.ERROR) {
+                throw new Error(`Message delivery failed: ${deliveryStatus.errorMessage || 'Unknown error'}`);
+              }
             }
           }
         }
-      }
 
-      this.update({
-        lastSentMessage: this.getTodayDate(),
-        dailyMessageCount: this.appState?.lastSentMessage !== this.getTodayDate() ? 1 : (this.appState?.dailyMessageCount || 0) + 1,
-      } as WAAppAuth<T>);
-
-      // Trigger outgoing message callback
-      try {
-        await this.onOutgoingMessage?.(record, raw, deliveryStatus || undefined);
-      } catch (error) {
-        this.log('error', 'Error in outgoing message callback:', error);
-      }
-
-      onSuccess?.(record, raw, deliveryStatus || undefined);
-
-      return { messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
-    };
-
-    try {
-      return await this.retryFn(sendMessage, maxRetries, retryDelay);
-    } catch (error: any) {
-      // Enhanced error detection for blocks
-      const errorMessage = error?.message || '';
-      const errorCode = error?.output?.statusCode || error?.statusCode;
-
-      // Detect specific block scenarios
-      if (errorCode === 403 || errorMessage.includes('Forbidden')) {
-        this.log('error', `🚫 User ${toNumber} has blocked this number`);
-        await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
         this.update({
-          outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
-          errorMessage,
-          lastErrorAt: getLocalTime(),
+          lastSentMessage: this.getTodayDate(),
+          dailyMessageCount: this.appState?.lastSentMessage !== this.getTodayDate() ? 1 : (this.appState?.dailyMessageCount || 0) + 1,
         } as WAAppAuth<T>);
-        throw new Error(`Message blocked: User has blocked this number`);
-      }
 
-      if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
-        this.log('error', `🚫 Authentication failed - account may be blocked`);
-        await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
-        this.update({
-          outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
-          errorMessage,
-          lastErrorAt: getLocalTime(),
-        } as WAAppAuth<T>);
-        throw new Error(`Message blocked: Authentication failed`);
-      }
+        // Trigger outgoing message callback
+        try {
+          await this.onOutgoingMessage?.(record, raw, deliveryStatus || undefined);
+        } catch (error) {
+          this.log('error', 'Error in outgoing message callback:', error);
+        }
 
-      if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
-        this.log('error', `🚫 Rate limited - too many messages`);
-        await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
-        this.update({
-          outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
-          errorMessage,
-          lastErrorAt: getLocalTime(),
-        } as WAAppAuth<T>);
-        throw new Error(`Message blocked: Rate limited`);
-      }
+        onSuccess?.(record, raw, deliveryStatus || undefined);
 
-      onFailure?.(error, maxRetries);
-      throw error;
+        return { messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
+      } catch (error: any) {
+        lastError = error;
+
+        // Enhanced error detection for blocks
+        const errorMessage = error?.message || '';
+        const errorCode = error?.output?.statusCode || error?.statusCode;
+
+        // Detect specific block scenarios
+        if (errorCode === 403 || errorMessage.includes('Forbidden')) {
+          this.log('error', `🚫 User ${toNumber} has blocked this number`);
+          await this.handleMessageBlocked(toNumber, 'USER_BLOCKED');
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
+          throw new Error(`Message blocked: User has blocked this number`);
+        }
+
+        if (errorCode === 401 || errorMessage.includes('Unauthorized')) {
+          this.log('error', `🚫 Authentication failed - account may be blocked`);
+          await this.handleMessageBlocked(toNumber, 'AUTH_FAILED');
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
+          throw new Error(`Message blocked: Authentication failed`);
+        }
+
+        if (errorCode === 429 || errorMessage.includes('Too Many Requests')) {
+          this.log('error', `🚫 Rate limited - too many messages`);
+          await this.handleMessageBlocked(toNumber, 'RATE_LIMITED');
+          this.update({
+            outgoingErrorCount: (this.appState?.outgoingErrorCount || 0) + 1,
+            errorMessage,
+            lastErrorAt: getLocalTime(),
+          } as WAAppAuth<T>);
+          throw new Error(`Message blocked: Rate limited`);
+        }
+
+        this.log(attempt < maxRetries ? 'debug' : 'error', `Send attempt ${attempt} failed:`, error.message);
+
+        if (attempt < maxRetries) {
+          const delay = Math.min(retryDelay * Math.pow(2, attempt - 1), 5000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          onFailure?.(lastError, attempt);
+        }
+      }
     }
+
+    options?.onFailure?.(lastError, attempts);
+    throw lastError;
   }
 
   public async refresh(): Promise<boolean> {
