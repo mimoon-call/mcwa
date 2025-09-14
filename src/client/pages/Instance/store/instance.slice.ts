@@ -53,22 +53,21 @@ const searchInstance = createAsyncThunk(
         // Return a rejected promise without storing in state
         return Promise.reject(error);
       }
-      
+
       // For other errors, create a serializable error object
-      const serializableError = error instanceof Error 
-        ? { message: error.message, name: error.name }
-        : { message: 'Unknown error', name: 'UnknownError' };
-        
+      const serializableError =
+        error instanceof Error ? { message: error.message, name: error.name } : { message: 'Unknown error', name: 'UnknownError' };
+
       return rejectWithValue(serializableError);
     }
   }
 );
 
-const instanceQr = createAsyncThunk(`${StoreEnum.instance}/${ADD_INSTANCE}`, async (phoneNumber: string) => {
+const instanceQr = async (phoneNumber: string) => {
   const { image } = await Http.get<AddInstanceRes>(`${StoreEnum.instance}/${ADD_INSTANCE}/${phoneNumber}`);
 
   return image;
-});
+};
 
 const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
   await Http.delete<void>(`${StoreEnum.instance}/${DELETE_INSTANCE}/${phoneNumber}`);
