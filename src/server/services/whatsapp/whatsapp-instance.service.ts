@@ -716,10 +716,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user.id, 'image');
-      await this.update({ profilePictureUrl } as WAAppAuth<T>);
+      await this.update({ profilePictureUrl: profilePictureUrl || null } as WAAppAuth<T>);
       this.log('debug', 'Profile picture URL updated successfully');
     } catch {
-      return;
+      await this.update({ profilePictureUrl: null } as WAAppAuth<T>);
     }
   }
 
