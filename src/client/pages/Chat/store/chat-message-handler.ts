@@ -47,10 +47,13 @@ export const handleIncomingMessage = (
 
   // Update conversations list
   if (state[searchDataKey]) {
-    const conversations = isGlobalChat 
-      ? (state[searchDataKey] as GlobalChatContact[])
-      : (state[searchDataKey] as ChatContact[]);
-    state[searchDataKey] = updateConversationInList(conversations, newMessage, isGlobalChat);
+    if (isGlobalChat) {
+      const conversations = state[searchDataKey] as GlobalChatContact[];
+      state[searchDataKey] = updateConversationInList(conversations, newMessage, isGlobalChat);
+    } else {
+      const conversations = state[searchDataKey] as ChatContact[];
+      state[searchDataKey] = updateConversationInList(conversations, newMessage, isGlobalChat);
+    }
   }
 };
 
