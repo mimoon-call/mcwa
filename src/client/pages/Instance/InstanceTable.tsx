@@ -245,16 +245,6 @@ const InstanceTable = () => {
       iconName: 'svg:refresh',
       onClick: onRefresh,
     },
-    {
-      label: 'INSTANCE.CONVERSATIONS',
-      iconName: 'svg:chat',
-      onClick: ({ phoneNumber }) => navigate(`/${RouteName.instance}/${phoneNumber}`),
-    },
-    {
-      label: 'GENERAL.GLOBAL_CHAT',
-      iconName: 'svg:users',
-      onClick: () => navigate(`/${RouteName.chat}`),
-    },
   ];
 
   return (
