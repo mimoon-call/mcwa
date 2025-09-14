@@ -113,22 +113,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return base + jitter; // 1–5s typical
   }
 
-  private retryFn = async <T>(fn: () => Promise<T>, retries: number = 5, delayMs: number = 2000): Promise<T> => {
-    let lastError: any;
-
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        lastError = error;
-        this.log('warn', `Async retry attempt ${attempt + 1} failed:`, error);
-        if (attempt < retries - 1) await this.delay(delayMs);
-      }
-    }
-
-    throw lastError;
-  };
-
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
     const isValid = Array.isArray(this.debugMode) ? this.debugMode.includes(type) : this.debugMode === type;
 
@@ -716,10 +700,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const profilePictureUrl = await this.socket.profilePictureUrl(this.socket.user.id, 'image');
-      await this.update({ profilePictureUrl } as WAAppAuth<T>);
+      await this.update({ profilePictureUrl: profilePictureUrl || null } as WAAppAuth<T>);
       this.log('debug', 'Profile picture URL updated successfully');
     } catch {
-      return;
+      await this.update({ profilePictureUrl: null } as WAAppAuth<T>);
     }
   }
 
@@ -1076,15 +1060,25 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
+    // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
 
       return;
     }
 
-    try {
-      await this.retryFn(this.connect, 3, 15000);
-    } catch {
+    if (attempts < maxRetry) {
+      const delay = 15000; // 15 seconds
+      setTimeout(async () => {
+        try {
+          await this.connect();
+        } catch (_error) {
+          this.log('warn', '🔄 Instance reconnect attempt', `${attempts + 1}/${maxRetry}`);
+
+          await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
+        }
+      }, delay);
+    } else {
       this.log('error', '🚫 Max reconnection attempts reached', `${attempts}/${maxRetry}`, reason);
 
       this.onDisconnect(reason);
