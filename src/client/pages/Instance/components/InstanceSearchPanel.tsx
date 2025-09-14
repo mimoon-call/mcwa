@@ -29,7 +29,7 @@ export const InstanceSearchPanel = () => {
 
   const statusCode: Options<number> = useMemo(
     () =>
-      [200, 401, 403, 408].map((value) => {
+      [200, 401, 403, 408, 428].map((value) => {
         const translation = statusCodeMap.get(value);
         const title = translation ? `${value} - ${t(translation)}` : String(value);
         return { title, value };

@@ -138,7 +138,8 @@
       "DISCONNECTED": "Disconnected",
       "LOGGED_OUT": "Logged out",
       "BLOCKED": "Blocked",
-      "REGISTRATION_INCOMPLETED": "Registration incomplete"
+      "REGISTRATION_INCOMPLETED": "Registration incomplete",
+      "SESSION_EXPIRED": "Session expired"
     }
   },
   "VALIDATE": {

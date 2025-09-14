@@ -138,7 +138,8 @@
       "DISCONNECTED": "מנותק",
       "LOGGED_OUT": "התנתק",
       "BLOCKED": "חסום",
-      "REGISTRATION_INCOMPLETED": "הרשמה לא הושלמה"
+      "REGISTRATION_INCOMPLETED": "הרשמה לא הושלמה",
+      "SESSION_EXPIRED": "פג תוקף"
     }
   },
   "VALIDATE": {
