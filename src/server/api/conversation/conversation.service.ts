@@ -295,11 +295,14 @@ export const conversationService = {
             },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
-            { $project: { messageId: 1 } },
+            { $project: { messageId: 1, fullName: 1 } },
           ],
           as: 'lastQueueMessage',
         },
       },
+
+      // Set the name field to fullName from queue if available
+      { $set: { name: { $ifNull: ['$fullName', '$name'] } } },
 
       // Lookup the corresponding message from whatsappmessages collection
       {
@@ -389,8 +392,6 @@ export const conversationService = {
 
     // Broadcast new message event
     const messageData = {
-      fromNumber: result.fromNumber,
-      toNumber: result.toNumber,
       text: textMessage,
       createdAt: result.sentAt,
       status: result.status,
