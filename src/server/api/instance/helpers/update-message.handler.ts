@@ -18,6 +18,8 @@ export const updateMessageHandler: WAMessageUpdateCallback = async (messageId, d
     { new: true, returnDocument: 'after', select: '-_id -__v -raw' }
   );
 
+  if (!updatedMessage) return;
+
   // Broadcast status update to connected clients
-  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { ...updatedMessage, messageId });
+  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { ...updatedMessage.toObject(), messageId });
 };
