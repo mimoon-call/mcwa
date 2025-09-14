@@ -1,7 +1,8 @@
 import type { ChatMessage } from '../Chat/store/chat.types';
 import type { ChatContact, ConversationPairItem } from '../Chat/store/chat.types';
-import { MessageStatusEnum } from '../Chat/store/chat.enum';
 import type { RootState, AppDispatch } from '@client/store';
+import type { MenuItem } from '@components/Menu/Menu.type';
+import { MessageStatusEnum } from '../Chat/store/chat.enum';
 import React, { useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -28,15 +29,18 @@ import {
   CHAT_LOADING,
   SEARCH_LOADING,
   CHAT_ERROR,
+  CHAT_DELETE_CONVERSATION,
+  CHAT_REMOVE_CONVERSATION,
+  CHAT_SET_SELECTED_CONTACT,
 } from '../Chat/store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { joinConversationRoom, leaveConversationRoom } from '@helpers/room.helper';
 import { ConversationEventEnum } from '../Chat/store/chat-event.enum';
+import { openDeletePopup } from '@helpers/open-delete-popup';
+import { RouteName } from '@client/router/route-name';
 
-type ChatProps = {
-  className?: string;
-};
+type ChatProps = { className?: string };
 
 const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const { t } = useTranslation();
@@ -47,6 +51,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
   // Get all chat actions using constants
   const {
+    [CHAT_DELETE_CONVERSATION]: deleteConversation,
     [CHAT_SEARCH_CONVERSATIONS]: searchConversations,
     [INSTANCE_GET_CONVERSATION]: getConversation,
     [CHAT_RESET_PAGINATION]: resetPagination,
@@ -56,6 +61,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_ADD_OPTIMISTIC_MESSAGE]: addOptimisticMessage,
     [CHAT_UPDATE_MESSAGE_STATUS]: updateMessageStatus,
     [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: updateOptimisticMessageStatus,
+    [CHAT_REMOVE_CONVERSATION]: removeConversation,
+    [CHAT_SET_SELECTED_CONTACT]: setSelectedContact,
   } = chatSlice;
 
   // Get data from store using constants
@@ -84,12 +91,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
       // Join the conversation room for live updates
       joinConversationRoom(phoneNumber, withPhoneNumber);
 
-      dispatch(
-        getConversation({
-          phoneNumber,
-          withPhoneNumber,
-        })
-      );
+      dispatch(getConversation({ phoneNumber, withPhoneNumber }));
     }
 
     // Cleanup: leave conversation room when component unmounts or chat changes
@@ -134,20 +136,11 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
     const handleMessageSent = (response: { success: boolean; tempId: string; returnCode?: number; error?: string }) => {
       if (response.success) {
-        dispatch(
-          updateOptimisticMessageStatus({
-            tempId: response.tempId,
-            status: MessageStatusEnum.DELIVERED,
-          })
-        );
+        dispatch(updateOptimisticMessageStatus({ tempId: response.tempId, status: MessageStatusEnum.DELIVERED }));
       } else {
-        dispatch(
-          updateOptimisticMessageStatus({
-            tempId: response.tempId,
-            status: MessageStatusEnum.ERROR,
-            errorMessage: response.error || 'Failed to send message',
-          })
-        );
+        const errorMessage = response.error || 'Failed to send message';
+
+        dispatch(updateOptimisticMessageStatus({ tempId: response.tempId, status: MessageStatusEnum.ERROR, errorMessage }));
       }
     };
 
@@ -178,8 +171,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
     // Create and add optimistic message
     const optimisticMessage: ChatMessage = {
-      fromNumber: fromNumber,
-      toNumber: toNumber,
+      fromNumber,
+      toNumber,
       text: trimmedText,
       createdAt: now,
       status: MessageStatusEnum.PENDING,
@@ -191,14 +184,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
     // Send message via socket
     const socket = getClientSocket();
-    if (socket) {
-      socket.emit(ConversationEventEnum.SEND_MESSAGE, {
-        fromNumber: fromNumber,
-        toNumber: toNumber,
-        textMessage: trimmedText,
-        tempId: tempId,
-      });
-    }
+    socket?.emit(ConversationEventEnum.SEND_MESSAGE, { fromNumber, toNumber, textMessage: trimmedText, tempId });
   };
 
   const handleRetryMessage = (tempId: string) => {
@@ -208,28 +194,21 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     if (!failedMessage) return;
 
     // Update the message status back to PENDING
-    dispatch(
-      updateOptimisticMessageStatus({
-        tempId: tempId,
-        status: MessageStatusEnum.PENDING,
-      })
-    );
+    dispatch(updateOptimisticMessageStatus({ tempId, status: MessageStatusEnum.PENDING }));
 
     // Resend the message via socket
     const socket = getClientSocket();
-    if (socket) {
-      socket.emit(ConversationEventEnum.SEND_MESSAGE, {
-        fromNumber: failedMessage.fromNumber,
-        toNumber: failedMessage.toNumber,
-        textMessage: failedMessage.text,
-        tempId: tempId,
-      });
-    }
+    socket?.emit(ConversationEventEnum.SEND_MESSAGE, {
+      fromNumber: failedMessage.fromNumber,
+      toNumber: failedMessage.toNumber,
+      textMessage: failedMessage.text,
+      tempId,
+    });
   };
 
   const handleChatSelect = (contactPhoneNumber: string) => {
     if (phoneNumber) {
-      navigate(`/instance/${phoneNumber}/${contactPhoneNumber}`);
+      navigate(`/${RouteName.instance}/${phoneNumber}/${contactPhoneNumber}`);
     }
   };
 
@@ -258,6 +237,35 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     );
   }
 
+  const handleDeleteConversation = async () => {
+    if (!phoneNumber || !withPhoneNumber) return;
+
+    await openDeletePopup({
+      title: 'CHAT.DELETE_CONVERSATION',
+      description: 'CHAT.DELETE_CONVERSATION_WARNING',
+      callback: async () => {
+        await deleteConversation({ fromNumber: phoneNumber, toNumber: withPhoneNumber });
+
+        // Remove conversation from state
+        dispatch(removeConversation({ fromNumber: phoneNumber, toNumber: withPhoneNumber }));
+
+        // Clear selected contact and navigate to chat without params
+        dispatch(setSelectedContact(null));
+        navigate(`/${RouteName.instance}/${phoneNumber}`, { replace: true });
+      },
+      successMessage: 'CHAT.CONVERSATION_DELETED_SUCCESSFULLY',
+    });
+  };
+
+  const actions: MenuItem[] = [
+    {
+      label: 'GENERAL.DELETE',
+      iconName: 'svg:trash',
+      className: 'text-red-800',
+      onClick: handleDeleteConversation,
+    },
+  ];
+
   const internalFlag = selectedContact && 'internalFlag' in selectedContact ? selectedContact.internalFlag === true : false;
 
   return (
@@ -276,6 +284,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         isItemSelected={(contact, selectedContact) => selectedContact?.phoneNumber === contact.phoneNumber}
       />
       <ChatRightPanel
+        menuItems={actions}
         internalFlag={internalFlag}
         selectedContact={selectedContact}
         messages={messages}

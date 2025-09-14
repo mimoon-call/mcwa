@@ -17,6 +17,7 @@ import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-eve
 import type { InstanceStateData } from '@client/store/global.types';
 import Tabs from '@components/Tabs/Tabs';
 import type { TabItem } from '@components/Tabs/Tabs.type';
+import { RouteName } from '@client/router/route-name';
 
 export const emitter = new TinyEmitter();
 export const esc = new EscapeService();
@@ -57,9 +58,9 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   }, [dispatch]);
 
   const tabs: TabItem[] = [
-    { label: 'INSTANCE.TITLE', onClick: () => navigate('/instance') },
-    { label: 'QUEUE.TITLE', onClick: () => navigate('/queue') },
-    { label: 'CHAT.TITLE', onClick: () => navigate('/chat') },
+    { label: 'INSTANCE.TITLE', onClick: () => navigate(`/${RouteName.instance}`) },
+    { label: 'QUEUE.TITLE', onClick: () => navigate(`/${RouteName.queue}`) },
+    { label: 'CHAT.TITLE', onClick: () => navigate(`/${RouteName.chat}`) },
   ];
 
   return !isAuthenticated ? <LoginForm /> : <Tabs items={tabs}>{component}</Tabs>;

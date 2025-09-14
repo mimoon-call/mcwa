@@ -34,6 +34,7 @@ import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
 import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceSearchPanel';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
+import { RouteName } from '@client/router/route-name';
 
 const InstanceTable = () => {
   const { t } = useTranslation();
@@ -149,7 +150,7 @@ const InstanceTable = () => {
   };
 
   const onRowClick = (item: InstanceItem) => {
-    navigate(`/instance/${item?.phoneNumber}`);
+    navigate(`/${RouteName.instance}/${item?.phoneNumber}`);
   };
 
   useEffect(() => {
@@ -246,12 +247,12 @@ const InstanceTable = () => {
     {
       label: 'INSTANCE.CONVERSATIONS',
       iconName: 'svg:chat',
-      onClick: ({ phoneNumber }) => navigate(`/instance/${phoneNumber}`),
+      onClick: ({ phoneNumber }) => navigate(`/${RouteName.instance}/${phoneNumber}`),
     },
     {
       label: 'GENERAL.GLOBAL_CHAT',
       iconName: 'svg:users',
-      onClick: () => navigate('/chat'),
+      onClick: () => navigate(`/${RouteName.chat}`),
     },
   ];
 

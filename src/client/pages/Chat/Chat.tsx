@@ -37,6 +37,7 @@ import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import type { MenuItem } from '@components/Menu/Menu.type';
+import { RouteName } from '@client/router/route-name';
 
 type ChatProps = {
   className?: string;
@@ -249,7 +250,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   };
 
   const handleChatSelect = (contact: GlobalChatContact) => {
-    navigate(`/chat/${contact.instanceNumber}/${contact.phoneNumber}`);
+    navigate(`/${RouteName.chat}/${contact.instanceNumber}/${contact.phoneNumber}`);
   };
 
   const handleSearch = useCallback(
@@ -292,7 +293,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
         // Clear selected contact and navigate to chat without params
         dispatch(setSelectedContact(null));
-        navigate('/chat', { replace: true });
+        navigate(`/${RouteName.chat}`, { replace: true });
       },
       successMessage: 'CHAT.CONVERSATION_DELETED_SUCCESSFULLY',
     });
