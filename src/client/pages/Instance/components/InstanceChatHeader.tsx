@@ -9,10 +9,41 @@ import { StoreEnum } from '@client/store/store.enum';
 import type { RootState, AppDispatch } from '@client/store';
 import { chatSlice } from '../../Chat/store/chat.slice';
 import { CHAT_EXTERNAL_FLAG, CHAT_CLEAR_SEARCH_DATA, CHAT_RESET_PAGINATION, CHAT_SEARCH_CONVERSATIONS } from '../../Chat/store/chat.constants';
+import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
+import { useTooltip } from '@hooks';
 
 type InstanceChatHeaderProps = {
   phoneNumber: string;
   searchMetadata?: InstanceChat | null;
+};
+
+const Error = ({ errorMessage, statusCode }: Partial<Pick<InstanceChat, 'errorMessage' | 'statusCode'>>) => {
+  const { t } = useTranslation();
+
+  const statusMap = statusCode ? statusCodeMap.get(statusCode) : undefined;
+  const displayText = statusMap ? t(statusMap) : errorMessage;
+  const spanRef = useTooltip({ text: displayText !== errorMessage ? errorMessage || '' : undefined });
+
+  if (!statusCode) return null;
+
+  return (
+    <div className="flex gap-0.5 items-center">
+      <Icon className="inline text-yellow-300 me-1 mt-1" name="svg:warning" size="0.875rem" />
+      <div className="flex gap-1 text-sm opacity-75 mt-1 whitespace-nowrap">
+        <span className="font-medium">{`${t('INSTANCE.STATUS_CODE')}:`}</span>
+        <span>{statusCode}</span>
+        {errorMessage && (
+          <>
+            <span>|</span>
+            <span className="font-medium">{t('INSTANCE.ERROR_MESSAGE')}:</span>
+            <span ref={spanRef} className="truncate">
+              {displayText}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
 };
 
 const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, searchMetadata }) => {
@@ -62,16 +93,7 @@ const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, se
             </div>
           </div>
 
-          {searchMetadata?.errorMessage && (
-            <div className="flex gap-0.5 items-center">
-              <Icon className="inline text-yellow-300 me-1 mt-1" name="svg:warning" size="0.875rem" />
-              <div className="text-sm opacity-75 mt-1">
-                {searchMetadata.statusCode && `${t('INSTANCE.STATUS_CODE')}: ${searchMetadata.statusCode}`}
-                {searchMetadata.statusCode && ' | '}
-                {t('INSTANCE.ERROR_MESSAGE')}: {searchMetadata.errorMessage}
-              </div>
-            </div>
-          )}
+          <Error statusCode={searchMetadata?.statusCode} errorMessage={searchMetadata?.errorMessage} />
         </div>
       </div>
 
