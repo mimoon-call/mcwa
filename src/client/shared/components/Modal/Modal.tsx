@@ -53,14 +53,14 @@ const Modal = forwardRef<ModalRef, ModalProps>((props, ref) => {
       if (openEvent) {
         emitter.emit(openEvent, ...args);
       } else {
-        await overlayRef.current?.open(...args);
+        return overlayRef.current?.open(...args);
       }
     },
     close: async (...args: unknown[]) => {
       if (closeEvent) {
         emitter.emit(closeEvent, ...args);
       } else {
-        await overlayRef.current?.close(...args);
+        return overlayRef.current?.close(...args);
       }
     },
     validate: () => !!formRef.current?.validate(),

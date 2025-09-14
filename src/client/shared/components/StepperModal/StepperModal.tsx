@@ -38,12 +38,12 @@ const StepperModal = forwardRef<ModalRef, StepperModalProps>((props, ref) => {
   const hideBack = stepIndex > 0 && steps[stepIndex].hideBack;
 
   useImperativeHandle(ref, () => ({
-    open: (...args: unknown[]) => {
+    open: async (...args: unknown[]) => {
       setStepIndex(0);
 
-      modalRef.current?.open(...args);
+      return modalRef.current?.open(...args);
     },
-    close: (...args: unknown[]) => modalRef.current?.close(...args),
+    close: async (...args: unknown[]) => modalRef.current?.close(...args),
     validate: () => !!modalRef.current?.validate(),
   }));
 
