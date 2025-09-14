@@ -257,6 +257,8 @@ const ActionItem = ({ action, item, actionIndex }: { action: TableItemAction; it
   const { t } = useTranslation();
   const { call, loading } = useAsyncFn(action.onClick);
 
+  if (action.hidden instanceof Function ? action.hidden(item) : action.hidden) return null;
+
   const label = action.label instanceof Function ? action.label(item) : action.label;
   const iconName = action.iconName instanceof Function ? action.iconName(item) : action.iconName;
 

@@ -132,6 +132,7 @@
     "EXTERNAL_ONLY": "External only",
     "CONVERSATIONS": "Conversations",
     "LAST_ERROR_AT": "Error at",
+    "ARE_YOU_SURE_YOU_WANT_TO_REAUTHENTICATE": "Are you sure you want to re-authenticate instance '{{phoneNumber}}'?",
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     },

@@ -232,9 +232,8 @@ const InstanceTable = () => {
     {
       label: 'GENERAL.REAUTHENTICATE',
       iconName: 'svg:scan-qr',
-      onClick: async ({ phoneNumber }) => {
-        await modelRef.current?.open(phoneNumber);
-      },
+      onClick: ({ phoneNumber }) => modelRef.current?.open(phoneNumber),
+      hidden: ({ statusCode }) => statusCode === 200,
     },
     {
       label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),

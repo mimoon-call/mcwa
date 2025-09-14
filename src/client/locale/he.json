@@ -132,6 +132,7 @@
     "EXTERNAL_ONLY": "חיצוני בלבד",
     "CONVERSATIONS": "שיחות",
     "LAST_ERROR_AT": "שגיאה בתאריך",
+    "ARE_YOU_SURE_YOU_WANT_TO_REAUTHENTICATE": "האם אתה בטוח שברצונך לבצע אימות מחדש למספר '{{phoneNumber}}'?",
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     },

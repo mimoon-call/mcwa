@@ -14,6 +14,7 @@ export type TableItemAction<T extends object = DefaultTableItem> = {
   loading?: boolean;
   className?: ClassValue;
   onClick: (item: T) => Promise<unknown> | unknown;
+  hidden?: boolean | ((item: T) => boolean);
 };
 
 export type TableBodyProps = Pick<TableProps, 'headers' | 'items' | 'loading' | 'rowClickable' | 'onRowClick' | 'keyboardDisabled'>;
@@ -68,11 +69,11 @@ export type TableProps<T extends object = DefaultTableItem> = {
   className?: ClassValue;
   keyboardDisabled?: boolean;
   emptyState?: ReactNode;
-  previewCallback?: (item: T) => void | Promise<void>;
-  updateCallback?: (item: T) => void | Promise<void>;
-  deleteCallback?: (item: T) => void | Promise<void>;
-  createCallback?: () => void | Promise<void>;
-  exportCallback?: () => void | Promise<void>;
+  previewCallback?: (item: T) => unknown | Promise<unknown>;
+  updateCallback?: (item: T) => unknown | Promise<unknown>;
+  deleteCallback?: (item: T) => unknown | Promise<unknown>;
+  createCallback?: () => unknown | Promise<unknown>;
+  exportCallback?: () => unknown | Promise<unknown>;
   customActions?: TableItemAction<T>[];
   tableActions?: MenuItem[];
 };
