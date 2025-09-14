@@ -1372,30 +1372,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.healthCheckInterval = undefined;
   }
 
-  private async handleIncompleteSession(): Promise<void> {
-    try {
-      this.log('info', '🧹 Cleaning up incomplete session files...');
-
-      // Reset instance state
-      this.connected = false;
-      this.socket = null;
-      this.saveCreds = null;
-      this.appState = null;
-
-      this.log('info', '✅ Incomplete session cleanup completed');
-
-      // Trigger removal callback to notify parent service
-      await this.onRemove();
-    } catch (cleanupError) {
-      this.log('warn', 'Error during incomplete session cleanup:', cleanupError);
-      // Even if cleanup fails, we still want to reset the instance state
-      this.connected = false;
-      this.socket = null;
-      this.saveCreds = null;
-      this.appState = null;
-    }
-  }
-
   private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
@@ -1727,7 +1703,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       if (!this.appState || !this.appState.creds || !this.appState.creds.me) {
         this.log('info', 'Session appears to be incomplete or new, removing from active instances');
-        await this.handleIncompleteSession();
 
         return;
       }
@@ -1739,13 +1714,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         if (!creds.registered && !creds.me) {
           this.log('info', 'Current session files indicate incomplete registration');
-          await this.handleIncompleteSession();
 
           return;
         }
       } catch (_error) {
         this.log('info', 'Could not read current session files, assuming incomplete');
-        await this.handleIncompleteSession();
 
         return;
       }
@@ -1984,6 +1957,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   public async disconnect(clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
+    if (!this.connected) {
+      this.hasManualDisconnected = true;
+
+      return;
+    }
+
     try {
       this.log('info', '🔄 Initiating manual disconnect...');
 
