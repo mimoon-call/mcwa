@@ -24,7 +24,7 @@ const Error = ({ errorMessage, statusCode }: Partial<Pick<InstanceChat, 'errorMe
   const displayText = statusMap ? t(statusMap) : errorMessage;
   const spanRef = useTooltip({ text: displayText !== errorMessage ? errorMessage || '' : undefined });
 
-  if (!statusCode) return null;
+  if (!statusCode || statusCode === 200) return null;
 
   return (
     <div className="flex gap-0.5 items-center">
