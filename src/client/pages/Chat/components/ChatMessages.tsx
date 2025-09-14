@@ -13,9 +13,10 @@ type ChatMessagesProps = {
   withPhoneNumber?: string;
   className?: string;
   onRetry?: (tempId: string) => void;
+  retryCooldowns?: Record<string, number>;
 };
 
-const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, phoneNumber, withPhoneNumber, className, onRetry }) => {
+const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, phoneNumber, withPhoneNumber, className, onRetry, retryCooldowns = {} }) => {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, loading, error, p
 
       return (
         <div ref={isLastMessage ? lastMessageRef : undefined} key={messageKey} data-message-index={index}>
-          <ChatMessageItem message={message} isFromUser={isFromUser} showDate={true} showFullDateTime={true} onRetry={onRetry} />
+          <ChatMessageItem message={message} isFromUser={isFromUser} showDate={true} showFullDateTime={true} onRetry={onRetry} retryCooldowns={retryCooldowns} />
         </div>
       );
     });

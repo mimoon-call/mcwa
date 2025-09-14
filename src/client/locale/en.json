@@ -56,7 +56,9 @@
     "MESSAGES": "messages",
     "INTERESTED": "Interested",
     "YESTERDAY": "Yesterday",
-    "RETRY": "Retry"
+    "RETRY": "Retry",
+    "RETRY_COOLDOWN": "Retry available in {{seconds}}s",
+    "RETRY_DISABLED": "Retry disabled"
   },
   "CHAT": {
     "TITLE": "Chat",

@@ -18,18 +18,21 @@ export const registerConversationSocketHandlers = (socketService: SocketService<
       const { fromNumber, toNumber, messageId } = data;
 
       try {
-        // Send the message using the existing service
-        const result = await conversationService[SEND_MESSAGE](data.fromNumber, data.toNumber, data.textMessage);
-
+        // If messageId is provided, this is a retry - delete the old ERROR message first
         if (messageId) {
-          WhatsAppMessage.deleteOne({ fromNumber, toNumber, messageId });
+          WhatsAppMessage.deleteOne({ fromNumber, toNumber, messageId }).then(() => {
+            socket.emit(ConversationEventEnum.REMOVE_MESSAGE, { messageId });
+          });
         }
+
+        // Send the message using the existing service
+        const result = await conversationService[SEND_MESSAGE](fromNumber, toNumber, data.textMessage);
 
         if (result.returnCode === 0) {
           // Send success response back to client
           socket.emit(ConversationEventEnum.CHAT_MESSAGE_SENT, {
             success: true,
-            tempId: data.tempId,
+            tempId: data.tempId || data.messageId,
             messageId: data.messageId,
             returnCode: result.returnCode,
           });

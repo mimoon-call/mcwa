@@ -23,6 +23,7 @@ type RightPanelProps = {
   headerComponent?: React.ReactNode;
   onSendMessage: (phoneNumber: string, withPhoneNumber: string, text: string) => void;
   onRetry?: (tempId: string) => void;
+  retryCooldowns?: Record<string, number>;
 };
 
 const ChatRightPanel: React.FC<RightPanelProps> = ({
@@ -36,6 +37,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   headerComponent,
   onSendMessage,
   onRetry,
+  retryCooldowns = {},
   className,
   menuItems,
 }) => {
@@ -88,6 +90,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
               phoneNumber={phoneNumber}
               withPhoneNumber={withPhoneNumber}
               onRetry={onRetry}
+              retryCooldowns={retryCooldowns}
             />
           </div>
         </>

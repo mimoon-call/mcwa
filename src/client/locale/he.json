@@ -56,7 +56,9 @@
     "MESSAGES": "הודעות",
     "INTERESTED": "מעוניין",
     "YESTERDAY": "אתמול",
-    "RETRY": "נסה שוב"
+    "RETRY": "נסה שוב",
+    "RETRY_COOLDOWN": "ניתן לנסות שוב בעוד {{seconds}} שניות",
+    "RETRY_DISABLED": "נסיון חוזר מושבת"
   },
   "CHAT": {
     "TITLE": "צ'אט",

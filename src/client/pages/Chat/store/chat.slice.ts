@@ -15,6 +15,7 @@ import {
   CHAT_LOAD_MORE_CONVERSATIONS,
   CHAT_ADD_OPTIMISTIC_MESSAGE,
   CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS,
+  CHAT_REMOVE_MESSAGE,
   CHAT_SET_SELECTED_CONTACT,
   CHAT_DELETE_CONVERSATION,
   CHAT_REMOVE_CONVERSATION,
@@ -38,6 +39,7 @@ import {
   INSTANCE_SEARCH_METADATA,
   INSTANCE_SELECTED_PHONE_NUMBER,
   INSTANCE_LAST_SEARCH_PARAMS,
+  CHAT_RETRY_COOLDOWNS,
 } from './chat.constants';
 import {
   type ChatMessage,
@@ -87,6 +89,9 @@ export interface ChatState {
   [INSTANCE_SEARCH_METADATA]: InstanceChat | null;
   [INSTANCE_SELECTED_PHONE_NUMBER]: string | null;
   [INSTANCE_LAST_SEARCH_PARAMS]: { phoneNumber: string; searchValue: string } | null;
+
+  // Retry cooldown state
+  [CHAT_RETRY_COOLDOWNS]: Record<string, number>;
 }
 
 const initialState: ChatState = {
@@ -109,6 +114,9 @@ const initialState: ChatState = {
   [INSTANCE_SEARCH_METADATA]: null,
   [INSTANCE_SELECTED_PHONE_NUMBER]: null,
   [INSTANCE_LAST_SEARCH_PARAMS]: null,
+
+  // Retry cooldown initial state
+  [CHAT_RETRY_COOLDOWNS]: {},
 };
 
 // Async thunk for search all conversations (Global Chat)
@@ -319,6 +327,12 @@ const chatSliceReducer = createSlice({
     updateGlobalOptimisticMessageStatus: (state, action) => {
       handleOptimisticMessageStatusUpdate(state, CHAT_MESSAGES_DATA, action.payload);
     },
+    removeGlobalMessage: (state, action) => {
+      const { messageId } = action.payload;
+      if (state.messagesData) {
+        state.messagesData = state.messagesData.filter(msg => msg.messageId !== messageId);
+      }
+    },
 
     // Instance chat actions
     setInstanceSelectedPhoneNumber: (state, action) => {
@@ -326,6 +340,14 @@ const chatSliceReducer = createSlice({
     },
     setExternalFlag: (state, action) => {
       state[CHAT_EXTERNAL_FLAG] = action.payload;
+    },
+    setRetryCooldown: (state, action) => {
+      const { messageId, timestamp } = action.payload;
+      state[CHAT_RETRY_COOLDOWNS][messageId] = timestamp;
+    },
+    clearRetryCooldown: (state, action) => {
+      const { messageId } = action.payload;
+      delete state[CHAT_RETRY_COOLDOWNS][messageId];
     },
   },
   extraReducers: (builder) => {
@@ -567,8 +589,11 @@ export const chatSlice = {
   [CHAT_REMOVE_CONVERSATION]: chatSliceReducer.actions.removeGlobalConversation,
   [CHAT_ADD_OPTIMISTIC_MESSAGE]: chatSliceReducer.actions.addGlobalOptimisticMessage,
   [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: chatSliceReducer.actions.updateGlobalOptimisticMessageStatus,
+  [CHAT_REMOVE_MESSAGE]: chatSliceReducer.actions.removeGlobalMessage,
   [CHAT_SET_SELECTED_PHONE_NUMBER]: chatSliceReducer.actions.setInstanceSelectedPhoneNumber,
   setExternalFlag: chatSliceReducer.actions.setExternalFlag,
+  setRetryCooldown: chatSliceReducer.actions.setRetryCooldown,
+  clearRetryCooldown: chatSliceReducer.actions.clearRetryCooldown,
 };
 
 // Default export for backward compatibility

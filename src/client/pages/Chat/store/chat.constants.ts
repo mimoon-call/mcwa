@@ -19,6 +19,7 @@ export const CHAT_ADD_INCOMING_MESSAGE = 'add-incoming-message';
 export const CHAT_ADD_NEW_CONVERSATION = 'add-new-conversation';
 export const CHAT_ADD_OPTIMISTIC_MESSAGE = 'add-optimistic-message';
 export const CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS = 'update-optimistic-message-status';
+export const CHAT_REMOVE_MESSAGE = 'remove-chat-message';
 export const CHAT_LOAD_MORE_MESSAGES = 'load-more-messages';
 export const CHAT_LOAD_MORE_CONVERSATIONS = 'load-more-conversations';
 export const CHAT_SET_SELECTED_CONTACT = 'set-selected-contact';
@@ -41,3 +42,6 @@ export const INSTANCE_LAST_SEARCH_PARAMS = 'instanceLastSearchParams';
 // Global-specific property constants (only for properties that remain separate)
 export const GLOBAL_SELECTED_CONTACT = 'globalSelectedContact';
 export const GLOBAL_LAST_SEARCH_PARAMS = 'globalLastSearchParams';
+
+// Retry cooldown constants
+export const CHAT_RETRY_COOLDOWNS = 'retryCooldowns';

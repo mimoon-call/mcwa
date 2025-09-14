@@ -1,5 +1,5 @@
 import type { ChatMessage } from '../store/chat.types';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '@components/Icon/Icon';
 import { cn } from '@client/plugins';
@@ -16,9 +16,10 @@ type MessageItemProps = {
   showFullDateTime?: boolean;
   className?: string;
   onRetry?: (tempId: string) => void;
+  retryCooldowns?: Record<string, number>;
 };
 
-const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className, onRetry }) => {
+const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, showFullDateTime = false, className, onRetry, retryCooldowns = {} }) => {
   const { t } = useTranslation();
 
   const formatMessageText = (text: string | null | undefined) => {
@@ -56,12 +57,68 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({ message, isFromUser, show
     if (!onRetry || (!message.tempId && message.status !== MessageStatusEnum.ERROR)) return null;
 
     const id = message.tempId || message.messageId;
-    const retryRef = useTooltip<HTMLDivElement>({ text: t('GENERAL.RETRY') });
     const [iconName, setIconName] = useState<IconName>('svg:warning');
+    const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+    const [isRetryDisabled, setIsRetryDisabled] = useState<boolean>(false);
+
+    // Check if this message has a retry cooldown
+    const cooldownTimestamp = retryCooldowns[id!];
+    const isOnCooldown = cooldownTimestamp && cooldownTimestamp > Date.now();
+
+    // Update cooldown timer
+    useEffect(() => {
+      if (!isOnCooldown) {
+        setIsRetryDisabled(false);
+        setCooldownSeconds(0);
+        return;
+      }
+
+      setIsRetryDisabled(true);
+      
+      const updateCooldown = () => {
+        const remaining = Math.ceil((cooldownTimestamp - Date.now()) / 1000);
+        if (remaining <= 0) {
+          setIsRetryDisabled(false);
+          setCooldownSeconds(0);
+        } else {
+          setCooldownSeconds(remaining);
+        }
+      };
+
+      updateCooldown();
+      const interval = setInterval(updateCooldown, 1000);
+
+      return () => clearInterval(interval);
+    }, [cooldownTimestamp, isOnCooldown]);
+
+    const getTooltipText = () => {
+      if (isRetryDisabled && cooldownSeconds > 0) {
+        return t('GENERAL.RETRY_COOLDOWN', { seconds: cooldownSeconds });
+      }
+      return t('GENERAL.RETRY');
+    };
+
+    const retryRef = useTooltip<HTMLDivElement>({ text: getTooltipText() });
+
+    const handleRetryClick = () => {
+      if (!isRetryDisabled && onRetry) {
+        onRetry(id!);
+      }
+    };
 
     return (
-      <div ref={retryRef} className="pt-0.5 px-1" onMouseOver={() => setIconName('svg:sync')} onMouseLeave={() => setIconName('svg:warning')}>
-        <Icon name={iconName} size="0.75rem" className="text-red-600" onClick={() => onRetry(id!)} />
+      <div 
+        ref={retryRef} 
+        className={cn("pt-0.5 px-1", isRetryDisabled && "cursor-not-allowed opacity-50")} 
+        onMouseOver={() => !isRetryDisabled && setIconName('svg:sync')} 
+        onMouseLeave={() => setIconName('svg:warning')}
+      >
+        <Icon 
+          name={iconName} 
+          size="0.75rem" 
+          className={cn("text-red-600", isRetryDisabled && "cursor-not-allowed")} 
+          onClick={handleRetryClick} 
+        />
       </div>
     );
   })();

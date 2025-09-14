@@ -31,6 +31,7 @@ import {
   SEARCH_LOADING,
   CHAT_ERROR,
   GLOBAL_SELECTED_CONTACT,
+  CHAT_RETRY_COOLDOWNS,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -63,6 +64,9 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
   } = chatSlice;
 
+  // Get retry cooldown actions
+  const { setRetryCooldown } = chatSlice;
+
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
   const searchValue = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_VALUE]);
@@ -71,6 +75,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][SEARCH_LOADING]);
   const error = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_ERROR]) !== null;
   const selectedContact = useSelector((state: RootState) => state[StoreEnum.globalChat][GLOBAL_SELECTED_CONTACT]);
+  const retryCooldowns = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_RETRY_COOLDOWNS]);
 
   // Get active instances from global store
   const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
@@ -161,16 +166,22 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       }
     };
 
+    const handleRemoveMessage = (data: { messageId: string }) => {
+      dispatch(chatSlice.actions.removeGlobalMessage(data));
+    };
+
     socket?.on(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
     socket?.on(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
     socket?.on(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
     socket?.on(ConversationEventEnum.MESSAGE_SENT, handleMessageSent);
+    socket?.on(ConversationEventEnum.REMOVE_MESSAGE, handleRemoveMessage);
 
     return () => {
       socket?.off(ConversationEventEnum.NEW_MESSAGE, handleNewMessage);
       socket?.off(ConversationEventEnum.NEW_CONVERSATION, handleNewConversation);
       socket?.off(ConversationEventEnum.MESSAGE_STATUS_UPDATE, handleMessageStatusUpdate);
       socket?.off(ConversationEventEnum.MESSAGE_SENT, handleMessageSent);
+      socket?.off(ConversationEventEnum.REMOVE_MESSAGE, handleRemoveMessage);
     };
   }, [selectedContact, dispatch]);
 
@@ -211,6 +222,10 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     const failedMessage = messages.find((msg) => (msg.tempId === id || msg.messageId === id) && msg.status === MessageStatusEnum.ERROR);
 
     if (!failedMessage) return;
+
+    // Set retry cooldown for 60 seconds
+    const cooldownTimestamp = Date.now() + 60000; // 60 seconds from now
+    dispatch(setRetryCooldown({ messageId: id, timestamp: cooldownTimestamp }));
 
     // Update the message status back to PENDING
     dispatch(
@@ -324,6 +339,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         withPhoneNumber={selectedContact?.phoneNumber}
         onSendMessage={handleSendMessage}
         onRetry={handleRetryMessage}
+        retryCooldowns={retryCooldowns}
       />
     </div>
   );

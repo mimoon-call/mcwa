@@ -39,7 +39,27 @@ export const conversationService = {
         },
       },
       { $sort: { createdAt: 1 } },
-      { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, createdAt: 1, sentAt: 1, deliveredAt: 1, playedAt: 1, status: 1, messageId: 1 } },
+      {
+        $project: {
+          _id: 0,
+          fromNumber: 1,
+          toNumber: 1,
+          text: 1,
+          createdAt: 1,
+          sentAt: 1,
+          deliveredAt: 1,
+          playedAt: 1,
+          status: 1,
+          messageId: 1,
+          tempId: { 
+            $cond: [
+              { $eq: ['$status', 'ERROR'] }, 
+              '$messageId', 
+              null
+            ] 
+          },
+        },
+      },
     ]);
   },
 

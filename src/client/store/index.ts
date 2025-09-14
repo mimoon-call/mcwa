@@ -4,7 +4,8 @@ import authSlice, { type AuthState } from '@client/store/auth.slice';
 import { configureStore } from '@reduxjs/toolkit';
 import { SET_AUTH_STATE } from '@client/store/auth.constants';
 import instanceSlice, { type InstanceState } from '@client/pages/Instance/store/instance.slice';
-import globalSlice, { type GlobalState } from '@client/store/global.slice';
+import globalSlice from '@client/store/global.slice';
+import { type GlobalState } from '@client/store/global.types';
 import messageQueueSlice, { type MessageQueueState } from '@client/pages/Queue/store/message-queue.slice';
 import { chatSlice, type ChatState } from '@client/pages/Chat/store/chat.slice';
 
