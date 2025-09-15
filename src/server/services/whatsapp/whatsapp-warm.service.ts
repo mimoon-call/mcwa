@@ -176,7 +176,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           },
         },
         { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, sentAt: '$createdAt' } },
-        { $sort: { createdAt: -1 } },
+        { $sort: { sentAt: -1 } },
         { $limit: limit },
       ]);
     } catch (error) {
@@ -271,11 +271,21 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const hasMinToCompare = previousConversation.length > 5;
 
       if (hasMinToCompare) {
-        const hasOneWay1 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber1);
-        const hasOneWay2 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber2);
+        const messagesFrom1 = previousConversation.filter(({ fromNumber }) => fromNumber === phoneNumber1).length;
+        const messagesFrom2 = previousConversation.filter(({ fromNumber }) => fromNumber === phoneNumber2).length;
+        const totalMessages = previousConversation.length;
 
-        if (hasOneWay1 || hasOneWay2) {
-          this.log('error', `[${conversationKey}]`, 'Previous conversation is one-sided, avoiding spammy behavior');
+        // Check if more than 80% of messages are from one sender (indicating one-sided conversation)
+        const oneSidedThreshold = 0.8;
+        const isOneSided1 = messagesFrom1 / totalMessages > oneSidedThreshold;
+        const isOneSided2 = messagesFrom2 / totalMessages > oneSidedThreshold;
+
+        if (isOneSided1 || isOneSided2) {
+          this.log(
+            'error',
+            `[${conversationKey}]`,
+            `Previous conversation is one-sided (${messagesFrom1}/${totalMessages} from ${phoneNumber1}, ${messagesFrom2}/${totalMessages} from ${phoneNumber2}), avoiding spammy behavior`
+          );
 
           throw new Error('Previous conversation is one-sided avoid spammy behavior');
         }
