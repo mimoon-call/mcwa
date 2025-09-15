@@ -1067,7 +1067,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       return;
     }
 
-    if (attempts < maxRetry) {
+    if (attempts < maxRetry && this.appState?.isActive === true) {
       const delay = 15000; // 15 seconds
       setTimeout(async () => {
         try {
@@ -1456,6 +1456,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     const attemptSessionReconnection = async (delayMs: number): Promise<boolean> => {
       this.socket = null;
       this.connected = false;
+
+      if (this.appState?.isActive === false) {
+        return false;
+      }
 
       if (delayMs > 0) {
         this.log('debug', `Waiting ${delayMs}ms before restore attempt...`);
