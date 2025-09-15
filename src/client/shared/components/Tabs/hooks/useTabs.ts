@@ -1,8 +1,12 @@
 // src/client/shared/components/Tabs/hooks/useTabs.ts
 import type { TabItem, TabProps } from '@components/Tabs/Tabs.type';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const useTabs = (props: TabProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const getActiveTab = (tab?: string | TabItem | null) => {
     const activeTabs = props.items.filter(({ hidden }) => !hidden);
     const activeLabel = typeof tab === 'string' ? props.value : tab?.label;
@@ -27,12 +31,22 @@ export const useTabs = (props: TabProps) => {
     setTabs(newTabs);
 
     const currentActive = activeTab?.label;
-    const stillExists = newTabs.some((tab) => tab.label === currentActive);
+    const stillExists = newTabs.some((tab) => {
+      // Check if tab label matches current active tab
+      if (tab.label === currentActive) return true;
+      
+      // Check if current route starts with tab's route (for route-based tabs)
+      if ('route' in tab && tab.route) {
+        return location.pathname.startsWith(tab.route);
+      }
+      
+      return false;
+    });
 
     if (!stillExists && newTabs.length > 0) {
       onTabClick(newTabs[0], 0);
     }
-  }, [props.items]);
+  }, [props.items, location.pathname]);
 
   const scrollToActiveTab = (newIndex: number) => {
     const currentActiveIndex = activeIndex.current;
@@ -66,7 +80,15 @@ export const useTabs = (props: TabProps) => {
   const onTabClick = (tab: TabItem, index: number) => {
     scrollToActiveTab(index);
     setActiveTab(tab);
-    tab.onClick?.(tab.label, index);
+    
+    // Handle route navigation if route property exists
+    if ('route' in tab && tab.route) {
+      navigate(tab.route);
+    } else {
+      // Call onClick callback if it exists
+      tab.onClick?.(tab.label, index);
+    }
+    
     activeIndex.current = index;
   };
 
@@ -77,7 +99,6 @@ export const useTabs = (props: TabProps) => {
 
     if (newTab) {
       onTabClick(newTab, newIndex);
-      newTab.onClick?.(newTab.label, newIndex);
     }
   };
 
@@ -96,7 +117,6 @@ export const useTabs = (props: TabProps) => {
 
     if (newTab) {
       onTabClick(newTab, newIndex);
-      newTab.onClick?.(newTab.label, newIndex);
     }
   };
 

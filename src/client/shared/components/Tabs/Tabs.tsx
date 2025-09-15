@@ -6,13 +6,13 @@ import Icon from '@components/Icon/Icon';
 import type { TabProps } from '@components/Tabs/Tabs.type';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 
 export default function Tabs({ className, panelClassName, fitHeight, children, ...props }: TabProps) {
-  if (!props.items?.length) {
-    return null;
-  }
+  if (!props.items?.length) return null;
 
   const { t } = useTranslation();
+  const location = useLocation();
 
   const { tabs, tabPanelRef, setTabItemRefs, activeTab, onTabClick, onTabFocus, showBackButton, onTabBackClick, showNextButton, onTabNextClick } =
     useTabs(props);
@@ -31,9 +31,13 @@ export default function Tabs({ className, panelClassName, fitHeight, children, .
         </button>
 
         <div ref={tabPanelRef} className={cn(styles['tabs-items'])}>
-          {tabs.map((tab, i) =>
-            tab.hidden ? null : (
-              <div className={cn(tab.label === activeTab?.label && styles['tabs-item--active'])} key={i} role="button">
+          {tabs.map((tab, i) => {
+            if (tab.hidden) return null;
+
+            const isActive = tab.label === activeTab?.label || ('route' in tab && location.pathname.startsWith(tab.route));
+
+            return (
+              <div className={cn(isActive && styles['tabs-item--active'])} key={i} role="button">
                 <div>
                   <span
                     ref={setTabItemRefs(i)}
@@ -46,8 +50,8 @@ export default function Tabs({ className, panelClassName, fitHeight, children, .
                   </span>
                 </div>
               </div>
-            )
-          )}
+            );
+          })}
         </div>
 
         <button

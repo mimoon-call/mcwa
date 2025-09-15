@@ -1,6 +1,6 @@
 import type { AppDispatch, RootState } from './store';
 import React, { useEffect, useCallback } from 'react';
-import { useNavigate, useRoutes } from 'react-router-dom';
+import { useRoutes } from 'react-router-dom';
 import router from '@client/router';
 import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
@@ -27,7 +27,6 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   const dispatch = useDispatch<AppDispatch>();
   const { [REFRESH_TOKEN]: refreshToken } = authSlice;
   const { [IS_AUTHENTICATED]: isAuthenticated } = useSelector((state: RootState) => state[StoreEnum.auth]);
-  const navigate = useNavigate();
 
   const handleAuthAndRefresh = useCallback(() => {
     if (data?.[StoreEnum.auth]) {
@@ -58,9 +57,9 @@ export default function App({ data }: { data?: Record<string, unknown> }) {
   }, [dispatch]);
 
   const tabs: TabItem[] = [
-    { label: 'INSTANCE.TITLE', onClick: () => navigate(`/${RouteName.instance}`) },
-    { label: 'QUEUE.TITLE', onClick: () => navigate(`/${RouteName.queue}`) },
-    { label: 'CHAT.TITLE', onClick: () => navigate(`/${RouteName.chat}`) },
+    { label: 'INSTANCE.TITLE', route: `/${RouteName.instance}` },
+    { label: 'QUEUE.TITLE', route: `/${RouteName.queue}` },
+    { label: 'CHAT.TITLE', route: `/${RouteName.chat}` },
   ];
 
   return !isAuthenticated ? <LoginForm /> : <Tabs items={tabs}>{component}</Tabs>;

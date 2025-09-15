@@ -8,6 +8,7 @@ export type TabItem = {
 } & (
   | { component: ReactNode; onClick?: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
   | { component?: ReactNode; onClick: (activeTab: string, tabIndex: number) => unknown | Promise<unknown> }
+  | { component?: never; onClick?: never; route: string }
 );
 
 export type TabProps = {
