@@ -14,21 +14,14 @@ export class WhatsappAiService {
   }
 
   // Helpers
-  private recent<K extends string>(arr: K[], n: number) {
-    return arr.slice(-n);
-  }
-
-  private getRandomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+  private recent = <K extends string>(arr: K[], n: number) => arr.slice(-n);
+  private getRandomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
 
   /**
    * Generate real, localized links based on persona location and topic using AI
    */
   private async getLocalizedLinksAI(topic: string, location?: string): Promise<string[]> {
-    if (!location) {
-      return this.getDefaultLinks(topic);
-    }
+    if (!location) return this.getDefaultLinks(topic);
 
     try {
       const prompt = `You are ChatGPT. Generate 3-5 REAL, WORKING URLs for ${topic} in ${location} that actually exist and work.
@@ -45,10 +38,7 @@ IMPORTANT: Use your training data to provide REAL URLs that exist and work, just
 
 Return only valid URLs, one per line, no explanations.`;
 
-      const response = await this.ai.request([this.ai.createUserMessage(prompt)], {
-        max_tokens: 200,
-        temperature: 0.7,
-      });
+      const response = await this.ai.request([this.ai.createUserMessage(prompt)], { max_tokens: 200, temperature: 0.7 });
 
       if (response?.choices?.[0]?.message?.content) {
         const content = response.choices[0].message.content;
@@ -102,6 +92,7 @@ Return only valid URLs, one per line, no explanations.`;
       .slice(-8)
       .map((m) => m.text.toLowerCase())
       .join(' ');
+
     const mentioned = (k: string) => recent.includes(k);
 
     // Common, low-friction seeds (short, everyday)
@@ -176,15 +167,13 @@ Return only valid URLs, one per line, no explanations.`;
       plan.push(pick);
       remaining -= pick;
     }
+
     return plan;
   }
 
   private buildSpeakerOrder(total: number, aNumber: string, bNumber: string): { from: string; to: string }[] {
     // Validate input phone numbers
-    if (!aNumber || !bNumber) {
-      console.error(`[AI Error] Invalid phone numbers: aNumber=${aNumber}, bNumber=${bNumber}`);
-      return [];
-    }
+    if (!aNumber || !bNumber) return [];
 
     const plan = this.buildRunPlan(total);
     const startWithA = Math.random() < 0.5;
@@ -199,9 +188,6 @@ Return only valid URLs, one per line, no explanations.`;
       // flip sender for next run
       [currentFrom, currentTo] = [currentTo, currentFrom];
     }
-
-    // Debug logging to help identify speaker order issues
-    console.log(`[AI Debug] Generated speaker order for ${total} messages:`, order.map((o, i) => `${i}: ${o.from} -> ${o.to}`).join(', '));
 
     return order;
   }
@@ -245,44 +231,25 @@ Return only valid URLs, one per line, no explanations.`;
       const src = items[i];
 
       // Skip if source message is missing or invalid
-      if (!src || !src.text || src.text.trim() === '') {
-        console.error(`[AI Error] Invalid message at index ${i}:`, src);
-        continue;
-      }
+      if (!src || !src.text || src.text.trim() === '') continue;
 
       // Force speaker order - always use the predetermined order, ignore AI's fromNumber/toNumber
       const fromNumber = order[i].from;
       const toNumber = order[i].to;
 
       // Validate phone numbers
-      if (!fromNumber || !toNumber) {
-        console.error(`[AI Error] Invalid phone numbers at index ${i}: from=${fromNumber}, to=${toNumber}`);
-        continue;
-      }
+      if (!fromNumber || !toNumber) continue;
 
       const cleanedText = this.stripForbiddenPunct(src.text.trim());
 
       // Skip if text becomes empty after cleaning
-      if (!cleanedText) {
-        console.error(`[AI Error] Empty text after cleaning at index ${i}: original="${src.text}"`);
-        continue;
-      }
+      if (!cleanedText) continue;
 
-      // Debug logging to track speaker assignments
-      console.log(`[AI Debug] Message ${i}: AI generated "${src.text}" -> Assigned to ${fromNumber} -> ${toNumber}`);
-
-      out.push({
-        fromNumber: fromNumber,
-        toNumber: toNumber,
-        text: cleanedText,
-      });
+      out.push({ fromNumber, toNumber, text: cleanedText });
     }
 
     // Only return if we have valid messages
-    if (out.length === 0) {
-      console.error('[AI Error] No valid messages after processing');
-      return [];
-    }
+    if (out.length === 0) return [];
 
     return out;
   }
@@ -434,9 +401,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
     lastConversation?: WAConversation[]
   ): Promise<Omit<WAConversation, 'sentAt'>[] | null> {
     // Validate input personas
-    if (!profileA?.phoneNumber || !profileB?.phoneNumber) {
-      return null;
-    }
+    if (!profileA?.phoneNumber || !profileB?.phoneNumber) return null;
 
     const totalMessages = this.getRandomInt(minMessages, maxMessages);
     const maxRetries = 3;
@@ -451,9 +416,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
         const speakerOrder = this.buildSpeakerOrder(totalMessages, aNum, bNum);
 
         // If speaker order is empty, return null
-        if (speakerOrder.length === 0) {
-          return null;
-        }
+        if (speakerOrder.length === 0) return null;
 
         const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
 
@@ -751,9 +714,7 @@ You are generating exactly ONE fictional WhatsApp persona (seed ${randomSeed} @ 
       { temperature: 0.7, top_p: 0.9, presence_penalty: 0.3, frequency_penalty: 0.5 }
     );
 
-    if (!parsed) {
-      return null;
-    }
+    if (!parsed) return null;
 
     return { ...parsed, language };
   }

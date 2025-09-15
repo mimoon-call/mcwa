@@ -198,7 +198,15 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!personaA.phoneNumber) personaA.phoneNumber = instanceA.phoneNumber;
     if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
-    return await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, prevConversation);
+    const script = await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, prevConversation);
+
+    this.log(
+      'debug',
+      `[${[personaA.phoneNumber, personaB.phoneNumber].join(':')}]`,
+      ...(script || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`)
+    );
+
+    return script;
   }
 
   private getDailyLimits(instance: WAInstance<WAPersona>) {
