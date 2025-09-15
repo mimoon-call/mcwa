@@ -172,7 +172,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
               { fromNumber: toNumber, toNumber: fromNumber },
             ],
             text: { $exists: true, $nin: ['', null] },
-            status: { $nin: [MessageStatusEnum.ERROR, MessageStatusEnum.PENDING] },
+            status: { $nin: [MessageStatusEnum.ERROR, MessageStatusEnum.PENDING, MessageStatusEnum.SENT] },
           },
         },
         { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, sentAt: '$createdAt' } },
@@ -268,7 +268,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     try {
       const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
       const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
-      const hasMinToCompare = previousConversation.length > 6;
+      const hasMinToCompare = previousConversation.length > 8;
 
       if (hasMinToCompare) {
         const hasOneWay1 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber1);
