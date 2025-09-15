@@ -1,13 +1,13 @@
-import { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
+import type { WAMessageIncoming, WAMessageIncomingCallback, WAMessageIncomingRaw, WAMessageOutgoingCallback } from './whatsapp-instance.type';
 import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type';
+import type { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WhatsappAiService } from './whatsapp.ai';
 import { WAInstance, WhatsappService } from './whatsapp.service';
 import { WhatsAppMessage } from './whatsapp.db';
 import { clearTimeout } from 'node:timers';
-
-import getLocalTime from '@server/helpers/get-local-time';
-import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { MessageStatusEnum } from './whatsapp.enum';
+import { LRUCache } from 'lru-cache';
+import getLocalTime from '@server/helpers/get-local-time';
 
 type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
@@ -31,6 +31,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
+  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
   public nextWarmUp: Date | null = null;
 
   constructor({ warmUpOnReady, ...config }: Config<WAPersona>) {
@@ -115,12 +116,17 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return nextWarmingTime;
   }
 
-  private getAllUniquePairs<T extends object>(key: keyof T, arr: T[], fallbackInstance?: (phoneNumber: string) => T): [T, T][] {
+  private getAllUniquePairs<T extends WAInstance<WAPersona>>(
+    key: keyof T,
+    arr: T[],
+    fallbackInstance?: (phoneNumber: string) => T,
+    allInstances?: T[]
+  ): [T, T][] {
     if (arr.length === 1) {
-      const fallback = fallbackInstance?.(arr[0][key] as string);
+      const fallback = this.getAvailableFallbackInstance(arr[0][key] as string, fallbackInstance, allInstances);
 
       if (!fallback) {
-        this.log('warn', 'Fallback instance not found');
+        this.log('warn', 'No available fallback instance found (all pairs have failed recently)');
 
         return [];
       }
@@ -141,6 +147,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           continue;
         }
 
+        // Check if this pair has failed recently
+        const pairKey = this.getPairKey(key, arr[i], arr[j]);
+        if (this.spammyBehaviorPairs.has(pairKey)) {
+          this.log('debug', `[${pairKey}] Skipping pair - failed recently`);
+          continue;
+        }
+
         result.push([arr[i], arr[j]]);
       }
     }
@@ -150,6 +163,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private getPairKey<T extends object>(key: keyof T, a: T, b: T): string {
     return [String(a[key]), String(b[key])].sort((a, b) => a.localeCompare(b)).join(':');
+  }
+
+  private markPairAsFailed(conversationKey: string): void {
+    this.spammyBehaviorPairs.set(conversationKey, true);
+    this.log('debug', `[${conversationKey}] Marked pair as failed - will avoid for 24 hours`);
   }
 
   private randomDelayBetween(min: number, max: number): number {
@@ -281,11 +299,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const isOneSided2 = messagesFrom2 / totalMessages > oneSidedThreshold;
 
         if (isOneSided1 || isOneSided2) {
-          this.log(
-            'error',
-            `[${conversationKey}]`,
-            `Previous conversation is one-sided (${messagesFrom1}/${totalMessages} from ${phoneNumber1}, ${messagesFrom2}/${totalMessages} from ${phoneNumber2}), avoiding spammy behavior`
-          );
+          this.markPairAsFailed(conversationKey);
+          this.log('error', `[${conversationKey}]`, `Previous conversation is one-sided, avoiding spammy behavior`);
 
           throw new Error('Previous conversation is one-sided avoid spammy behavior');
         }
@@ -397,6 +412,39 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       return sortedInstances[0];
     };
+  }
+
+  private getAvailableFallbackInstance<T extends WAInstance<WAPersona>>(
+    phoneNumber: string,
+    fallbackInstance?: (phoneNumber: string) => T,
+    allInstances?: T[]
+  ): T | null {
+    if (!fallbackInstance || !allInstances) return null;
+
+    const availableInstances = allInstances.filter((instance) => instance.phoneNumber !== phoneNumber && instance.connected);
+    const warmedAvailable = availableInstances.filter((instance) => instance.get('hasWarmedUp') && instance.connected);
+
+    const sortedInstances = (warmedAvailable.length ? warmedAvailable : availableInstances).sort((a, b) => {
+      const aDailyCount = a.get('dailyMessageCount');
+      const bDailyCount = b.get('dailyMessageCount');
+
+      const { maxMessages: aMaxMessages } = this.getDailyLimits(a);
+      const { maxMessages: bMaxMessages } = this.getDailyLimits(b);
+
+      const aDiff = aMaxMessages - aDailyCount;
+      const bDiff = bMaxMessages - bDailyCount;
+
+      return bDiff - aDiff;
+    });
+
+    // Find the first instance that hasn't failed with this phone number
+    for (const instance of sortedInstances) {
+      const pairKey = this.getPairKey<{ phoneNumber: string }>('phoneNumber', { phoneNumber }, instance);
+
+      if (!this.spammyBehaviorPairs.has(pairKey)) return instance;
+    }
+
+    return null;
   }
 
   private async getWarmInstances(instances: WAInstance<WAPersona>[]) {
@@ -570,7 +618,12 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
 
       this.log('debug', warmUpTodayInstances.map(({ phoneNumber }) => phoneNumber).join(','), `Start Warming Up ${warmUpTodayInstances.length}`);
-      const instancesPairs = this.getAllUniquePairs('phoneNumber', warmUpTodayInstances, this.getFallbackInstance(allActiveInstances));
+      const instancesPairs = this.getAllUniquePairs(
+        'phoneNumber',
+        warmUpTodayInstances,
+        this.getFallbackInstance(allActiveInstances),
+        allActiveInstances
+      );
       this.setWarmUpActive(true);
 
       // Process conversations sequentially with delays to prevent simultaneous creation
@@ -584,13 +637,21 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
-        await this.createConversation(pair);
+        try {
+          await this.createConversation(pair);
 
-        const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
-        await new Promise((resolve) => setTimeout(resolve, setupDelay));
+          const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
+          await new Promise((resolve) => setTimeout(resolve, setupDelay));
+        } catch (conversationError) {
+          // Mark this pair as failed
+          const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
+
+          this.log('error', `[${conversationKey}] Conversation failed, marking pair as failed:`, conversationError);
+          // Continue with next pair instead of stopping the entire warming process
+        }
       }
     } catch (error) {
-      this.log('error', 'Error occurred', error);
+      this.log('error', 'Error occurred in warming process', error);
       // Don't retry automatically - let the scheduled warming handle it
     }
   }
