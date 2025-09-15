@@ -5,6 +5,7 @@ import {
   SearchAllConversationsRes,
   ConversationPairItem,
   DeleteConversationRes,
+  GetConversationItem,
 } from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
@@ -24,7 +25,7 @@ export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
     const { pageSize = 50, ...restPage } = page || {};
 
-    return WhatsAppMessage.pagination({ page: { pageSize, ...restPage } }, [
+    return await WhatsAppMessage.pagination<GetConversationItem>({ page: { pageSize, ...restPage } }, [
       {
         $match: {
           $and: [
@@ -51,12 +52,8 @@ export const conversationService = {
           playedAt: 1,
           status: 1,
           messageId: 1,
-          tempId: { 
-            $cond: [
-              { $eq: ['$status', 'ERROR'] }, 
-              '$messageId', 
-              null
-            ] 
+          tempId: {
+            $cond: [{ $eq: ['$status', 'ERROR'] }, '$messageId', null],
           },
         },
       },
