@@ -268,7 +268,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     try {
       const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
       const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
-      const hasMinToCompare = previousConversation.length > 8;
+      const hasMinToCompare = previousConversation.length > 5;
 
       if (hasMinToCompare) {
         const hasOneWay1 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber1);
