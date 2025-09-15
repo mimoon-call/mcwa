@@ -200,6 +200,9 @@ Return only valid URLs, one per line, no explanations.`;
       [currentFrom, currentTo] = [currentTo, currentFrom];
     }
 
+    // Debug logging to help identify speaker order issues
+    console.log(`[AI Debug] Generated speaker order for ${total} messages:`, order.map((o, i) => `${i}: ${o.from} -> ${o.to}`).join(', '));
+
     return order;
   }
 
@@ -242,14 +245,14 @@ Return only valid URLs, one per line, no explanations.`;
       const src = items[i];
 
       // Skip if source message is missing or invalid
-      if (!src || !src.fromNumber || !src.toNumber || !src.text || src.text.trim() === '') {
+      if (!src || !src.text || src.text.trim() === '') {
         console.error(`[AI Error] Invalid message at index ${i}:`, src);
         continue;
       }
 
-      // Ensure phone numbers are properly set - never allow undefined
-      const fromNumber = order[i].from || src.fromNumber || '';
-      const toNumber = order[i].to || src.toNumber || '';
+      // Force speaker order - always use the predetermined order, ignore AI's fromNumber/toNumber
+      const fromNumber = order[i].from;
+      const toNumber = order[i].to;
 
       // Validate phone numbers
       if (!fromNumber || !toNumber) {
@@ -264,6 +267,9 @@ Return only valid URLs, one per line, no explanations.`;
         console.error(`[AI Error] Empty text after cleaning at index ${i}: original="${src.text}"`);
         continue;
       }
+
+      // Debug logging to track speaker assignments
+      console.log(`[AI Debug] Message ${i}: AI generated "${src.text}" -> Assigned to ${fromNumber} -> ${toNumber}`);
 
       out.push({
         fromNumber: fromNumber,
@@ -404,10 +410,11 @@ Copy and paste the URLs exactly as they appear - do not modify or create new one
 Follow this exact sequence of senders (runs already embedded). Each object is a message:
 SPEAKER_ORDER = ${orderJson}
 
-Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER, with matching from/to.
+Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
+**IMPORTANT**: The fromNumber/toNumber will be automatically assigned based on SPEAKER_ORDER, so you can use placeholder values like "A" and "B" - focus only on generating the text content.
 
 📤 Output format (JSON only):
-{ "messages": [ { "fromNumber": "...", "toNumber": "...", "text": "..." }, ... ] }
+{ "messages": [ { "fromNumber": "A", "toNumber": "B", "text": "..." }, ... ] }
 
 ⚠️ Strict:
 - Return ONLY a valid JSON object with "messages" of length ${messageCount}.
