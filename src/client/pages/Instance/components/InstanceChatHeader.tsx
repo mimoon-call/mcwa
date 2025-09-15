@@ -8,7 +8,7 @@ import { internationalPhonePrettier } from '@helpers/international-phone-prettie
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState, AppDispatch } from '@client/store';
 import { chatSlice } from '../../Chat/store/chat.slice';
-import { CHAT_EXTERNAL_FLAG, CHAT_CLEAR_SEARCH_DATA, CHAT_RESET_PAGINATION, CHAT_SEARCH_CONVERSATIONS } from '../../Chat/store/chat.constants';
+import { CHAT_EXTERNAL_FLAG, CHAT_CLEAR_SEARCH_DATA, CHAT_RESET_PAGINATION, CHAT_SEARCH_CONVERSATIONS, CHAT_SET_EXTERNAL_FLAG } from '../../Chat/store/chat.constants';
 import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
 import { useTooltip } from '@hooks';
 
@@ -63,7 +63,7 @@ const InstanceChatHeader: React.FC<InstanceChatHeaderProps> = ({ phoneNumber, se
 
   // Get chat actions
   const {
-    setExternalFlag,
+    [CHAT_SET_EXTERNAL_FLAG]: setExternalFlag,
     [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
     [CHAT_RESET_PAGINATION]: resetPagination,
     [CHAT_SEARCH_CONVERSATIONS]: searchConversations,

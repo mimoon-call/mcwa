@@ -32,6 +32,9 @@ import {
   CHAT_ERROR,
   GLOBAL_SELECTED_CONTACT,
   CHAT_RETRY_COOLDOWNS,
+  CHAT_RESET_SEARCH_VALUE,
+  CHAT_SET_RETRY_COOLDOWN,
+  CHAT_CLEAR_RETRY_COOLDOWN,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -63,10 +66,14 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_ADD_OPTIMISTIC_MESSAGE]: addOptimisticMessage,
     [CHAT_REMOVE_CONVERSATION]: removeConversation,
     [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
+    [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
   } = chatSlice;
 
   // Get retry cooldown actions
-  const { setRetryCooldown } = chatSlice;
+  const {
+    [CHAT_SET_RETRY_COOLDOWN]: setRetryCooldown,
+    [CHAT_CLEAR_RETRY_COOLDOWN]: clearRetryCooldown,
+  } = chatSlice;
 
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -95,7 +102,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     
     // Clear retry cooldowns
     Object.keys(retryCooldowns).forEach(messageId => {
-      dispatch(chatSlice.actions.clearRetryCooldown({ messageId }));
+      dispatch(clearRetryCooldown({ messageId }));
     });
   }, [dispatch, clearSearchData, resetPagination, setSelectedContact, retryCooldowns]);
 
@@ -105,7 +112,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     resetChatState();
     
     // Reset search value in store
-    dispatch(chatSlice.actions.resetSearchValue());
+    dispatch(resetSearchValue());
     
     // Then load conversations
     dispatch(searchConversations({}));

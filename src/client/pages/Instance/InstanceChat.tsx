@@ -32,6 +32,7 @@ import {
   CHAT_DELETE_CONVERSATION,
   CHAT_REMOVE_CONVERSATION,
   CHAT_SET_SELECTED_CONTACT,
+  CHAT_RESET_SEARCH_VALUE,
 } from '../Chat/store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 import getClientSocket from '@helpers/get-client-socket.helper';
@@ -63,6 +64,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: updateOptimisticMessageStatus,
     [CHAT_REMOVE_CONVERSATION]: removeConversation,
     [CHAT_SET_SELECTED_CONTACT]: setSelectedContact,
+    [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
   } = chatSlice;
 
 
@@ -80,8 +82,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
 
   // Reset search value on component mount only
   useEffect(() => {
-    dispatch(chatSlice.actions.resetSearchValue());
-  }, [dispatch]);
+    dispatch(resetSearchValue());
+  }, [dispatch, resetSearchValue]);
 
   // Load conversations when phoneNumber changes
   useEffect(() => {

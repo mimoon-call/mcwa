@@ -45,3 +45,11 @@ export const GLOBAL_LAST_SEARCH_PARAMS = 'globalLastSearchParams';
 
 // Retry cooldown constants
 export const CHAT_RETRY_COOLDOWNS = 'retryCooldowns';
+
+// Reset constants
+export const CHAT_RESET_SEARCH_VALUE = 'reset-search-value';
+
+// Action constants
+export const CHAT_SET_EXTERNAL_FLAG = 'set-external-flag';
+export const CHAT_SET_RETRY_COOLDOWN = 'set-retry-cooldown';
+export const CHAT_CLEAR_RETRY_COOLDOWN = 'clear-retry-cooldown';

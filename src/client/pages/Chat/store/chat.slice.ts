@@ -40,6 +40,10 @@ import {
   INSTANCE_SELECTED_PHONE_NUMBER,
   INSTANCE_LAST_SEARCH_PARAMS,
   CHAT_RETRY_COOLDOWNS,
+  CHAT_RESET_SEARCH_VALUE,
+  CHAT_SET_EXTERNAL_FLAG,
+  CHAT_SET_RETRY_COOLDOWN,
+  CHAT_CLEAR_RETRY_COOLDOWN,
 } from './chat.constants';
 import {
   type ChatMessage,
@@ -594,10 +598,10 @@ export const chatSlice = {
   [CHAT_UPDATE_OPTIMISTIC_MESSAGE_STATUS]: chatSliceReducer.actions.updateGlobalOptimisticMessageStatus,
   [CHAT_REMOVE_MESSAGE]: chatSliceReducer.actions.removeGlobalMessage,
   [CHAT_SET_SELECTED_PHONE_NUMBER]: chatSliceReducer.actions.setInstanceSelectedPhoneNumber,
-  setExternalFlag: chatSliceReducer.actions.setExternalFlag,
-  setRetryCooldown: chatSliceReducer.actions.setRetryCooldown,
-  clearRetryCooldown: chatSliceReducer.actions.clearRetryCooldown,
-  resetSearchValue: chatSliceReducer.actions.resetSearchValue,
+  [CHAT_SET_EXTERNAL_FLAG]: chatSliceReducer.actions.setExternalFlag,
+  [CHAT_SET_RETRY_COOLDOWN]: chatSliceReducer.actions.setRetryCooldown,
+  [CHAT_CLEAR_RETRY_COOLDOWN]: chatSliceReducer.actions.clearRetryCooldown,
+  [CHAT_RESET_SEARCH_VALUE]: chatSliceReducer.actions.resetSearchValue,
 };
 
 // Default export for backward compatibility
