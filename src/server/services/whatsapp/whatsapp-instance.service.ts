@@ -1634,14 +1634,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     });
   }
 
-  public async connect(): Promise<void> {
+  public async connect(disconnectBeforeFlag: boolean = false): Promise<void> {
     this.appState ??= await this.getAppAuth();
 
-    if (this.connected) {
-      this.log('info', 'Instance is already connected');
-      return;
-    }
-
+    if (this.connected && disconnectBeforeFlag) await this.disconnect();
     await this.update({ isActive: true } as Partial<WAAppAuth<T>>);
     this.log('info', 'Restoring session...');
 

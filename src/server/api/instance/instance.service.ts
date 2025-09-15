@@ -94,6 +94,6 @@ export const instanceService = {
       throw new ServerError('INSTANCE.NOT_FOUND');
     }
 
-    await instance.connect();
+    await instance.connect(true);
   },
 };
