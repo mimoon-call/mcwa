@@ -33,7 +33,7 @@ const speechToText = async (raw: WAMessageIncomingRaw) => {
 
 export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw, messageId) => {
   // Internal message
-  if (msg.internalFlag && msg.warmingFlag) {
+  if (msg.internalFlag) {
     console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}]`, msg.text);
 
     return;
