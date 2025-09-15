@@ -487,6 +487,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
 
       return setTimeout(async () => {
+        const currentState = this.activeConversation.get(conversationKey);
+        const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
+        const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
+
+        if (!currentState || !currentMessage || currentIndex === undefined) {
+          await this.cleanupConversation(conversationKey);
+
+          return;
+        }
+
+        const messageContent = { type: 'text' as const, text: currentMessage.text };
+
         try {
           const [key1, key2] = conversationKey.split(':');
           const instance1 = this.getInstance(key1);
@@ -494,17 +506,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           if (!instance1?.get('isActive') || !instance2?.get('isActive')) throw new Error('One or more of the instances deactivated');
 
-          const currentState = this.activeConversation.get(conversationKey);
-          const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
-          const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
-
-          if (!currentState || !currentMessage || currentIndex === undefined) {
-            await this.cleanupConversation(conversationKey);
-
-            return;
-          }
-
-          const messageContent = { type: 'text' as const, text: currentMessage.text };
           const instance = this.getInstance(currentMessage.fromNumber);
 
           if (instance) {
@@ -556,8 +557,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
           this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
           await this.handleConversationMessage(conversationKey);
-        } catch (error) {
-          this.log('error', `Failed to send message in conversation ${conversationKey}:`, error);
+        } catch {
+          this.log(
+            'error',
+            `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber} failed, aborting conversation`
+          );
 
           await this.cleanupConversation(conversationKey);
         }
