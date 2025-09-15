@@ -1,4 +1,7 @@
 // src/client/store/instance/instance.slice.ts
+// This slice includes auto-save/auto-load functionality for filter data
+// Filter changes are automatically saved to localStorage
+// On mount, saved filter data is loaded from localStorage into the initial state
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { Http } from '@services/http';
 import { StoreEnum } from '@client/store/store.enum';
@@ -13,12 +16,15 @@ import {
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
+  RESET_INSTANCE,
   SEARCH_INSTANCE,
+  UPDATE_FILTER,
   UPDATE_INSTANCE,
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
+import { loadInstanceFilter, saveInstanceFilter, clearInstanceStorage } from './instance.storage';
 
 export interface InstanceState {
   [INSTANCE_SEARCH_DATA]: SearchInstanceRes['data'] | null;
@@ -31,7 +37,7 @@ export interface InstanceState {
 const initialState: InstanceState = {
   [INSTANCE_SEARCH_DATA]: null,
   [INSTANCE_SEARCH_PAGINATION]: { pageSize: 50 },
-  [INSTANCE_SEARCH_FILTER]: {},
+  [INSTANCE_SEARCH_FILTER]: loadInstanceFilter(),
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
 };
@@ -105,8 +111,9 @@ const instanceSlice = createSlice({
       state[INSTANCE_SEARCH_DATA] = null;
     },
     reset: (state) => {
-      state[INSTANCE_SEARCH_FILTER] = initialState[INSTANCE_SEARCH_FILTER];
-      state[INSTANCE_SEARCH_PAGINATION] = initialState[INSTANCE_SEARCH_PAGINATION];
+      state[INSTANCE_SEARCH_FILTER] = {};
+      state[INSTANCE_SEARCH_PAGINATION] = { pageSize: 50 };
+      clearInstanceStorage();
     },
     updateInstance: (state, action) => {
       const data = action.payload;
@@ -123,6 +130,9 @@ const instanceSlice = createSlice({
 
       state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
       state[INSTANCE_SEARCH_PAGINATION] = { ...state[INSTANCE_SEARCH_PAGINATION], pageIndex: 0 };
+      
+      // Auto-save filter to localStorage
+      saveInstanceFilter(state[INSTANCE_SEARCH_FILTER]);
     },
   },
   extraReducers: (builder) => {
@@ -161,6 +171,6 @@ export default {
   [INSTANCE_REFRESH]: refreshInstance,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
-  updateFilter: instanceSlice.actions.updateFilter,
-  resetInstance,
+  [UPDATE_FILTER]: instanceSlice.actions.updateFilter,
+  [RESET_INSTANCE]: resetInstance,
 };

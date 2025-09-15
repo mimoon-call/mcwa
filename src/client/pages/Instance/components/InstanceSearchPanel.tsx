@@ -8,7 +8,7 @@ import { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
 import { useTranslation } from 'react-i18next';
 import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
 import { useDispatch, useSelector } from 'react-redux';
-import { INSTANCE_SEARCH_FILTER, SEARCH_INSTANCE } from '@client/pages/Instance/store/instance.constants';
+import { INSTANCE_SEARCH_FILTER, RESET_INSTANCE, SEARCH_INSTANCE, UPDATE_FILTER } from '@client/pages/Instance/store/instance.constants';
 import instanceStore from '@client/pages/Instance/store/instance.slice';
 import { StoreEnum } from '@client/store/store.enum';
 import { SearchPanel } from '@client/components/SearchPanel';
@@ -16,7 +16,7 @@ import { SearchPanel } from '@client/components/SearchPanel';
 export const InstanceSearchPanel = () => {
   const { t } = useTranslation();
 
-  const { [SEARCH_INSTANCE]: searchInstance, resetInstance, updateFilter } = instanceStore;
+  const { [SEARCH_INSTANCE]: searchInstance, [RESET_INSTANCE]: resetInstance, [UPDATE_FILTER]: updateFilter } = instanceStore;
   const { [INSTANCE_SEARCH_FILTER]: instanceFilter } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const dispatch = useDispatch<AppDispatch>();

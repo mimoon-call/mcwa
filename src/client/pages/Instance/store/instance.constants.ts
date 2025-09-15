@@ -5,9 +5,11 @@ export const INSTANCE_REFRESH = 'refresh-instance';
 export const ACTIVE_TOGGLE_INSTANCE = 'active-toggle-instance';
 
 export const UPDATE_INSTANCE = 'update-instance';
+export const UPDATE_FILTER = 'update-filter';
+export const RESET_INSTANCE = 'reset-instance';
 
-export const INSTANCE_SEARCH_DATA = 'data';
-export const INSTANCE_SEARCH_PAGINATION = 'pagination';
-export const INSTANCE_SEARCH_FILTER = 'filter';
-export const INSTANCE_LOADING = 'loading';
-export const INSTANCE_ERROR = 'error';
+export const INSTANCE_SEARCH_DATA = 'instance-data';
+export const INSTANCE_SEARCH_PAGINATION = 'instance-pagination';
+export const INSTANCE_SEARCH_FILTER = 'instance-filter';
+export const INSTANCE_LOADING = 'instance-loading';
+export const INSTANCE_ERROR = 'instance-error';
