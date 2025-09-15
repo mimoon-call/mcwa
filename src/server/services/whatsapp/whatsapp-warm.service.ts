@@ -18,8 +18,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private readonly maxRetryAttempt = 3;
   private dailyTimeWindow = [
-    [6, 0],
-    [9, 59],
+    [5, 0],
+    [7, 59],
   ];
   private dailyScheduleTimeHour = 9;
   private dailyScheduleTimeMinute = 0;
