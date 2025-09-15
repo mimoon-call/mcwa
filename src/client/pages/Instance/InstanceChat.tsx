@@ -65,6 +65,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_SET_SELECTED_CONTACT]: setSelectedContact,
   } = chatSlice;
 
+
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
   const searchMetadata = useSelector((state: RootState) => state[StoreEnum.chat][INSTANCE_SEARCH_METADATA]);
@@ -77,13 +78,18 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   // Get active instances from global store
   const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
-  // Load conversations on component mount
+  // Reset search value on component mount only
+  useEffect(() => {
+    dispatch(chatSlice.actions.resetSearchValue());
+  }, [dispatch]);
+
+  // Load conversations when phoneNumber changes
   useEffect(() => {
     if (phoneNumber && !withPhoneNumber) {
       dispatch(resetPagination());
       dispatch(searchConversations({ phoneNumber }));
     }
-  }, [phoneNumber, withPhoneNumber, dispatch]);
+  }, [phoneNumber, withPhoneNumber, dispatch, resetPagination, searchConversations]);
 
   // Load messages when a chat is selected and join conversation room
   useEffect(() => {

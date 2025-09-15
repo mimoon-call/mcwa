@@ -81,13 +81,35 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   // Get active instances from global store
   const activeList = useSelector((state: RootState) => state[StoreEnum.global].activeList);
 
+  // Reset function to clear all chat state
+  const resetChatState = useCallback(() => {
+    // Clear search data and reset pagination
+    dispatch(clearSearchData());
+    dispatch(resetPagination());
+    
+    // Clear selected contact
+    dispatch(setSelectedContact(null));
+    
+    // Reset search value ref
+    lastSearchValueRef.current = '';
+    
+    // Clear retry cooldowns
+    Object.keys(retryCooldowns).forEach(messageId => {
+      dispatch(chatSlice.actions.clearRetryCooldown({ messageId }));
+    });
+  }, [dispatch, clearSearchData, resetPagination, setSelectedContact, retryCooldowns]);
+
   // Load conversations on component mount
   useEffect(() => {
-    dispatch(resetPagination());
+    // Reset all chat state first
+    resetChatState();
+    
+    // Reset search value in store
+    dispatch(chatSlice.actions.resetSearchValue());
+    
+    // Then load conversations
     dispatch(searchConversations({}));
-    // Initialize the ref with the current search value
-    lastSearchValueRef.current = searchValue;
-  }, [dispatch]);
+  }, [dispatch, resetChatState]);
 
   // Find selected contact based on URL parameters
   const selectedContactFromUrl =

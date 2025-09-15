@@ -349,6 +349,9 @@ const chatSliceReducer = createSlice({
       const { messageId } = action.payload;
       delete state[CHAT_RETRY_COOLDOWNS][messageId];
     },
+    resetSearchValue: (state) => {
+      state[CHAT_SEARCH_VALUE] = '';
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -594,6 +597,7 @@ export const chatSlice = {
   setExternalFlag: chatSliceReducer.actions.setExternalFlag,
   setRetryCooldown: chatSliceReducer.actions.setRetryCooldown,
   clearRetryCooldown: chatSliceReducer.actions.clearRetryCooldown,
+  resetSearchValue: chatSliceReducer.actions.resetSearchValue,
 };
 
 // Default export for backward compatibility

@@ -74,10 +74,10 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
   const { t } = useTranslation();
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
-  // Initialize local search value only on mount
+  // Sync local search value with prop changes
   useEffect(() => {
     setLocalSearchValue(searchValue);
-  }, []); // Empty dependency array - only run on mount
+  }, [searchValue]);
 
   // Debounced search effect - only trigger when localSearchValue changes
   useEffect(() => {
