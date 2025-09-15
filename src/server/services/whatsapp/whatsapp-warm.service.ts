@@ -7,6 +7,7 @@ import { clearTimeout } from 'node:timers';
 
 import getLocalTime from '@server/helpers/get-local-time';
 import { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
+import { MessageStatusEnum } from './whatsapp.enum';
 
 type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
@@ -171,6 +172,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
               { fromNumber: toNumber, toNumber: fromNumber },
             ],
             text: { $exists: true, $nin: ['', null] },
+            status: { $nin: [MessageStatusEnum.ERROR, MessageStatusEnum.PENDING] },
           },
         },
         { $project: { _id: 0, fromNumber: 1, toNumber: 1, text: 1, sentAt: '$createdAt' } },
@@ -266,6 +268,19 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     try {
       const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
       const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
+      const hasMinToCompare = previousConversation.length > 6;
+
+      if (hasMinToCompare) {
+        const hasOneWay1 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber1);
+        const hasOneWay2 = previousConversation.every(({ fromNumber }) => fromNumber === phoneNumber2);
+
+        if (hasOneWay1 || hasOneWay2) {
+          this.log('error', `[${conversationKey}]`, 'Previous conversation is one-sided, avoiding spammy behavior');
+
+          throw new Error('Previous conversation is one-sided avoid spammy behavior');
+        }
+      }
+
       const script = await this.getRandomScript(pair[0], pair[1], previousConversation);
 
       if (script?.length) {
