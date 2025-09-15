@@ -17,11 +17,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
-  private readonly maxRetryAttempt = 3;
-  private dailyTimeWindow = [
-    [5, 0],
-    [7, 59],
-  ];
   private dailyScheduleTimeHour = 9;
   private dailyScheduleTimeMinute = 0;
   private isWarming: boolean = false;
@@ -32,6 +27,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
   private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
+  private dailyTimeWindow = [
+    [5, 0],
+    [7, 59],
+  ];
   public nextWarmUp: Date | null = null;
 
   constructor({ warmUpOnReady, ...config }: Config<WAPersona>) {
@@ -66,12 +65,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private getTodayDate(): string {
     // Get current time in Jerusalem timezone
     const now = getLocalTime();
+    const nowHours = now.getHours();
+    const nowMinutes = now.getMinutes();
 
     // If we're before the daily schedule time, consider it still "yesterday" for warm-up purposes
-    if (
-      now.getHours() < this.dailyScheduleTimeHour ||
-      (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)
-    ) {
+    if (nowHours < this.dailyScheduleTimeHour || (nowHours === this.dailyScheduleTimeHour && nowMinutes < this.dailyScheduleTimeMinute)) {
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       return yesterday.toISOString().split('T')[0];
@@ -93,12 +91,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private getNextWarmingTime(): Date {
     const now = getLocalTime();
+    const nowHours = now.getHours();
+    const nowMinutes = now.getMinutes();
     let nextWarmingTime: Date;
 
-    if (
-      now.getHours() < this.dailyScheduleTimeHour ||
-      (now.getHours() === this.dailyScheduleTimeHour && now.getMinutes() < this.dailyScheduleTimeMinute)
-    ) {
+    if (nowHours < this.dailyScheduleTimeHour || (nowHours === this.dailyScheduleTimeHour && nowMinutes < this.dailyScheduleTimeMinute)) {
       // Today
       this.randomNextTimeWindow();
       nextWarmingTime = new Date(now);
@@ -126,7 +123,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const fallback = this.getAvailableFallbackInstance(arr[0][key] as string, fallbackInstance, allInstances);
 
       if (!fallback) {
-        this.log('warn', 'No available fallback instance found (all pairs have failed recently)');
+        this.log('error', 'No available fallback instance found (all pairs have failed recently)');
 
         return [];
       }
@@ -151,6 +148,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const pairKey = this.getPairKey(key, arr[i], arr[j]);
         if (this.spammyBehaviorPairs.has(pairKey)) {
           this.log('debug', `[${pairKey}] Skipping pair - failed recently`);
+
           continue;
         }
 
@@ -208,7 +206,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     instanceA: WAInstance<WAPersona>,
     instanceB: WAInstance<WAPersona>,
     prevConversation: WAConversation[] | undefined,
-    minMessages = 6,
+    minMessages = 8,
     maxMessages = 12
   ): Promise<Omit<WAConversation, 'sentAt'>[] | null> {
     const personaA = instanceA.get() as WAPersona;
@@ -271,9 +269,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     const [instance1, instance2] = pair;
 
-    if (!instance1.get('isActive') || !instance2.get('isActive')) {
-      return;
-    }
+    if (!instance1.get('isActive') || !instance2.get('isActive')) return;
 
     // Check if conversation is already active or being created and ensure neither phone number is involved in other conversations
     if (activeConversations.some((val) => val.includes(key1) || val.includes(key2)) || this.creatingConversation.has(conversationKey)) return;
@@ -318,16 +314,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         }
 
         this.activeConversation.set(conversationKey, validScript);
-        const delay = this.randomDelayBetween(10, 30) * 1000;
-
-        this.timeoutConversation.set(
-          conversationKey,
-          setTimeout(async () => await this.handleConversationMessage(conversationKey), delay)
-        );
 
         const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
-        this.conversationStartCallback?.({ phoneNumber1, phoneNumber2, totalMessages: script.length, startInSeconds: delay / 1000 });
-        this.log('debug', `[${conversationKey}] Conversation created successfully (messages: ${script.length}, delay: ${delay / 1000}s)`);
+        this.conversationStartCallback?.({ phoneNumber1, phoneNumber2, totalMessages: script.length });
+        this.log('debug', `[${conversationKey}] Conversation created successfully (messages: ${script.length})`);
+        await this.handleConversationMessage(conversationKey);
       } else {
         this.log('error', `[${conversationKey}]`, 'creating script failed', script);
       }
@@ -489,11 +480,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       return;
     }
 
-    const send = (attempt: number = 0) => {
-      const seconds = this.getRealisticDelay(5, 30) * (attempt + 1);
-      const delay = seconds * 1000;
+    const sendTimeout = () => {
+      const randomSeconds = this.getRealisticDelay(5, 30);
+      const sendingDelay = randomSeconds * 1000;
 
-      this.log('debug', `[${conversationKey}]`, `schedule message in ${seconds} seconds`, attempt ? `(${attempt}/${this.maxRetryAttempt})` : '');
+      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
 
       return setTimeout(async () => {
         try {
@@ -566,21 +557,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
           await this.handleConversationMessage(conversationKey);
         } catch (error) {
-          if (attempt < this.maxRetryAttempt) {
-            this.log('error', `[${conversationKey}]`, 'Retrying...');
+          this.log('error', `Failed to send message in conversation ${conversationKey}:`, error);
 
-            clearTimeout(this.timeoutConversation.get(conversationKey));
-            this.timeoutConversation.set(conversationKey, send(attempt + 1));
-          } else {
-            this.log('error', `Failed to send message in conversation ${conversationKey}:`, error);
-
-            await this.cleanupConversation(conversationKey);
-          }
+          await this.cleanupConversation(conversationKey);
         }
-      }, delay);
+      }, sendingDelay);
     };
 
-    this.timeoutConversation.set(conversationKey, send());
+    this.timeoutConversation.set(conversationKey, sendTimeout());
   }
 
   public isWarmingUp(phoneNumber: string): boolean {

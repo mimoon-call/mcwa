@@ -4,7 +4,6 @@ export type WAWarmUpdate = {
   totalMessages: number;
   sentMessages?: number;
   unsentMessages?: number;
-  startInSeconds?: number;
 };
 
 export type WAActiveWarm = Pick<WAWarmUpdate, 'phoneNumber1' | 'phoneNumber2'>;
