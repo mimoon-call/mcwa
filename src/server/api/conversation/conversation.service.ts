@@ -369,8 +369,8 @@ export const conversationService = {
         },
       },
 
-      // Set the name field to fullName from queue if available
-      { $set: { name: { $ifNull: [{ $let: { vars: { firstMessage: { $arrayElemAt: ['$messageDetails', 0] } }, in: '$$firstMessage.fullName' } }, '$name'] } } },
+      // Set the name field to fullName from lastQueueMessage if available
+      // { $set: { name: { $ifNull: [{ $arrayElemAt: ['$lastQueueMessage.fullName', 0] }, '$name'] } } },
 
       // Remove the temporary arrays
       { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } }
