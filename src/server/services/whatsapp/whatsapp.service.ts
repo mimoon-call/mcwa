@@ -155,13 +155,13 @@ export class WhatsappService<T extends object = Record<never, never>> {
 
     // Stagger connection attempts to prevent conflicts
     const connectionPromises = sessions.map((phoneNumber, index) => {
-      const delay = index * 2000; // 2 second delay between each connection attempt
+      const delay = index * this.getRealisticDelay(2000, 3000); // 2-3 second delay between each connection attempt
 
       return new Promise<void>((resolve, reject) => {
         setTimeout(async () => {
           try {
             const instance = await this.createInstance(phoneNumber);
-            if (!instance.connected && !instance.connecting) await instance.connect();
+            await instance.connect();
 
             resolve();
           } catch (error: any) {

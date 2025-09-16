@@ -103,10 +103,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public connected: boolean = false;
   private recovering: boolean = false;
 
-  public get connecting(): boolean {
-    return this.isConnecting;
-  }
-
   private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
   private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
 
@@ -1684,9 +1680,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       return;
     }
 
-    // Check if we're already connected
+    // Check if we're already connected or connecting
     if (this.connected && !disconnectBeforeFlag) {
       this.log('debug', 'Already connected, skipping connection attempt');
+      return;
+    }
+
+    if (this.isConnecting) {
+      this.log('debug', 'Already connecting, skipping connection attempt');
       return;
     }
 
