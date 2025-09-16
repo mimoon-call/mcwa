@@ -202,13 +202,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
   }
 
-  private async getRandomScript(
-    instanceA: WAInstance<WAPersona>,
-    instanceB: WAInstance<WAPersona>,
-    prevConversation: WAConversation[] | undefined,
-    minMessages = 8,
-    maxMessages = 12
-  ): Promise<Omit<WAConversation, 'sentAt'>[] | null> {
+  private async getRandomScript(pair: [WAInstance<WAPersona>, WAInstance<WAPersona>]): Promise<Omit<WAConversation, 'sentAt'>[] | null> {
+    const [instanceA, instanceB] = pair;
     const personaA = instanceA.get() as WAPersona;
     const personaB = instanceB.get() as WAPersona;
 
@@ -216,13 +211,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!personaA.phoneNumber) personaA.phoneNumber = instanceA.phoneNumber;
     if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
-    const script = await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, prevConversation);
+    const lastMessages = await this.getLastMessages(personaA.phoneNumber, personaB.phoneNumber);
+    const script = await this.ai.generateConversation(personaA, personaB, 8, 12, lastMessages);
 
     this.log(
       'debug',
       `[${[personaA.phoneNumber, personaB.phoneNumber].join(':')}]`,
       '\n---- Previous Conversation ----',
-      ...(prevConversation || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`),
+      ...(lastMessages || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`),
       '\n---- AI Script ----',
       ...(script || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`)
     );
@@ -282,10 +278,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.log('debug', `[${conversationKey}] Starting conversation creation...`);
 
     try {
-      const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
-      const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
-
-      const script = await this.getRandomScript(pair[0], pair[1], previousConversation);
+      const script = await this.getRandomScript(pair);
 
       if (script?.length) {
         // Validate script has proper phone numbers
