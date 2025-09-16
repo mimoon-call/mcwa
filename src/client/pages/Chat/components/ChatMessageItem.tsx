@@ -27,7 +27,7 @@ const ReadIndicator = ({ status, visible }: Pick<ChatMessage, 'status'> & { visi
 
   const [className1, className2] = ((): [string, string | null] => {
     if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
-    if (status === MessageStatusEnum.ERROR) return ['text-red-500', null];
+    if (status === MessageStatusEnum.ERROR) return ['text-gray-500', null];
     if (status === MessageStatusEnum.DELIVERED) return ['text-gray-500', 'text-gray-500'];
     if (status === MessageStatusEnum.READ || status === MessageStatusEnum.PLAYED) return ['text-green-500', 'text-green-500'];
 
@@ -141,6 +141,9 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({
     });
   };
 
+  const retryExpired = message.sentAt && new Date(message.sentAt).getTime() < Date.now() - 1000 * 60 * 3;
+  const hasError = message.status === MessageStatusEnum.ERROR && message.tempId && onRetry && !retryExpired;
+
   return !message.text ? null : (
     <div className={cn('', className)} data-message-id={message.messageId || message.tempId}>
       <div className={cn('mb-4', isFromUser ? 'flex justify-end' : 'flex justify-start')}>
@@ -154,7 +157,7 @@ const ChatMessageItem: React.FC<MessageItemProps> = ({
             )}
             <div className="text-sm text-gray-900 whitespace-pre-wrap">{formatMessageText(message.text)}</div>
             <div className={cn('flex items-center mt-2 space-x-1', isFromUser ? 'justify-end' : 'justify-start')}>
-              {isFromUser && message.status === MessageStatusEnum.ERROR && message.tempId && onRetry ? (
+              {isFromUser && hasError ? (
                 <RetryElement
                   status={message.status}
                   messageId={message.messageId}
