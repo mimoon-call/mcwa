@@ -221,6 +221,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.log(
       'debug',
       `[${[personaA.phoneNumber, personaB.phoneNumber].join(':')}]`,
+      '\n---- Previous Conversation ----',
+      ...(prevConversation || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`),
+      '\n---- AI Script ----',
       ...(script || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`)
     );
 
@@ -262,58 +265,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return Array.from(this.activeConversation.keys()).some((conversationKey) => conversationKey.includes(phoneNumber));
   }
 
-  private isSpammyBehavior(conversationKey: string, previousConversation: WAConversation[]): boolean {
-    // Check if last 3 messages have more than 10 minutes between each and are all from same number
-    const lastThreeMessages = previousConversation.slice(0, 3);
-
-    // Need at least 3 messages to evaluate
-    if (lastThreeMessages.length < 3) return false;
-
-    const allFromSameNumber = lastThreeMessages.every(({ fromNumber }) => fromNumber === lastThreeMessages[0].fromNumber);
-
-    // No need to check further if not all from same number
-    if (!allFromSameNumber) return false;
-
-    const timeGaps = [];
-    for (let i = 0; i < lastThreeMessages.length - 1; i++) {
-      const currentTime = new Date(lastThreeMessages[i].sentAt || 0).getTime();
-      const nextTime = new Date(lastThreeMessages[i + 1].sentAt || 0).getTime();
-      const timeDiffMinutes = (currentTime - nextTime) / (1000 * 60); // Convert to minutes
-      timeGaps.push(timeDiffMinutes);
-    }
-
-    const allGapsOver10Minutes = timeGaps.every((gap) => gap > 10);
-
-    if (allGapsOver10Minutes) {
-      this.markPairAsFailed(conversationKey);
-      this.log('error', `[${conversationKey}]`, `Last 3 messages have >10min gaps and are from same number, avoiding spammy behavior`);
-
-      return true;
-    }
-
-    return false;
-  }
-
-  private logoutFailureInstance(...instances: WAInstance<WAPersona>[]) {
-    for (const instance of instances) {
-      const messageCount = Math.max(instance.get('outgoingMessageCount') || 0, 20);
-      const failureCount = instance.get('outgoingErrorCount') || 0;
-      let reason = '';
-
-      this.log('debug', `[${instance.phoneNumber}]`, `Message count: ${messageCount}, Failure count: ${failureCount}`);
-
-      if (messageCount * 2 < failureCount) {
-        reason = 'High failure rate (over 50% of messages failed)';
-        instance.disconnect({ logout: true }, reason);
-      } else if (messageCount < failureCount) {
-        reason = 'Very high failure rate (over 100% of messages failed)';
-        instance.disconnect({ logout: false }, reason);
-      }
-
-      if (reason) this.log('info', `[${instance.phoneNumber}]`, `Logged out due to repeated failures: ${reason}`);
-    }
-  }
-
   private async createConversation(pair: [WAInstance<WAPersona>, WAInstance<WAPersona>]) {
     const activeConversations = [...this.activeConversation.keys()];
     const conversationKey = this.getPairKey('phoneNumber', ...pair);
@@ -333,11 +284,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     try {
       const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
       const previousConversation = await this.getLastMessages(phoneNumber1, phoneNumber2);
-
-      if (this.isSpammyBehavior(conversationKey, previousConversation)) {
-        this.logoutFailureInstance(instance1, instance2);
-        throw new Error('Spammy behavior detected');
-      }
 
       const script = await this.getRandomScript(pair[0], pair[1], previousConversation);
 
@@ -520,14 +466,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const sendTimeout = () => {
       const randomSeconds = this.getRealisticDelay(5, 30);
       const sendingDelay = randomSeconds * 1000;
+      const currentState = this.activeConversation.get(conversationKey);
+      const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
+      const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
 
       this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
 
       return setTimeout(async () => {
-        const currentState = this.activeConversation.get(conversationKey);
-        const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
-        const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
-
         if (!currentState || !currentMessage || currentIndex === undefined) {
           await this.cleanupConversation(conversationKey);
 
@@ -599,6 +544,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             'error',
             `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber} failed, aborting conversation`
           );
+
+          if (currentState.every(({ sentAt }) => !sentAt)) this.markPairAsFailed(conversationKey);
 
           await this.cleanupConversation(conversationKey);
         }

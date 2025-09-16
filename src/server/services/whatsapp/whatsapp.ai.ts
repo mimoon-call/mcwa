@@ -176,21 +176,21 @@ Return only valid URLs, one per line, no explanations.`;
     if (!aNumber || !bNumber) return [];
 
     const plan = this.buildRunPlan(total);
-    
+
     // Determine who should start based on previous conversation
     let startWithA: boolean;
     if (lastConversation && lastConversation.length > 0) {
       // Get the last message from previous conversation
       const lastMessage = lastConversation[lastConversation.length - 1];
       const lastFromNumber = lastMessage.fromNumber;
-      
+
       // If the last message was from A, start with B (and vice versa)
       startWithA = lastFromNumber !== aNumber;
     } else {
       // If no previous conversation, randomly choose who starts
       startWithA = Math.random() < 0.5;
     }
-    
+
     let currentFrom = startWithA ? aNumber : bNumber;
     let currentTo = startWithA ? bNumber : aNumber;
 
@@ -696,18 +696,8 @@ You are generating exactly ONE fictional WhatsApp persona (seed ${randomSeed} @ 
         age: { type: 'integer', minimum: 18, maximum: 75 },
         gender: { type: 'string', enum: ['male', 'female', 'other'] },
         jobTitle: { type: 'string', minLength: 2 },
-        hobbies: {
-          type: 'array',
-          minItems: 2,
-          maxItems: 5,
-          items: { type: 'string', minLength: 2 },
-        },
-        interests: {
-          type: 'array',
-          minItems: 2,
-          maxItems: 5,
-          items: { type: 'string', minLength: 2 },
-        },
+        hobbies: { type: 'array', minItems: 2, maxItems: 5, items: { type: 'string', minLength: 2 } },
+        interests: { type: 'array', minItems: 2, maxItems: 5, items: { type: 'string', minLength: 2 } },
         personality: { type: 'string', minLength: 3, maxLength: 120 },
         location: { type: 'string', minLength: 3 },
         maritalStatus: { type: 'string', enum: ['single', 'married', 'divorced', 'widowed', 'separated'] },
@@ -717,10 +707,7 @@ You are generating exactly ONE fictional WhatsApp persona (seed ${randomSeed} @ 
             type: 'object',
             additionalProperties: false,
             required: ['name', 'age'],
-            properties: {
-              name: { type: 'string', minLength: 1 },
-              age: { type: 'integer', minimum: 0, maximum: 25 },
-            },
+            properties: { name: { type: 'string', minLength: 1 }, age: { type: 'integer', minimum: 0, maximum: 25 } },
           },
         },
       },
