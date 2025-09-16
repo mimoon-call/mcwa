@@ -38,12 +38,22 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-... (unchanged) ...
+- CAR: Only if message specifically mentions car/vehicle purchase or car loan
+- MORTGAGE: Only if message specifically mentions mortgage (משכנתא) or home purchase with loan
+- GENERAL: For all other loan types, including:
+  * General loans (הלוואה כללית)
+  * Home renovation loans (שיפוץ הבית)
+  * Investment loans (השקעה)
+  * Debt consolidation (סגירת הלוואות קיימות)
+  * Multi-purpose loans that mention multiple uses
+  * Any loan that doesn't specifically fall into CAR or MORTGAGE categories
 
 EXAMPLES:
 - YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
 - YOU: "הלוואת משכנתא לרכישת דירה" → department="MORTGAGE"
 - LEAD: "הלוואה לרכב" → department="CAR"
+- YOU: "הלוואה לשיפוץ הבית, רכישת רכב, השקעה" → department="GENERAL" (multi-purpose)
+- YOU: "הלוואה נוספת בתנאים מועדפים לשיפוץ, רכב, השקעה" → department="GENERAL" (multi-purpose)
 
 YOUR TASK:
 - Consider the whole CONVERSATION for interest/intent and department classification.
