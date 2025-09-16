@@ -300,6 +300,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const failureCount = instance.get('outgoingErrorCount') || 0;
       let reason = '';
 
+      this.log('debug', `[${instance.phoneNumber}]`, `Message count: ${messageCount}, Failure count: ${failureCount}`);
+
       if (messageCount * 2 < failureCount) {
         reason = 'High failure rate (over 50% of messages failed)';
         instance.disconnect({ logout: true }, reason);
@@ -308,7 +310,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         instance.disconnect({ logout: false }, reason);
       }
 
-      if (reason) this.log('info', `[${instance.phoneNumber}] Logged out due to repeated failures: ${reason}`);
+      if (reason) this.log('info', `[${instance.phoneNumber}]`, `Logged out due to repeated failures: ${reason}`);
     }
   }
 
@@ -316,7 +318,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const activeConversations = [...this.activeConversation.keys()];
     const conversationKey = this.getPairKey('phoneNumber', ...pair);
     const [key1, key2] = conversationKey.split(':');
-
     const [instance1, instance2] = pair;
 
     if (!instance1.get('isActive') || !instance2.get('isActive')) return;
@@ -335,7 +336,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
       if (this.isSpammyBehavior(conversationKey, previousConversation)) {
         this.logoutFailureInstance(instance1, instance2);
-        throw new Error('Spammy behavior detected in previous conversation');
+        throw new Error('Spammy behavior detected');
       }
 
       const script = await this.getRandomScript(pair[0], pair[1], previousConversation);
