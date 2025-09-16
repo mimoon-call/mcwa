@@ -53,7 +53,7 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
   }
 };
 
-export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
+export const messageReplyHandler = async (id: ObjectId, debounceTime: number = 30 * 1000): Promise<void> => {
   const { fromNumber, toNumber, messageId, text, sentAt } = await (async () => {
     const message = await WhatsAppMessage.findOne({ _id: id });
 
@@ -125,111 +125,108 @@ export const messageReplyHandler = async (id: ObjectId): Promise<void> => {
   // clear any pending debounce for this outreach
   clearTimeout(replyTimeout.get(conversationKey));
 
-  const handle = setTimeout(
-    async () => {
-      try {
-        console.log('handler started for', conversationKey);
-        const leadNumber = fromNumber; // LEAD
-        const yourNumber = toNumber; // YOU
+  const handle = setTimeout(async () => {
+    try {
+      console.log('handler started for', conversationKey);
+      const leadNumber = fromNumber; // LEAD
+      const yourNumber = toNumber; // YOU
 
-        const originalMessage = await WhatsAppMessage.findOne({
-          messageId,
+      const originalMessage = await WhatsAppMessage.findOne({
+        messageId,
+        $or: [
+          { fromNumber: leadNumber, toNumber: yourNumber },
+          { fromNumber: yourNumber, toNumber: leadNumber },
+        ],
+      });
+
+      if (!originalMessage?.createdAt) {
+        return;
+      }
+
+      const allPreviousMessages = await WhatsAppMessage.find(
+        {
+          createdAt: { $gte: new Date(originalMessage.createdAt) },
           $or: [
             { fromNumber: leadNumber, toNumber: yourNumber },
             { fromNumber: yourNumber, toNumber: leadNumber },
           ],
+        },
+        { text: 1, createdAt: 1, fromNumber: 1, toNumber: 1 },
+        { sort: { createdAt: 1 }, lean: true }
+      );
+
+      // role-aware, ordered transcript (skip empty texts)
+      const leadReplies: TranscriptItem[] = allPreviousMessages
+        .filter((m) => typeof m.text === 'string' && m.text.trim().length > 0)
+        .map((m) => ({
+          from: m.fromNumber === leadNumber ? 'LEAD' : 'YOU',
+          text: m.text!.trim(),
+          at: (m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt)).toISOString(),
+        }));
+
+      const svc = new OpenAiService();
+
+      try {
+        const ai = await classifyInterest(svc, {
+          outreachText: text ?? '',
+          leadReplies,
+          localeHint: 'he-IL',
+          timezone: 'Asia/Jerusalem',
+          referenceTimeIso: new Date().toISOString(),
         });
 
-        if (!originalMessage?.createdAt) {
-          return;
-        }
+        console.log('INCOMING', `[${fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
 
-        const allPreviousMessages = await WhatsAppMessage.find(
-          {
-            createdAt: { $gte: new Date(originalMessage.createdAt) },
-            $or: [
-              { fromNumber: leadNumber, toNumber: yourNumber },
-              { fromNumber: yourNumber, toNumber: leadNumber },
-            ],
-          },
-          { text: 1, createdAt: 1, fromNumber: 1, toNumber: 1 },
-          { sort: { createdAt: 1 }, lean: true }
-        );
+        if (!ai) return;
 
-        // role-aware, ordered transcript (skip empty texts)
-        const leadReplies: TranscriptItem[] = allPreviousMessages
-          .filter((m) => typeof m.text === 'string' && m.text.trim().length > 0)
-          .map((m) => ({
-            from: m.fromNumber === leadNumber ? 'LEAD' : 'YOU',
-            text: m.text!.trim(),
-            at: (m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt)).toISOString(),
-          }));
+        // persist classification on the outreach message
+        await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
+        await handleAiInterest(leadNumber, text, ai);
 
-        const svc = new OpenAiService();
+        if (ai.suggestedReply) {
+          // Check if there are active members in the conversation room
+          const conversationKey = `conversation:${yourNumber}:${leadNumber}`;
+          const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);
 
-        try {
-          const ai = await classifyInterest(svc, {
-            outreachText: text ?? '',
-            leadReplies,
-            localeHint: 'he-IL',
-            timezone: 'Asia/Jerusalem',
-            referenceTimeIso: new Date().toISOString(),
-          });
-
-          console.log('INCOMING', `[${fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
-
-          if (!ai) return;
-
-          // persist classification on the outreach message
-          await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
-          await handleAiInterest(leadNumber, text, ai);
-
-          if (ai.suggestedReply) {
-            // Check if there are active members in the conversation room
-            const conversationKey = `conversation:${yourNumber}:${leadNumber}`;
-            const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);
-
-            if (hasActiveMembers) {
-              console.log(`[Auto-reply skipped] Conversation room has active members: ${conversationKey} - Human is actively viewing the chat`);
-              return; // Skip auto-reply if someone is actively viewing the chat
-            }
-
-            console.log(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
-
-            try {
-              const sendResult = await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply, {
-                trackDelivery: true,
-                waitForDelivery: true,
-                onUpdate: (messageId, deliveryStatus) =>
-                  app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { messageId, status: deliveryStatus.status }),
-              });
-
-              // Broadcast the sent message with actual messageId from WhatsApp
-              const sentMessageData = {
-                fromNumber: yourNumber,
-                toNumber: leadNumber,
-                text: ai.suggestedReply,
-                createdAt: new Date().toISOString(),
-                status: MessageStatusEnum.PENDING,
-                sentAt: new Date().toISOString(),
-                messageId: sendResult.key!.id,
-              };
-
-              // Send message to specific conversation room instead of broadcasting
-              app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, sentMessageData);
-            } catch (error) {
-              console.error('sendMessage:error', error);
-            }
+          if (hasActiveMembers) {
+            console.log(`[Auto-reply skipped] Conversation room has active members: ${conversationKey} - Human is actively viewing the chat`);
+            return; // Skip auto-reply if someone is actively viewing the chat
           }
-        } catch (e) {
-          console.error('classifyInterest:error', e);
+
+          console.log(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
+
+          try {
+            const sendResult = await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply, {
+              trackDelivery: true,
+              waitForDelivery: true,
+              onUpdate: (messageId, deliveryStatus) =>
+                app.socket.broadcast(ConversationEventEnum.MESSAGE_STATUS_UPDATE, { messageId, status: deliveryStatus.status }),
+            });
+
+            // Broadcast the sent message with actual messageId from WhatsApp
+            const sentMessageData = {
+              fromNumber: yourNumber,
+              toNumber: leadNumber,
+              text: ai.suggestedReply,
+              createdAt: new Date().toISOString(),
+              status: MessageStatusEnum.PENDING,
+              sentAt: new Date().toISOString(),
+              messageId: sendResult.key!.id,
+            };
+
+            // Send message to specific conversation room instead of broadcasting
+            app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, sentMessageData);
+          } catch (error) {
+            console.error('sendMessage:error', error);
+          }
         }
-      } finally {
-        replyTimeout.delete(conversationKey);
+      } catch (e) {
+        console.error('classifyInterest:error', e);
       }
-    },
-    30 * 1000 // 30 seconds debounce per conversation
-  );
+    } finally {
+      replyTimeout.delete(conversationKey);
+    }
+  }, debounceTime);
 
   replyTimeout.set(conversationKey, handle);
 };
