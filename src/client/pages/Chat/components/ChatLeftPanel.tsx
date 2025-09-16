@@ -228,7 +228,7 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
         />
 
         {/* Filters */}
-        <div className="pb-2 px-1">
+        <div className="pb-2 px-0.5">
           <div className="flex flex-wrap gap-2">
             {/* Interested Filter */}
             {onInterestedChange && (
