@@ -74,10 +74,11 @@ DECISION RULES:
 - interested=false for declines, unsubscribe, abuse, or out-of-scope.
 - If unclear, intent="AMBIGUOUS" with a brief clarifying suggestedReply.
 
-// NUMERIC RESPONSE HANDLING:
+// NUMERIC RESPONSE HANDLING (OPTIONAL):
 - If LEAD replies with just "1" (or "1."): interested=true; intent="POSITIVE_INTEREST"; action="REPLY"
 - If LEAD replies with just "2" (or "2."): interested=false; intent="DECLINE"; action="DO_NOT_CONTACT"
 - If LEAD replies with just "3" (or "3."): interested=false; intent="UNSUBSCRIBE"; action="ADD_TO_DNC"
+- Note: These numeric responses are optional - leads may respond with natural language instead
 
 // NEW: SARCASM & ROLE-REVERSAL
 - If the LEAD's message is a role-reversal offering YOU the same product/service you offered (e.g., "אני יכולה לתת לך הלוואה"), treat this as sarcasm/irony indicating lack of interest.
