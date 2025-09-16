@@ -2075,14 +2075,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       return hasValueChanged;
     });
 
-    if (hasChanges) {
-      this.set(data);
+    if (!hasChanges) return;
 
-      this.set((await this.updateAppAuth(data)) || this.appState);
-      this.onUpdate(data);
-    } else if (data.outgoingMessageCount !== undefined) {
-      this.log('debug', `📱 Update skipped for outgoingMessageCount: no changes detected`);
-    }
+    this.set(data);
+
+    this.set((await this.updateAppAuth(data)) || this.appState);
+    this.onUpdate(data);
   }
 
   set(data: Partial<WAAppAuth<T>>): void {
