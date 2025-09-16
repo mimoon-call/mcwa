@@ -296,7 +296,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private logoutFailureInstance(...instances: WAInstance<WAPersona>[]) {
     for (const instance of instances) {
-      const messageCount = Math.max(instance.get('dailyMessageCount') || 0, 20);
+      const messageCount = Math.max(instance.get('outgoingMessageCount') || 0, 20);
       const failureCount = instance.get('outgoingErrorCount') || 0;
       let reason = '';
 
