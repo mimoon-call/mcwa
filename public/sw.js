@@ -11,6 +11,13 @@ self.addEventListener('activate', () => {
 });
 
 self.addEventListener('fetch', function (event) {
+  // Skip caching for Socket.io requests and other real-time connections
+  if (event.request.url.includes('/socket.io/') || 
+      event.request.url.includes('/api/') ||
+      event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(function (response) {
       // Cache hit - return response
