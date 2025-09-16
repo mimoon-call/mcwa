@@ -60,6 +60,11 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
   } catch (e) {
     // Final attempt failed, mark as failed
     await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { lastError: String(e) }, $inc: { attempt: 1 } });
-    app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, { ...doc, error: String(e) });
+
+    app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, {
+      ...doc,
+      attempt: (doc.attempt || 0) + 1,
+      error: String(e),
+    });
   }
 };
