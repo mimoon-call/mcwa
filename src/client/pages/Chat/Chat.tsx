@@ -55,7 +55,8 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
   if (!contact) return null;
 
   const { t } = useTranslation();
-  const contactName = contact.name || internationalPhonePrettier(contact.phoneNumber, '-', true);
+  const phoneNumber = internationalPhonePrettier(contact.phoneNumber, '-', true);
+  const contactName = contact.name === contact.phoneNumber ? '-' : contact.name;
 
   return (
     <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-white">
@@ -64,7 +65,7 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
 
         <div className="flex flex-col pt-1">
           <h1 className="font-medium">{contactName}</h1>
-          {contact.name && <p>{internationalPhonePrettier(contact.phoneNumber, '-', true)}</p>}
+          <p>{phoneNumber}</p>
         </div>
 
         {contact.department && (
@@ -104,7 +105,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const lastSearchValueRef = useRef<string>('');
-  
+
   // Filter state
   const [selectedIntents, setSelectedIntents] = React.useState<string[]>([]);
   const [selectedDepartments, setSelectedDepartments] = React.useState<string[]>([]);
@@ -172,11 +173,13 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     dispatch(resetSearchValue());
 
     // Then load conversations
-    dispatch(searchConversations({ 
-      intents: selectedIntents,
-      departments: selectedDepartments,
-      interested: selectedInterested
-    }));
+    dispatch(
+      searchConversations({
+        intents: selectedIntents,
+        departments: selectedDepartments,
+        interested: selectedInterested,
+      })
+    );
   }, [dispatch, resetChatState]);
 
   // Find selected contact based on URL parameters
@@ -355,12 +358,14 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
         // Clear current data and search with new value
         dispatch(clearSearchData());
-        dispatch(searchConversations({ 
-          searchValue: value,
-          intents: selectedIntents,
-          departments: selectedDepartments,
-          interested: selectedInterested
-        }));
+        dispatch(
+          searchConversations({
+            searchValue: value,
+            intents: selectedIntents,
+            departments: selectedDepartments,
+            interested: selectedInterested,
+          })
+        );
       }
     },
     [dispatch]
@@ -370,54 +375,71 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     if (!searchPagination?.hasMore || searchLoading) return;
 
     const nextPageIndex = (searchPagination.pageIndex || 0) + 1;
-    dispatch(loadMoreConversations({ 
-      page: { 
-        pageIndex: nextPageIndex,
-        pageSize: searchPagination.pageSize 
-      }, 
-      searchValue: searchValue,
-      intents: selectedIntents,
-      departments: selectedDepartments,
-      interested: selectedInterested
-    }));
+    dispatch(
+      loadMoreConversations({
+        page: {
+          pageIndex: nextPageIndex,
+          pageSize: searchPagination.pageSize,
+        },
+        searchValue: searchValue,
+        intents: selectedIntents,
+        departments: selectedDepartments,
+        interested: selectedInterested,
+      })
+    );
   }, [dispatch, searchPagination, searchValue, searchLoading, selectedIntents, selectedDepartments, selectedInterested]);
 
   // Filter handlers
-  const handleIntentsChange = useCallback((intents: string[]) => {
-    setSelectedIntents(intents);
-    // Trigger new search with updated filters
-    dispatch(clearSearchData());
-    dispatch(resetPagination());
-    dispatch(searchConversations({ 
-      intents,
-      departments: selectedDepartments,
-      interested: selectedInterested
-    }));
-  }, [dispatch, selectedDepartments, selectedInterested]);
+  const handleIntentsChange = useCallback(
+    (intents: string[]) => {
+      setSelectedIntents(intents);
+      // Trigger new search with updated filters
+      dispatch(clearSearchData());
+      dispatch(resetPagination());
+      dispatch(
+        searchConversations({
+          intents,
+          departments: selectedDepartments,
+          interested: selectedInterested,
+        })
+      );
+    },
+    [dispatch, selectedDepartments, selectedInterested]
+  );
 
-  const handleDepartmentsChange = useCallback((departments: string[]) => {
-    setSelectedDepartments(departments);
-    // Trigger new search with updated filters
-    dispatch(clearSearchData());
-    dispatch(resetPagination());
-    dispatch(searchConversations({ 
-      intents: selectedIntents,
-      departments,
-      interested: selectedInterested
-    }));
-  }, [dispatch, selectedIntents, selectedInterested]);
+  const handleDepartmentsChange = useCallback(
+    (departments: string[]) => {
+      setSelectedDepartments(departments);
+      // Trigger new search with updated filters
+      dispatch(clearSearchData());
+      dispatch(resetPagination());
+      dispatch(
+        searchConversations({
+          intents: selectedIntents,
+          departments,
+          interested: selectedInterested,
+        })
+      );
+    },
+    [dispatch, selectedIntents, selectedInterested]
+  );
 
-  const handleInterestedChange = useCallback((interested: boolean | null) => {
-    setSelectedInterested(interested);
-    // Trigger new search with updated filters
-    dispatch(clearSearchData());
-    dispatch(resetPagination());
-    dispatch(searchConversations({ 
-      intents: selectedIntents,
-      departments: selectedDepartments,
-      interested
-    }));
-  }, [dispatch, selectedIntents, selectedDepartments]);
+  const handleInterestedChange = useCallback(
+    (interested: boolean | null) => {
+      setSelectedInterested(interested);
+      // Trigger new search with updated filters
+      dispatch(clearSearchData());
+      dispatch(resetPagination());
+      dispatch(
+        searchConversations({
+          intents: selectedIntents,
+          departments: selectedDepartments,
+          interested,
+        })
+      );
+    },
+    [dispatch, selectedIntents, selectedDepartments]
+  );
 
   const handleDeleteConversation = async () => {
     if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
