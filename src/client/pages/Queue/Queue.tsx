@@ -55,8 +55,8 @@ const Queue = () => {
     { title: 'QUEUE.PHONE_NUMBER', value: 'phoneNumber', class: ['whitespace-nowrap', 'min-w-[180px]'] },
     { title: 'QUEUE.FULL_NAME', value: 'fullName', class: ['whitespace-nowrap', 'min-w-[180px]'] },
     { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage', class: ['whitespace-pre-line', 'min-w-[40vw]'] },
-    { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line'] },
-    { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center', 'max-w-[80px]'] },
+    { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line', 'min-w-[240px]'] },
+    { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center', 'w-[80px]'] },
   ];
 
   const onPageChange = (pageIndex: number) => {
