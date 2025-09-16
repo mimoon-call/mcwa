@@ -25,7 +25,18 @@ type ListProps<T> = Pick<
   'loading' | 'items' | 'error' | 'isItemSelected' | 'selectedItem' | 'onItemSelect' | 'getItemKey' | 'itemComponent' | 'onLoadMore' | 'hasMore'
 >;
 
-const List = <T extends object>({ loading, items, error, isItemSelected, selectedItem, onItemSelect, getItemKey, itemComponent, onLoadMore, hasMore }: ListProps<T>) => {
+const List = <T extends object>({
+  loading,
+  items,
+  error,
+  isItemSelected,
+  selectedItem,
+  onItemSelect,
+  getItemKey,
+  itemComponent,
+  onLoadMore,
+  hasMore,
+}: ListProps<T>) => {
   const { t } = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +133,7 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
       {headerComponent}
 
       {/* Search Bar */}
-      <div className="px-0.5 py-1 border-b border-gray-200">
+      <div className="px-0.5 py-1 border-gray-200">
         <TextField
           clearable
           hideDetails
