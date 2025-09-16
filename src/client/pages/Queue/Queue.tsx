@@ -52,9 +52,11 @@ const Queue = () => {
   } = messageQueueSlice;
 
   const headers: TableHeaders<MessageQueueItem> = [
-    { title: 'QUEUE.PHONE_NUMBER', value: 'phoneNumber' },
-    { title: 'QUEUE.FULL_NAME', value: 'fullName' },
-    { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage', class: ['whitespace-pre-line'] },
+    { title: 'QUEUE.PHONE_NUMBER', value: 'phoneNumber', class: ['whitespace-nowrap', 'min-w-[180px]'] },
+    { title: 'QUEUE.FULL_NAME', value: 'fullName', class: ['whitespace-nowrap', 'min-w-[180px]'] },
+    { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage', class: ['whitespace-pre-line', 'min-w-[40vw]'] },
+    { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line'] },
+    { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center', 'max-w-[80px]'] },
   ];
 
   const onPageChange = (pageIndex: number) => {

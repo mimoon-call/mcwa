@@ -37,7 +37,7 @@ export const messageQueueService = {
       { page },
       [
         { $match: { sentAt: { $exists: !!hasBeenSent } } },
-        { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1, instanceNumber: 1, createdAt: 1 } },
+        { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1, instanceNumber: 1, createdAt: 1, lastError: 1, attempt: 1 } },
       ],
       []
     );

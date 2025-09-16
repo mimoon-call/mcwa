@@ -106,7 +106,9 @@
     "BLOCKED_MESSAGES_NOT_ADDED_TO_QUEUE": "All destinations were unsubscribed; messages were not added to the queue",
     "ADDED_MESSAGES_TO_QUEUE": "Added {{addedCount}} messages to the queue",
     "NO_VALID_PHONE_NUMBERS_WERE_FOUND": "No valid phone numbers were found",
-    "DYNAMIC_FIELDS": "Dynamic fields"
+    "DYNAMIC_FIELDS": "Dynamic fields",
+    "LAST_ERROR_MESSAGE": "Last error message",
+    "ATTEMPT": "Attempt"
   },
   "INSTANCE": {
     "TITLE": "Instances",

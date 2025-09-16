@@ -7,8 +7,9 @@ export type MessageQueueItem = {
   textMessage: string;
   tts?: boolean;
   sentAt?: Date;
-  lastError?: string;
   instanceNumber?: string;
+  attempt?: number;
+  lastError?: string;
 };
 
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
