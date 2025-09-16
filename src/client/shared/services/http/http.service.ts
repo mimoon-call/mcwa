@@ -8,7 +8,13 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios';
 
-import crypto from 'crypto';
+// Browser-compatible crypto implementation
+const getCrypto = () => {
+  if (typeof window !== 'undefined' && window.crypto) {
+    return window.crypto;
+  }
+  throw new Error('Crypto not available in this environment');
+};
 
 export type AxiosRequestInterceptor = {
   onFulfilled: (value: InternalAxiosRequestConfig) => InternalAxiosRequestConfig | Promise<InternalAxiosRequestConfig>;
@@ -109,8 +115,23 @@ export class HttpService {
     return abortController.signal;
   }
 
-  private getSignatureOfValue(value: unknown, signatureKey: string) {
-    return crypto.createHmac('sha256', signatureKey).update(JSON.stringify(value)).digest('hex');
+  private async getSignatureOfValue(value: unknown, signatureKey: string): Promise<string> {
+    const crypto = getCrypto();
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(signatureKey);
+    const messageData = encoder.encode(JSON.stringify(value));
+    
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signature = await crypto.subtle.sign('HMAC', key, messageData);
+    const hashArray = Array.from(new Uint8Array(signature));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   async get<Response>(url: string, config?: AxiosGetRequestConfig): Promise<Response> {
@@ -133,7 +154,7 @@ export class HttpService {
     }
 
     if (signatureKey) {
-      headers['X-Signature'] = this.getSignatureOfValue(data, signatureKey);
+      headers['X-Signature'] = await this.getSignatureOfValue(data, signatureKey);
     }
 
     const axiosConfig: AxiosRequestConfig = {

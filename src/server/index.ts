@@ -82,6 +82,11 @@ export const wa = new WhatsappWarmService({
     app.socket.broadcast<WAReadyEvent>(InstanceEventEnum.INSTANCE_READY, getActiveInstanceState());
   });
 
+  // Health check endpoint
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   app.get('/*', routeMiddleware(), await createViteSSR(app, isProduction));
 
   app.listen(port);

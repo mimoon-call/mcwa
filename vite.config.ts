@@ -36,12 +36,21 @@ export default defineConfig({
     ssrManifest: true,
     target: 'esnext',
     assetsDir: 'assets',
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: path.resolve(__dirname, 'src/client/index.tsx'),
       output: {
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          redux: ['@reduxjs/toolkit', 'react-redux'],
+          ui: ['clsx', 'tailwind-merge'],
+          utils: ['lodash', 'dayjs', 'uuid'],
+          socket: ['socket.io-client'],
+          i18n: ['i18next', 'react-i18next'],
+        },
       },
     },
   },
