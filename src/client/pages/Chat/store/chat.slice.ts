@@ -69,6 +69,7 @@ import {
   handleMessageStatusUpdate,
   handleOptimisticMessageStatusUpdate,
 } from './chat-message-handler';
+import { MAX_CHAT_CONVERSATIONS, MAX_CHAT_MESSAGES } from '@client/pages/Chat/constants/chat.constants';
 
 // Chat State Interface - combines both global and instance functionality
 export interface ChatState {
@@ -101,11 +102,11 @@ export interface ChatState {
 const initialState: ChatState = {
   // Shared initial state
   [CHAT_SEARCH_DATA]: null,
-  [CHAT_SEARCH_PAGINATION]: { pageSize: 50, hasMore: false },
+  [CHAT_SEARCH_PAGINATION]: { pageSize: MAX_CHAT_CONVERSATIONS },
   [CHAT_SEARCH_VALUE]: '',
   [CHAT_EXTERNAL_FLAG]: false,
   [CHAT_MESSAGES_DATA]: null,
-  [CHAT_MESSAGES_PAGINATION]: { pageSize: 50 },
+  [CHAT_MESSAGES_PAGINATION]: { pageSize: MAX_CHAT_MESSAGES },
   [CHAT_LOADING]: false,
   [SEARCH_LOADING]: false,
   [CHAT_ERROR]: null,
@@ -296,11 +297,11 @@ const chatSliceReducer = createSlice({
     // Global chat actions
     clearGlobalSearchData: (state) => {
       state[CHAT_SEARCH_DATA] = null;
-      state[CHAT_SEARCH_PAGINATION] = { pageSize: 50, hasMore: false };
+      state[CHAT_SEARCH_PAGINATION] = { pageSize: MAX_CHAT_CONVERSATIONS };
     },
     resetGlobalPagination: (state) => {
-      state[CHAT_SEARCH_PAGINATION] = { pageSize: 50, hasMore: false };
-      state[CHAT_MESSAGES_PAGINATION] = { pageSize: 100 };
+      state[CHAT_SEARCH_PAGINATION] = { pageSize: MAX_CHAT_CONVERSATIONS };
+      state[CHAT_MESSAGES_PAGINATION] = { pageSize: MAX_CHAT_MESSAGES };
     },
     setGlobalSelectedContact: (state, action) => {
       state[GLOBAL_SELECTED_CONTACT] = action.payload;
@@ -334,7 +335,7 @@ const chatSliceReducer = createSlice({
     removeGlobalMessage: (state, action) => {
       const { messageId } = action.payload;
       if (state.messagesData) {
-        state.messagesData = state.messagesData.filter(msg => msg.messageId !== messageId);
+        state.messagesData = state.messagesData.filter((msg) => msg.messageId !== messageId);
       }
     },
 

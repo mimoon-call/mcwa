@@ -26,6 +26,7 @@ import {
   CHAT_CLEAR_SEARCH_DATA,
   CHAT_SEARCH_DATA,
   CHAT_SEARCH_VALUE,
+  CHAT_SEARCH_PAGINATION,
   CHAT_MESSAGES_DATA,
   CHAT_LOADING,
   SEARCH_LOADING,
@@ -35,6 +36,7 @@ import {
   CHAT_RESET_SEARCH_VALUE,
   CHAT_SET_RETRY_COOLDOWN,
   CHAT_CLEAR_RETRY_COOLDOWN,
+  CHAT_LOAD_MORE_CONVERSATIONS,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -118,6 +120,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_REMOVE_CONVERSATION]: removeConversation,
     [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
     [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
+    [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
   } = chatSlice;
 
   // Get retry cooldown actions
@@ -126,6 +129,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
   const searchValue = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_VALUE]);
+  const searchPagination = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_PAGINATION]);
   const messages = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_MESSAGES_DATA]) || [];
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_LOADING]);
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.globalChat][SEARCH_LOADING]);
@@ -348,6 +352,19 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [dispatch]
   );
 
+  const handleLoadMore = useCallback(() => {
+    if (!searchPagination?.hasMore || searchLoading) return;
+
+    const nextPageIndex = (searchPagination.pageIndex || 0) + 1;
+    dispatch(loadMoreConversations({ 
+      page: { 
+        pageIndex: nextPageIndex,
+        pageSize: searchPagination.pageSize 
+      }, 
+      searchValue: searchValue 
+    }));
+  }, [dispatch, searchPagination, searchValue, searchLoading]);
+
   const handleDeleteConversation = async () => {
     if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
 
@@ -412,6 +429,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         searchValue={searchValue}
         onItemSelect={handleChatSelect}
         onSearch={handleSearch}
+        onLoadMore={handleLoadMore}
+        hasMore={searchPagination?.hasMore}
         itemComponent={(contact, isSelected, onClick) => (
           <ChatListItem contact={contact as GlobalChatContact} isSelected={isSelected} onClick={(contact) => onClick(contact as GlobalChatContact)} />
         )}

@@ -23,6 +23,7 @@ import {
   CHAT_SEARCH_CONVERSATIONS,
   INSTANCE_GET_CONVERSATION,
   CHAT_SEARCH_DATA,
+  CHAT_SEARCH_PAGINATION,
   INSTANCE_SEARCH_METADATA,
   CHAT_SEARCH_VALUE,
   CHAT_MESSAGES_DATA,
@@ -33,6 +34,7 @@ import {
   CHAT_REMOVE_CONVERSATION,
   CHAT_SET_SELECTED_CONTACT,
   CHAT_RESET_SEARCH_VALUE,
+  INSTANCE_LOAD_MORE_CONVERSATIONS,
 } from '../Chat/store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 import getClientSocket from '@helpers/get-client-socket.helper';
@@ -65,6 +67,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_REMOVE_CONVERSATION]: removeConversation,
     [CHAT_SET_SELECTED_CONTACT]: setSelectedContact,
     [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
+    [INSTANCE_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
   } = chatSlice;
 
 
@@ -72,6 +75,7 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
   const conversations = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_DATA]) || [];
   const searchMetadata = useSelector((state: RootState) => state[StoreEnum.chat][INSTANCE_SEARCH_METADATA]);
   const searchValue = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_VALUE]);
+  const searchPagination = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_SEARCH_PAGINATION]);
   const messages = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_MESSAGES_DATA]) || [];
   const chatLoading = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_LOADING]);
   const searchLoading = useSelector((state: RootState) => state[StoreEnum.chat][SEARCH_LOADING]);
@@ -232,6 +236,20 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     [phoneNumber, dispatch]
   );
 
+  const handleLoadMore = useCallback(() => {
+    if (!phoneNumber || !searchPagination?.hasMore || searchLoading) return;
+
+    const nextPageIndex = (searchPagination.pageIndex || 0) + 1;
+    dispatch(loadMoreConversations({ 
+      phoneNumber,
+      page: { 
+        pageIndex: nextPageIndex,
+        pageSize: searchPagination.pageSize 
+      }, 
+      searchValue: searchValue 
+    }));
+  }, [dispatch, phoneNumber, searchPagination, searchValue, searchLoading]);
+
   // Show error if phoneNumber is not provided
   if (!phoneNumber) {
     return (
@@ -286,6 +304,8 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         searchValue={searchValue}
         onItemSelect={(contact) => handleChatSelect(contact.phoneNumber)}
         onSearch={handleSearch}
+        onLoadMore={handleLoadMore}
+        hasMore={searchPagination?.hasMore}
         headerComponent={<InstanceChatHeader phoneNumber={phoneNumber} searchMetadata={searchMetadata} />}
         itemComponent={(contact, isSelected, onClick) => <InstanceChatListItem contact={contact} isSelected={isSelected} onClick={onClick} />}
         getItemKey={(contact) => contact.phoneNumber}
