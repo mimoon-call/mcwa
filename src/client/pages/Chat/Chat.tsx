@@ -107,7 +107,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const lastSearchValueRef = useRef<string>('');
 
   // Filter state
-  const [selectedIntents, setSelectedIntents] = React.useState<string[]>([]);
   const [selectedDepartments, setSelectedDepartments] = React.useState<string[]>([]);
   const [selectedInterested, setSelectedInterested] = React.useState<boolean | null>(null);
 
@@ -175,7 +174,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     // Then load conversations
     dispatch(
       searchConversations({
-        intents: selectedIntents,
         departments: selectedDepartments,
         interested: selectedInterested,
       })
@@ -361,7 +359,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         dispatch(
           searchConversations({
             searchValue: value,
-            intents: selectedIntents,
             departments: selectedDepartments,
             interested: selectedInterested,
           })
@@ -382,30 +379,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
           pageSize: searchPagination.pageSize,
         },
         searchValue: searchValue,
-        intents: selectedIntents,
         departments: selectedDepartments,
         interested: selectedInterested,
       })
     );
-  }, [dispatch, searchPagination, searchValue, searchLoading, selectedIntents, selectedDepartments, selectedInterested]);
-
-  // Filter handlers
-  const handleIntentsChange = useCallback(
-    (intents: string[]) => {
-      setSelectedIntents(intents);
-      // Trigger new search with updated filters
-      dispatch(clearSearchData());
-      dispatch(resetPagination());
-      dispatch(
-        searchConversations({
-          intents,
-          departments: selectedDepartments,
-          interested: selectedInterested,
-        })
-      );
-    },
-    [dispatch, selectedDepartments, selectedInterested]
-  );
+  }, [dispatch, searchPagination, searchValue, searchLoading, selectedDepartments, selectedInterested]);
 
   const handleDepartmentsChange = useCallback(
     (departments: string[]) => {
@@ -413,15 +391,9 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       // Trigger new search with updated filters
       dispatch(clearSearchData());
       dispatch(resetPagination());
-      dispatch(
-        searchConversations({
-          intents: selectedIntents,
-          departments,
-          interested: selectedInterested,
-        })
-      );
+      dispatch(searchConversations({ departments, interested: selectedInterested }));
     },
-    [dispatch, selectedIntents, selectedInterested]
+    [dispatch, selectedInterested]
   );
 
   const handleInterestedChange = useCallback(
@@ -430,15 +402,9 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       // Trigger new search with updated filters
       dispatch(clearSearchData());
       dispatch(resetPagination());
-      dispatch(
-        searchConversations({
-          intents: selectedIntents,
-          departments: selectedDepartments,
-          interested,
-        })
-      );
+      dispatch(searchConversations({ departments: selectedDepartments, interested }));
     },
-    [dispatch, selectedIntents, selectedDepartments]
+    [dispatch, selectedDepartments]
   );
 
   const handleDeleteConversation = async () => {
@@ -514,10 +480,8 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         isItemSelected={(contact, selectedContact) =>
           selectedContact?.instanceNumber === contact.instanceNumber && selectedContact?.phoneNumber === contact.phoneNumber
         }
-        selectedIntents={selectedIntents}
         selectedDepartments={selectedDepartments}
         selectedInterested={selectedInterested}
-        onIntentsChange={handleIntentsChange}
         onDepartmentsChange={handleDepartmentsChange}
         onInterestedChange={handleInterestedChange}
       />
