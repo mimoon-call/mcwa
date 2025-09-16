@@ -1956,7 +1956,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
-  public async disconnect(clearSocket: boolean = false, reason: string = 'Manual disconnect'): Promise<void> {
+  public async disconnect(options?: { clearSocket?: boolean; logout?: boolean }, reason: string = 'Manual disconnect'): Promise<void> {
     if (!this.connected) {
       this.hasManualDisconnected = true;
 
@@ -1972,7 +1972,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.hasManualDisconnected = true;
 
       this.connected = false;
-      if (clearSocket) this.socket = null;
+      if (options?.logout) await this.socket?.logout();
+      if (options?.clearSocket) this.socket = null;
+
       await this.onDisconnect(reason);
 
       this.log('info', '✅ Disconnect completed successfully');
