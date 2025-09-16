@@ -180,7 +180,10 @@ const InstanceTable = () => {
     };
 
     const warmEndToast = (data: WarmUpdate) => {
-      const text = t('INSTANCE.WARM_END_TOAST', data).toString();
+      const phoneNumber1 = internationalPhonePrettier(data.phoneNumber1, '-', true);
+      const phoneNumber2 = internationalPhonePrettier(data.phoneNumber2, '-', true);
+
+      const text = t('INSTANCE.WARM_END_TOAST', { ...data, phoneNumber1, phoneNumber2 }).toString();
       activeWarm(data, false);
 
       if (data.sentMessages === 0) {
@@ -193,14 +196,17 @@ const InstanceTable = () => {
     };
 
     const warmStartToast = (data: WarmUpdate) => {
-      const text = t('INSTANCE.WARM_START_TOAST', data).toString();
+      const phoneNumber1 = internationalPhonePrettier(data.phoneNumber1, '-', true);
+      const phoneNumber2 = internationalPhonePrettier(data.phoneNumber2, '-', true);
+
+      const text = t('INSTANCE.WARM_START_TOAST', { ...data, phoneNumber1, phoneNumber2 }).toString();
       activeWarm(data, true);
 
       toast.success(text);
     };
 
     const registerToast = ({ phoneNumber }: InstanceItem) => {
-      const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber }).toString();
+      const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber: internationalPhonePrettier(phoneNumber, '-') }).toString();
       modelRef.current?.close();
       toast.success(text);
     };
