@@ -35,6 +35,7 @@ import {
   CHAT_SET_SELECTED_CONTACT,
   CHAT_RESET_SEARCH_VALUE,
   INSTANCE_LOAD_MORE_CONVERSATIONS,
+  CHAT_EXTERNAL_FLAG,
 } from '../Chat/store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel, InstanceChatHeader, InstanceChatListItem, ChatHeader } from './components';
 import getClientSocket from '@helpers/get-client-socket.helper';
@@ -89,13 +90,21 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
     dispatch(resetSearchValue());
   }, [dispatch, resetSearchValue]);
 
+  // Get external flag from store
+  const externalFlag = useSelector((state: RootState) => state[StoreEnum.chat][CHAT_EXTERNAL_FLAG]);
+
+  // Reset external flag when phone number changes
+  useEffect(() => {
+    dispatch(chatSlice.actions.setExternalFlag(false));
+  }, [phoneNumber, dispatch]);
+
   // Load conversations when phoneNumber changes
   useEffect(() => {
     if (phoneNumber && !withPhoneNumber) {
       dispatch(resetPagination());
-      dispatch(searchConversations({ phoneNumber }));
+      dispatch(searchConversations({ phoneNumber, externalFlag }));
     }
-  }, [phoneNumber, withPhoneNumber, dispatch, resetPagination, searchConversations]);
+  }, [phoneNumber, withPhoneNumber, dispatch, resetPagination, searchConversations, externalFlag]);
 
   // Load messages when a chat is selected and join conversation room
   useEffect(() => {
@@ -230,10 +239,10 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         lastSearchValueRef.current = value;
         dispatch(resetPagination());
         dispatch(clearSearchData());
-        dispatch(searchConversations({ phoneNumber, searchValue: value }));
+        dispatch(searchConversations({ phoneNumber, searchValue: value, externalFlag }));
       }
     },
-    [phoneNumber, dispatch]
+    [phoneNumber, dispatch, externalFlag]
   );
 
   const handleLoadMore = useCallback(() => {
@@ -246,9 +255,10 @@ const InstanceChat: React.FC<ChatProps> = ({ className }) => {
         pageIndex: nextPageIndex,
         pageSize: searchPagination.pageSize 
       }, 
-      searchValue: searchValue 
+      searchValue: searchValue,
+      externalFlag
     }));
-  }, [dispatch, phoneNumber, searchPagination, searchValue, searchLoading]);
+  }, [dispatch, phoneNumber, searchPagination, searchValue, searchLoading, externalFlag]);
 
   // Show error if phoneNumber is not provided
   if (!phoneNumber) {
