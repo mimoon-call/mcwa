@@ -88,7 +88,7 @@ export interface ChatState {
 
   // Global chat specific properties
   [GLOBAL_SELECTED_CONTACT]: GlobalChatContact | null;
-  [GLOBAL_LAST_SEARCH_PARAMS]: { searchValue: string } | null;
+  [GLOBAL_LAST_SEARCH_PARAMS]: { searchValue: string; intents?: string[]; departments?: string[]; interested?: boolean } | null;
 
   // Instance chat specific properties
   [INSTANCE_SEARCH_METADATA]: InstanceChat | null;
@@ -127,14 +127,18 @@ const initialState: ChatState = {
 // Async thunk for search all conversations (Global Chat)
 const searchAllConversations = createAsyncThunk(
   `${StoreEnum.globalChat}/${CHAT_SEARCH_ALL_CONVERSATIONS}`,
-  async ({ page, searchValue }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
+  async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.globalChat]?.searchPagination || initialState.searchPagination;
       const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
+      const lastSearchParams = state[StoreEnum.globalChat]?.globalLastSearchParams;
       const data = {
         page: { ...currentPagination, ...(page || {}) },
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        intents: intents !== undefined ? intents : lastSearchParams?.intents,
+        departments: departments !== undefined ? departments : lastSearchParams?.departments,
+        interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
       const result = await Http.post<SearchAllConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
 
@@ -244,13 +248,17 @@ const loadMoreInstanceMessages = createAsyncThunk(
 // Async thunk for loading more conversations (Global)
 const loadMoreGlobalConversations = createAsyncThunk(
   `${StoreEnum.globalChat}/loadMoreConversations`,
-  async ({ page, searchValue }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
+  async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
       const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
+      const lastSearchParams = state[StoreEnum.globalChat]?.globalLastSearchParams;
       const data = {
         page,
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        intents: intents !== undefined ? intents : lastSearchParams?.intents,
+        departments: departments !== undefined ? departments : lastSearchParams?.departments,
+        interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
 
       return await Http.post<SearchAllConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
@@ -263,13 +271,14 @@ const loadMoreGlobalConversations = createAsyncThunk(
 // Async thunk for loading more conversations (Instance)
 const loadMoreInstanceConversations = createAsyncThunk(
   `${StoreEnum.chat}/loadMoreConversations`,
-  async ({ phoneNumber, page, searchValue }: SearchConversationsReq, { rejectWithValue, getState }) => {
+  async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
       const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
       const data = {
         page,
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        externalFlag,
       };
 
       return await Http.post<SearchConversationsRes, typeof data>(`/conversation/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
@@ -385,7 +394,12 @@ const chatSliceReducer = createSlice({
         }
 
         state.searchValue = searchValue;
-        state.globalLastSearchParams = { searchValue };
+        state.globalLastSearchParams = { 
+          searchValue, 
+          intents: action.meta.arg.intents,
+          departments: action.meta.arg.departments,
+          interested: action.meta.arg.interested ?? undefined
+        };
         state.searchLoading = false;
       })
       .addCase(searchAllConversations.rejected, (state, action) => {
@@ -492,7 +506,10 @@ const chatSliceReducer = createSlice({
         };
 
         state.searchValue = searchValue;
-        state.instanceLastSearchParams = { phoneNumber, searchValue };
+        state.instanceLastSearchParams = { 
+          phoneNumber, 
+          searchValue
+        };
         state.searchLoading = false;
       })
       .addCase(searchConversations.rejected, (state, action) => {

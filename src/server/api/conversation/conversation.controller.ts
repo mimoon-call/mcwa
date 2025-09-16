@@ -39,14 +39,17 @@ export const conversationController = {
   },
 
   [SEARCH_ALL_CONVERSATIONS]: async (req: Request<never, never, SearchAllConversationsReq>, res: Response<SearchAllConversationsRes>) => {
-    const { page, searchValue } = await new RecordValidator(req.body, [
+    const { page, searchValue, intents, departments, interested } = await new RecordValidator(req.body, [
       ['searchValue', { type: ['String'] }],
+      ['intents', { type: [['Array', 'Null']] }],
+      ['departments', { type: [['Array', 'Null']] }],
+      ['interested', { type: [['Boolean', 'Null']] }],
       ['page.pageSize', { type: ['Number'], max: [MAX_PAGE_SIZE] }],
       ['page.pageIndex', { type: ['Number'] }],
       ['page.pageSort', { type: [['Object', 'Null']] }],
     ]).validate();
 
-    res.send(await conversationService[SEARCH_ALL_CONVERSATIONS](page, searchValue));
+    res.send(await conversationService[SEARCH_ALL_CONVERSATIONS](page, searchValue, intents, departments, interested ?? undefined));
   },
 
   [SEARCH_CONVERSATIONS]: async (req: Request<{ phoneNumber: string }, never, SearchConversationReq>, res: Response<SearchConversationRes>) => {

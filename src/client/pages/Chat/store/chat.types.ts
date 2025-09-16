@@ -39,6 +39,9 @@ export type ChatMessage = {
 export type SearchAllConversationsReq = {
   page?: Pagination;
   searchValue?: string;
+  intents?: string[];
+  departments?: string[];
+  interested?: boolean | null;
 };
 
 export type SearchAllConversationsRes = EntityList<GlobalChatContact>;
@@ -69,7 +72,9 @@ export type ChatContact = Pick<GlobalChatContact, 'phoneNumber' | 'name' | 'last
   internalFlag?: boolean;
 };
 
-export type SearchConversationsReq = SearchAllConversationsReq & {
+export type SearchConversationsReq = {
+  page?: Pagination;
+  searchValue?: string;
   phoneNumber: string;
   externalFlag?: boolean;
 };

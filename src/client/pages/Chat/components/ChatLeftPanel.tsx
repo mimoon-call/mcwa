@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState, ReactNode, useRef } from 'reac
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import { TextField } from '@components/Fields';
+import { DEPARTMENT_OPTIONS, INTENT_OPTIONS, INTERESTED_OPTIONS } from '@client/pages/Chat/constants/chat.constants';
+import type { Options } from '@models';
 
 type ChatLeftPanelProps<T = object> = {
   items?: T[];
@@ -18,12 +20,50 @@ type ChatLeftPanelProps<T = object> = {
   getItemKey: (item: T) => string;
   isItemSelected: (item: T, selectedItem: T | null) => boolean;
   className?: string;
+  searchComponent?: ReactNode;
+  // Filter props
+  selectedIntents?: string[];
+  selectedDepartments?: string[];
+  selectedInterested?: boolean | null;
+  onIntentsChange?: (intents: string[]) => void;
+  onDepartmentsChange?: (departments: string[]) => void;
+  onInterestedChange?: (interested: boolean | null) => void;
 };
 
 type ListProps<T> = Pick<
   ChatLeftPanelProps<T>,
   'loading' | 'items' | 'error' | 'isItemSelected' | 'selectedItem' | 'onItemSelect' | 'getItemKey' | 'itemComponent' | 'onLoadMore' | 'hasMore'
 >;
+
+const Filter = <T = string | boolean | number,>(props: {
+  options: Options<T>;
+  handleToggle: (value: T) => void;
+  selectedOptions: T[] | T | null;
+  isMultiSelect?: boolean;
+}) => {
+  const { t } = useTranslation();
+  const { options, handleToggle, selectedOptions, isMultiSelect = true } = props;
+
+  return options.map((option) => {
+    const title = typeof option.title === 'string' ? t(option.title) : option.title;
+    const isSelected = isMultiSelect ? Array.isArray(selectedOptions) && selectedOptions.includes(option.value) : selectedOptions === option.value;
+
+    return (
+      <button
+        key={String(option.value)}
+        type="button"
+        onClick={() => handleToggle(option.value)}
+        className={cn(
+          'px-3 py-0.5 rounded-full text-sm font-medium transition-colors duration-200',
+          'border border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
+          isSelected ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600 hover:border-blue-600' : 'bg-white text-gray-700 hover:bg-gray-50'
+        )}
+      >
+        {title}
+      </button>
+    );
+  });
+};
 
 const List = <T extends object>({
   loading,
@@ -105,7 +145,22 @@ const List = <T extends object>({
 };
 
 const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
-  const { searchValue = '', onSearch, headerComponent, className, onLoadMore, hasMore, ...listProps } = props;
+  const {
+    searchValue = '',
+    onSearch,
+    headerComponent,
+    searchComponent,
+    className,
+    onLoadMore,
+    hasMore,
+    selectedIntents = [],
+    selectedDepartments = [],
+    selectedInterested = null,
+    onIntentsChange,
+    onDepartmentsChange,
+    onInterestedChange,
+    ...listProps
+  } = props;
   const { t } = useTranslation();
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
 
@@ -127,13 +182,42 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
     setLocalSearchValue(value);
   }, []);
 
+  const handleIntentToggle = useCallback(
+    (intent: string) => {
+      if (!onIntentsChange) return;
+      const newIntents = selectedIntents.includes(intent) ? selectedIntents.filter((i) => i !== intent) : [...selectedIntents, intent];
+      onIntentsChange(newIntents);
+    },
+    [selectedIntents, onIntentsChange]
+  );
+
+  const handleDepartmentToggle = useCallback(
+    (department: string) => {
+      if (!onDepartmentsChange) return;
+      const newDepartments = selectedDepartments.includes(department)
+        ? selectedDepartments.filter((d) => d !== department)
+        : [...selectedDepartments, department];
+      onDepartmentsChange(newDepartments);
+    },
+    [selectedDepartments, onDepartmentsChange]
+  );
+
+  const handleInterestedToggle = useCallback(
+    (interested: boolean) => {
+      if (!onInterestedChange) return;
+      const newInterested = selectedInterested === interested ? null : interested;
+      onInterestedChange(newInterested);
+    },
+    [selectedInterested, onInterestedChange]
+  );
+
   return (
     <div className={cn('w-1/4 min-w-[400px] bg-white border-e border-gray-200 flex flex-col', className)}>
       {/* Header */}
       {headerComponent}
 
       {/* Search Bar */}
-      <div className="px-0.5 py-1 border-gray-200">
+      <div className="px-0.5 py-1 border-gray-200 flex flex-col gap-3">
         <TextField
           clearable
           hideDetails
@@ -142,6 +226,26 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
           value={localSearchValue}
           onChange={handleSearchChange}
         />
+
+        {/* Filters */}
+        <div className="pb-2 px-1">
+          <div className="flex flex-wrap gap-2">
+            {/* Interested Filter */}
+            {onInterestedChange && (
+              <Filter options={INTERESTED_OPTIONS} handleToggle={handleInterestedToggle} selectedOptions={selectedInterested} isMultiSelect={false} />
+            )}
+
+            {/* Intent Filter */}
+            {onIntentsChange && <Filter options={INTENT_OPTIONS} handleToggle={handleIntentToggle} selectedOptions={selectedIntents} />}
+
+            {/* Department Filter */}
+            {onDepartmentsChange && (
+              <Filter options={DEPARTMENT_OPTIONS} handleToggle={handleDepartmentToggle} selectedOptions={selectedDepartments} />
+            )}
+          </div>
+        </div>
+
+        {searchComponent}
       </div>
 
       {/* Items List */}

@@ -104,6 +104,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const lastSearchValueRef = useRef<string>('');
+  
+  // Filter state
+  const [selectedIntents, setSelectedIntents] = React.useState<string[]>([]);
+  const [selectedDepartments, setSelectedDepartments] = React.useState<string[]>([]);
+  const [selectedInterested, setSelectedInterested] = React.useState<boolean | null>(null);
 
   // Get all chat actions using constants
   const {
@@ -167,7 +172,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     dispatch(resetSearchValue());
 
     // Then load conversations
-    dispatch(searchConversations({}));
+    dispatch(searchConversations({ 
+      intents: selectedIntents,
+      departments: selectedDepartments,
+      interested: selectedInterested
+    }));
   }, [dispatch, resetChatState]);
 
   // Find selected contact based on URL parameters
@@ -346,7 +355,12 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
         // Clear current data and search with new value
         dispatch(clearSearchData());
-        dispatch(searchConversations({ searchValue: value }));
+        dispatch(searchConversations({ 
+          searchValue: value,
+          intents: selectedIntents,
+          departments: selectedDepartments,
+          interested: selectedInterested
+        }));
       }
     },
     [dispatch]
@@ -361,9 +375,49 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         pageIndex: nextPageIndex,
         pageSize: searchPagination.pageSize 
       }, 
-      searchValue: searchValue 
+      searchValue: searchValue,
+      intents: selectedIntents,
+      departments: selectedDepartments,
+      interested: selectedInterested
     }));
-  }, [dispatch, searchPagination, searchValue, searchLoading]);
+  }, [dispatch, searchPagination, searchValue, searchLoading, selectedIntents, selectedDepartments, selectedInterested]);
+
+  // Filter handlers
+  const handleIntentsChange = useCallback((intents: string[]) => {
+    setSelectedIntents(intents);
+    // Trigger new search with updated filters
+    dispatch(clearSearchData());
+    dispatch(resetPagination());
+    dispatch(searchConversations({ 
+      intents,
+      departments: selectedDepartments,
+      interested: selectedInterested
+    }));
+  }, [dispatch, selectedDepartments, selectedInterested]);
+
+  const handleDepartmentsChange = useCallback((departments: string[]) => {
+    setSelectedDepartments(departments);
+    // Trigger new search with updated filters
+    dispatch(clearSearchData());
+    dispatch(resetPagination());
+    dispatch(searchConversations({ 
+      intents: selectedIntents,
+      departments,
+      interested: selectedInterested
+    }));
+  }, [dispatch, selectedIntents, selectedInterested]);
+
+  const handleInterestedChange = useCallback((interested: boolean | null) => {
+    setSelectedInterested(interested);
+    // Trigger new search with updated filters
+    dispatch(clearSearchData());
+    dispatch(resetPagination());
+    dispatch(searchConversations({ 
+      intents: selectedIntents,
+      departments: selectedDepartments,
+      interested
+    }));
+  }, [dispatch, selectedIntents, selectedDepartments]);
 
   const handleDeleteConversation = async () => {
     if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
@@ -438,6 +492,12 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         isItemSelected={(contact, selectedContact) =>
           selectedContact?.instanceNumber === contact.instanceNumber && selectedContact?.phoneNumber === contact.phoneNumber
         }
+        selectedIntents={selectedIntents}
+        selectedDepartments={selectedDepartments}
+        selectedInterested={selectedInterested}
+        onIntentsChange={handleIntentsChange}
+        onDepartmentsChange={handleDepartmentsChange}
+        onInterestedChange={handleInterestedChange}
       />
       <ChatRightPanel
         menuItems={actions}

@@ -147,7 +147,13 @@ export const conversationService = {
     };
   },
 
-  [SEARCH_ALL_CONVERSATIONS]: async (page: Pagination, searchValue?: string): Promise<SearchAllConversationsRes> => {
+  [SEARCH_ALL_CONVERSATIONS]: async (
+    page: Pagination,
+    searchValue?: string,
+    intents?: string[],
+    departments?: string[],
+    interested?: boolean
+  ): Promise<SearchAllConversationsRes> => {
     const pipeline: PipelineStage[] = [
       // Filter out internal messages and empty text
       { $match: { $and: [{ internalFlag: false }, { text: { $ne: '' } }, { text: { $ne: null } }] } },
@@ -162,12 +168,8 @@ export const conversationService = {
               { $concat: ['$toNumber', '|', '$fromNumber'] },
             ],
           },
-          participant1: {
-            $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$fromNumber', '$toNumber'],
-          },
-          participant2: {
-            $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$toNumber', '$fromNumber'],
-          },
+          participant1: { $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$fromNumber', '$toNumber'] },
+          participant2: { $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$toNumber', '$fromNumber'] },
           // Get pushName from incoming messages
           pushName: { $ifNull: ['$raw.pushName', null] },
         },
@@ -288,10 +290,8 @@ export const conversationService = {
           instanceNumber: 1,
           phoneNumber: 1,
         },
-      }
-    );
+      },
 
-    const afterPipeline: PipelineStage[] = [
       // Lookup the last messageId from whatsappqueues collection for this conversation
       {
         $lookup: {
@@ -372,19 +372,24 @@ export const conversationService = {
       },
 
       // Remove the temporary arrays
-      { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } },
-    ];
+      { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } }
+    );
 
-    const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline, afterPipeline);
+    // Add filter conditions for intents, departments, and interested
+    const filterConditions: any[] = [];
+
+    if (intents && intents.length > 0) filterConditions.push({ intent: { $in: intents } });
+    if (departments && departments.length > 0) filterConditions.push({ department: { $in: departments } });
+    if (interested !== undefined && interested !== null) filterConditions.push({ interested: interested });
+    if (filterConditions.length > 0) pipeline.push({ $match: { $and: filterConditions } });
+
+    const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline);
 
     return {
       data: data.map((value) => {
         const instance = value.instanceNumber ? wa.getInstance(value.instanceNumber) : null;
 
-        return {
-          ...value,
-          instanceConnected: instance?.connected || false,
-        };
+        return { ...value, instanceConnected: instance?.connected || false };
       }),
       ...rest,
     };
