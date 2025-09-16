@@ -41,9 +41,60 @@ import ChatListItem from './components/ChatListItem';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import type { MenuItem } from '@components/Menu/Menu.type';
 import { RouteName } from '@client/router/route-name';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
+import Avatar from '@components/Avatar/Avatar';
+import { useTranslation } from 'react-i18next';
 
 type ChatProps = {
   className?: string;
+};
+
+const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
+  if (!contact) return null;
+
+  const { t } = useTranslation();
+  const contactName = contact.name || internationalPhonePrettier(contact.phoneNumber, '-', true);
+
+  return (
+    <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-white">
+      <div className="flex gap-4 pe-16">
+        <Avatar size="3rem" src={null} alt={contact.name || contact.phoneNumber} />
+
+        <div className="flex flex-col pt-1">
+          <h1 className="font-medium">{contactName}</h1>
+          {contact.name && <p>{internationalPhonePrettier(contact.phoneNumber, '-', true)}</p>}
+        </div>
+
+        {contact.department && (
+          <div className="flex flex-col pt-1 ps-4 border-s">
+            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.DEPARTMENT')}</label>
+            <p>{t(`CHAT.DEPARTMENT.${contact.department}`)}</p>
+          </div>
+        )}
+
+        {contact.intent && (
+          <div className="flex flex-col pt-1 ps-4 border-s">
+            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.ANALYSIS')}</label>
+            <p>{t(`CHAT.INTENT.${contact.intent}`)}</p>
+          </div>
+        )}
+
+        {contact.reason && (
+          <div className="flex flex-col pt-1 ps-4 border-s">
+            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.REASONING')}</label>
+            <p>{contact.reason}</p>
+          </div>
+        )}
+
+        {contact.confidence && (
+          <div className="flex flex-col pt-1 ps-4 border-s">
+            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.CONFIDENCE')}</label>
+            <p>{contact.confidence}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 const Chat: React.FC<ChatProps> = ({ className }) => {
@@ -70,10 +121,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   } = chatSlice;
 
   // Get retry cooldown actions
-  const {
-    [CHAT_SET_RETRY_COOLDOWN]: setRetryCooldown,
-    [CHAT_CLEAR_RETRY_COOLDOWN]: clearRetryCooldown,
-  } = chatSlice;
+  const { [CHAT_SET_RETRY_COOLDOWN]: setRetryCooldown, [CHAT_CLEAR_RETRY_COOLDOWN]: clearRetryCooldown } = chatSlice;
 
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -93,15 +141,15 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     // Clear search data and reset pagination
     dispatch(clearSearchData());
     dispatch(resetPagination());
-    
+
     // Clear selected contact
     dispatch(setSelectedContact(null));
-    
+
     // Reset search value ref
     lastSearchValueRef.current = '';
-    
+
     // Clear retry cooldowns
-    Object.keys(retryCooldowns).forEach(messageId => {
+    Object.keys(retryCooldowns).forEach((messageId) => {
       dispatch(clearRetryCooldown({ messageId }));
     });
   }, [dispatch, clearSearchData, resetPagination, setSelectedContact, retryCooldowns]);
@@ -110,10 +158,10 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   useEffect(() => {
     // Reset all chat state first
     resetChatState();
-    
+
     // Reset search value in store
     dispatch(resetSearchValue());
-    
+
     // Then load conversations
     dispatch(searchConversations({}));
   }, [dispatch, resetChatState]);
@@ -330,7 +378,21 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   const actions: MenuItem[] = [
     {
-      label: 'GENERAL.DELETE',
+      label: 'CHAT.COPY_CONTACT_DETAILS',
+      iconName: 'svg:copy',
+      disabled: !selectedContact,
+      onClick: async () => {
+        if (!selectedContact) return;
+
+        const phoneNumber = internationalPhonePrettier(selectedContact.phoneNumber, '-', true);
+        const contactText = selectedContact.name ? `${selectedContact.name}\n${phoneNumber}` : phoneNumber;
+
+        await navigator.clipboard.writeText(contactText);
+      },
+    },
+    { type: 'divider' },
+    {
+      label: 'CHAT.DELETE_CONVERSATION',
       iconName: 'svg:trash',
       className: 'text-red-800',
       onClick: handleDeleteConversation,
@@ -367,6 +429,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         error={error}
         phoneNumber={selectedContact?.instanceNumber}
         withPhoneNumber={selectedContact?.phoneNumber}
+        headerComponent={<ChatHeader contact={selectedContact} />}
         onSendMessage={handleSendMessage}
         onRetry={handleRetryMessage}
         retryCooldowns={retryCooldowns}

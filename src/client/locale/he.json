@@ -83,7 +83,8 @@
     "DELETE_CONVERSATION_WARNING": "האם אתה בטוח שברצונך למחוק את השיחה הזו?\nפעולה זו לא ניתנת לביטול.",
     "CONVERSATION_DELETED_SUCCESSFULLY": "השיחה נמחקה בהצלחה",
     "NOTHING_TO_DELETE": "אין מה למחוק - השיחה כבר ריקה",
-    "DELETE_FAILED": "נכשל במחיקת השיחה"
+    "DELETE_FAILED": "נכשל במחיקת השיחה",
+    "COPY_CONTACT_DETAILS": "העתק פרטי קשר"
   },
   "QUEUE": {
     "TITLE": "שידור",
@@ -108,7 +109,11 @@
     "NO_VALID_PHONE_NUMBERS_WERE_FOUND": "לא נמצאו מספרי טלפון חוקיים",
     "DYNAMIC_FIELDS": "שדות דינמיים",
     "LAST_ERROR_MESSAGE": "הודעת שגיאה אחרונה",
-    "ATTEMPT": "ניסיון"
+    "ATTEMPT": "ניסיון",
+    "DEPARTMENT": "מחלקה",
+    "REASONING": "נימוק",
+    "ANALYSIS": "ניתוח",
+    "CONFIDENCE": "אמון"
   },
   "INSTANCE": {
     "TITLE": "קווים",

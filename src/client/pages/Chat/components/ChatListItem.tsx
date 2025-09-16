@@ -6,7 +6,7 @@ import Avatar from '@components/Avatar/Avatar';
 import Icon from '@components/Icon/Icon';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { formatTime } from '../helpers';
-import { ChatIntentEnum } from '@client/pages/Chat/store/chat.enum';
+import { ChatIntentColorMap } from '@client/pages/Chat/constants/chat-intent-color.map';
 
 type ChatListItemProps = {
   contact: GlobalChatContact;
@@ -17,47 +17,14 @@ type ChatListItemProps = {
 
 const Interested = ({ contact }: { contact: GlobalChatContact }) => {
   const { t } = useTranslation();
-  let className: string;
 
   if (contact.interested) return <div className="font-bold text-xs text-green-600">{t('GENERAL.INTERESTED')}</div>;
   if (!contact.intent) return null;
 
-  switch (contact.intent) {
-    case ChatIntentEnum.POSITIVE_INTEREST:
-      className = 'text-green-600';
-      break;
-    case ChatIntentEnum.REQUEST_INFO:
-      className = 'text-blue-600';
-      break;
-    case ChatIntentEnum.NEUTRAL:
-      className = 'text-gray-600';
-      break;
-    case ChatIntentEnum.NOT_NOW:
-      className = 'text-yellow-600';
-      break;
-    case ChatIntentEnum.DECLINE:
-      className = 'text-orange-600';
-      break;
-    case ChatIntentEnum.OUT_OF_SCOPE:
-      className = 'text-purple-600';
-      break;
-    case ChatIntentEnum.AMBIGUOUS:
-      className = 'text-pink-600';
-      break;
-    case ChatIntentEnum.ABUSIVE:
-      className = 'text-red-600';
-      break;
-    case ChatIntentEnum.UNSUBSCRIBE:
-      className = 'text-red-700';
-      break;
-    default:
-      className = 'text-gray-600';
-  }
-
   return (
     <div className="flex gap-1 text-xs">
       {contact.confidence && <span className="text-gray-500">{contact.confidence}</span>}
-      <div className={cn('font-bold text-xs', className)}>{t(`CHAT.INTENT.${contact.intent}`)}</div>
+      <div className={cn('font-bold text-xs', ChatIntentColorMap.get(contact.intent))}>{t(`CHAT.INTENT.${contact.intent}`)}</div>
     </div>
   );
 };

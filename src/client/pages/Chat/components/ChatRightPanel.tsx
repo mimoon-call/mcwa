@@ -66,14 +66,14 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
   };
 
   return (
-    <div className={cn('flex-1 flex flex-col h-full max-h-full', className)}>
+    <div className={cn('flex-1 flex flex-col h-full max-h-full relative', className)}>
       {selectedContact ? (
         <>
           {/* Chat Header */}
           {headerComponent}
 
           {/* Chat Messages */}
-          <div className="flex-1 min-h-0 overflow-hidden relative">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {/* Floating 3 dots menu */}
             {phoneNumber && withPhoneNumber && !!menuItems?.length && (
               <div className="absolute top-4 rtl:left-4 ltr:right-4 z-40">

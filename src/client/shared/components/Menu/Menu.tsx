@@ -26,13 +26,15 @@ const MenuList: FC<{ items: MenuProps['items']; popoverRef: PopoverProps['ref'] 
     return { ...rest, loading, disabled: isDisabled, onClick: !isDisabled ? call : undefined };
   });
 
-  return items.map(({ label, iconName, disabled, loading, className, onClick }, index) => {
+  return items.map(({ type, label, iconName, disabled, loading, className, onClick }, index) => {
     const hasLoading = items.some(({ loading }) => loading);
+
+    if (type === 'divider') return <hr key={index} className="border-t" />;
 
     return (
       <div
         key={index}
-        className={cn('flex gap-2 align-middle', disabled || hasLoading ? 'opacity-50' : 'cursor-pointer', className)}
+        className={cn('flex gap-2 align-middle px-2 py-1', disabled || hasLoading ? 'opacity-50' : 'cursor-pointer hover:bg-slate-100', className)}
         {...(!disabled && !hasLoading ? { role: 'button' } : {})}
         tabIndex={disabled ? -1 : 0}
         onClick={!hasLoading ? onClick : undefined}

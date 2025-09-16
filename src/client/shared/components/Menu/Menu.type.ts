@@ -3,13 +3,23 @@ import type { IconName } from '@components/Icon/Icon.type';
 import type { ClassValue } from 'clsx';
 import type { ReactNode } from 'react';
 
-export type MenuItem = {
-  label: string | ReactNode;
-  iconName?: IconName;
-  className?: ClassValue;
-  onClick: () => Promise<unknown> | unknown;
-  disabled?: boolean | (() => boolean);
-};
+export type MenuItem =
+  | {
+      type?: never;
+      label: string | ReactNode;
+      iconName?: IconName;
+      className?: ClassValue;
+      onClick: () => Promise<unknown> | unknown;
+      disabled?: boolean | (() => boolean);
+    }
+  | {
+      type: 'divider';
+      label?: never;
+      iconName?: never;
+      className?: never;
+      onClick?: never;
+      disabled?: never;
+    };
 
 export type MenuProps = {
   items: MenuItem[];
