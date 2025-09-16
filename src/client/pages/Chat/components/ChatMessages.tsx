@@ -52,12 +52,12 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
     lastMessageRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages.length]);
 
-  const renderContent = () => {
+  const renderContent = (() => {
     if (loading) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.LOADING')}</div>;
     if (error) return <div className="flex items-center justify-center h-32 text-red-500">{t('GENERAL.ERROR')}</div>;
     if (messages.length === 0) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.EMPTY')}</div>;
 
-    return messages.map((message, index) => {
+    const items = messages.map((message, index) => {
       const isFromUser = isMessageFromUser(message);
       const messageKey = message.messageId || message.tempId || `${message.createdAt}-${index}`;
       const isLastMessage = index === messages.length - 1;
@@ -76,12 +76,18 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
         </div>
       );
     });
-  };
+
+    return (
+      <>
+        <ChatStickyDate messages={messages} scrollContainerRef={scrollContainerRef} />
+        {items}
+      </>
+    );
+  })();
 
   return (
     <div ref={scrollContainerRef} className={cn('h-full bg-gray-50 overflow-y-auto p-4 relative z-10', className)}>
-      <ChatStickyDate messages={messages} scrollContainerRef={scrollContainerRef} />
-      {renderContent()}
+      {renderContent}
     </div>
   );
 };
