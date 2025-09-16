@@ -15,7 +15,6 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
   const onUpdate = async (messageId: string, deliveryStatus: WAMessageDelivery) => {
     if (SENT_STATUSES.includes(deliveryStatus.status as MessageStatusEnum)) {
       await MessageQueueDb.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), messageId } });
-      successCallback?.();
     }
   };
 
@@ -54,6 +53,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
 
       console.log('message sent to', doc.phoneNumber, messageResult.instanceNumber, 'messageId:', messageResult.key.id);
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
+      successCallback?.();
     } else {
       throw new Error('Message was not sent successfully - no message ID returned');
     }
