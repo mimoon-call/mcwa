@@ -326,10 +326,8 @@ export class WhatsappService<T extends object = Record<never, never>> {
       }
 
       const warmedNumbers = this.listInstanceNumbers({ onlyConnectedFlag: true, hasWarmedUp: true });
-      console.log('warmedNumbers', warmedNumbers);
       let availableNumbers: string[];
       availableNumbers = warmedNumbers.filter((num) => !this.lastUsedNumbers.includes(num));
-      console.log('availableNumbers', availableNumbers);
 
       if (!availableNumbers.length) {
         this.lastUsedNumbers = [];
@@ -338,11 +336,9 @@ export class WhatsappService<T extends object = Record<never, never>> {
       }
 
       const randomSelected = availableNumbers.shuffle()?.[0];
-      console.log('randomSelected', randomSelected);
       if (!randomSelected) throw new Error(`Instance not available to send message to ${toNumber}`);
 
       const selectedInstance = this.instances.get(randomSelected);
-      console.log('selectedInstance', selectedInstance?.phoneNumber, selectedInstance?.connected);
       if (!selectedInstance?.connected) throw new Error(`Number [${randomSelected}] is not connected.`);
 
       return selectedInstance;
