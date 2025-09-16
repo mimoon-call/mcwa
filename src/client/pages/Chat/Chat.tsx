@@ -37,6 +37,7 @@ import {
   CHAT_SET_RETRY_COOLDOWN,
   CHAT_CLEAR_RETRY_COOLDOWN,
   CHAT_LOAD_MORE_CONVERSATIONS,
+  AI_REASONING_CONVERSATION,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -126,6 +127,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_CLEAR_SEARCH_DATA]: clearSearchData,
     [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
     [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
+    [AI_REASONING_CONVERSATION]: aiReasoningConversation,
   } = chatSlice;
 
   // Get retry cooldown actions
@@ -435,6 +437,12 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     });
   };
 
+  const handleCalculateAiReasoning = async () => {
+    if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
+
+    await aiReasoningConversation(selectedContact.instanceNumber, selectedContact.phoneNumber);
+  };
+
   const actions: MenuItem[] = [
     {
       label: 'CHAT.COPY_CONTACT_DETAILS',
@@ -448,6 +456,13 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
         await navigator.clipboard.writeText(contactText);
       },
+    },
+    {
+      label: 'CHAT.CALCULATE_AI_REASONING',
+      iconName: 'svg:ai',
+      disabled: !selectedContact,
+      hidden: !selectedContact?.hasStartMessage,
+      onClick: handleCalculateAiReasoning,
     },
     { type: 'divider' },
     {

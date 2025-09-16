@@ -11,6 +11,7 @@ export type MenuItem =
       className?: ClassValue;
       onClick: () => Promise<unknown> | unknown;
       disabled?: boolean | (() => boolean);
+      hidden?: boolean | (() => boolean);
     }
   | {
       type: 'divider';
@@ -19,6 +20,7 @@ export type MenuItem =
       className?: never;
       onClick?: never;
       disabled?: never;
+      hidden?: never;
     };
 
 export type MenuProps = {

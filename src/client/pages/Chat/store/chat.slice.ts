@@ -43,6 +43,7 @@ import {
   CHAT_SET_EXTERNAL_FLAG,
   CHAT_SET_RETRY_COOLDOWN,
   CHAT_CLEAR_RETRY_COOLDOWN,
+  AI_REASONING_CONVERSATION,
 } from './chat.constants';
 import {
   type ChatMessage,
@@ -296,6 +297,11 @@ const sendMessage = async ({ fromNumber, toNumber, ...data }: SendMessageReq): P
 // Async function for delete conversation
 const deleteConversation = async ({ fromNumber, toNumber }: DeleteConversationReq): Promise<DeleteConversationRes> => {
   return await api.delete<DeleteConversationRes>(`${CHAT_DELETE_CONVERSATION}/${fromNumber}/${toNumber}`);
+};
+
+// Async thunk for calculate AI reasoning conversation
+const aiReasoningConversation = async (phoneNumber: string, withPhoneNumber: string) => {
+  await api.post<void>(`${AI_REASONING_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`);
 };
 
 // Chat Slice
@@ -589,6 +595,7 @@ export const chatSlice = {
   [CHAT_LOAD_MORE_MESSAGES]: loadMoreGlobalMessages,
   [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreGlobalConversations,
   [CHAT_DELETE_CONVERSATION]: deleteConversation,
+  [AI_REASONING_CONVERSATION]: aiReasoningConversation,
 
   // Instance chat async actions using constants
   [CHAT_SEARCH_CONVERSATIONS]: searchConversations,

@@ -84,7 +84,8 @@
     "CONVERSATION_DELETED_SUCCESSFULLY": "Conversation deleted successfully",
     "NOTHING_TO_DELETE": "Nothing to delete - conversation is already empty",
     "DELETE_FAILED": "Failed to delete conversation",
-    "COPY_CONTACT_DETAILS": "Copy contact details"
+    "COPY_CONTACT_DETAILS": "Copy contact details",
+    "CALCULATE_AI_REASONING": "Calculate AI Reasoning"
   },
   "QUEUE": {
     "TITLE": "Broadcast",

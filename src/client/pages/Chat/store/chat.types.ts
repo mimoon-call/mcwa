@@ -19,6 +19,7 @@ export type GlobalChatContact = {
   reason: string;
   intent: ChatIntentEnum;
   profilePictureUrl?: string | null;
+  hasStartMessage: boolean;
 };
 
 export type ChatMessage = {

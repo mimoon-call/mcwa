@@ -6,19 +6,40 @@ import { MessageHandlerActionEnum } from './chat.enum';
 // Helper function to deduplicate messages by messageId, keeping the last occurrence
 export const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
   const seen = new Map<string, ChatMessage>();
+  const messagesWithoutId: ChatMessage[] = [];
 
   // Process messages in order, keeping the last occurrence of each messageId
   messages.forEach((message) => {
     if (message.messageId) {
       seen.set(message.messageId, message);
+    } else {
+      // For messages without messageId, we need to deduplicate by other criteria
+      // Use a combination of fromNumber, toNumber, text, and createdAt as a unique key
+      const uniqueKey = `${message.fromNumber}-${message.toNumber}-${message.text}-${message.createdAt}`;
+      const existingIndex = messagesWithoutId.findIndex(msg => 
+        msg.fromNumber === message.fromNumber &&
+        msg.toNumber === message.toNumber &&
+        msg.text === message.text &&
+        msg.createdAt === message.createdAt
+      );
+      
+      if (existingIndex === -1) {
+        messagesWithoutId.push(message);
+      } else {
+        // Replace with newer message if timestamps are different
+        const existingMessage = messagesWithoutId[existingIndex];
+        if (new Date(message.createdAt) > new Date(existingMessage.createdAt)) {
+          messagesWithoutId[existingIndex] = message;
+        }
+      }
     }
   });
 
-  // Return messages without messageId first, then deduplicated messages
-  const messagesWithoutId = messages.filter((msg) => !msg.messageId);
   const deduplicatedMessages = Array.from(seen.values());
-
-  return [...messagesWithoutId, ...deduplicatedMessages];
+  
+  // Sort all messages by createdAt to maintain chronological order
+  const allMessages = [...messagesWithoutId, ...deduplicatedMessages];
+  return allMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 };
 
 // Helper function to deduplicate conversations by phoneNumber+instanceNumber, keeping the last occurrence
@@ -27,8 +48,11 @@ export const deduplicateGlobalConversations = (conversations: GlobalChatContact[
 
   // Process conversations in order, keeping the last occurrence of each phoneNumber+instanceNumber combination
   conversations.forEach((conversation) => {
-    const key = `${conversation.phoneNumber}+${conversation.instanceNumber}`;
-    seen.set(key, conversation);
+    // Ensure we have valid data before processing
+    if (conversation && typeof conversation === 'object' && conversation.phoneNumber && conversation.instanceNumber) {
+      const key = `${conversation.phoneNumber}+${conversation.instanceNumber}`;
+      seen.set(key, conversation);
+    }
   });
 
   return Array.from(seen.values());
@@ -40,7 +64,10 @@ export const deduplicateInstanceConversations = (conversations: ChatContact[]): 
 
   // Process conversations in order, keeping the last occurrence of each phoneNumber
   conversations.forEach((conversation) => {
-    seen.set(conversation.phoneNumber, conversation);
+    // Ensure we have valid data before processing
+    if (conversation && typeof conversation === 'object' && conversation.phoneNumber) {
+      seen.set(conversation.phoneNumber, conversation);
+    }
   });
 
   return Array.from(seen.values());

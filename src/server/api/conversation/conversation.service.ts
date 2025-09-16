@@ -15,11 +15,13 @@ import {
   SEARCH_ALL_CONVERSATIONS,
   SEND_MESSAGE,
   DELETE_CONVERSATION,
+  AI_REASONING_CONVERSATION,
 } from '@server/api/conversation/conversation.map';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
 import { BaseResponse } from '@server/models';
+import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -316,9 +318,6 @@ export const conversationService = {
         },
       },
 
-      // Set the name field to fullName from queue if available
-      { $set: { name: { $ifNull: ['$fullName', '$name'] } } },
-
       // Lookup the corresponding message from whatsappmessages collection
       {
         $lookup: {
@@ -366,8 +365,12 @@ export const conversationService = {
           interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
           reason: { $arrayElemAt: ['$messageDetails.reason', 0] },
           unsubscribedAt: { $arrayElemAt: ['$unsubscribedData.createdAt', 0] },
+          hasStartMessage: { $cond: [{ $gt: [{ $size: '$lastQueueMessage' }, 0] }, true, false] },
         },
       },
+
+      // Set the name field to fullName from queue if available
+      { $set: { name: { $ifNull: [{ $let: { vars: { firstMessage: { $arrayElemAt: ['$messageDetails', 0] } }, in: '$$firstMessage.fullName' } }, '$name'] } } },
 
       // Remove the temporary arrays
       { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } }
@@ -478,5 +481,23 @@ export const conversationService = {
       deletedMessagesCount,
       deletedQueueCount,
     };
+  },
+
+  [AI_REASONING_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string): Promise<BaseResponse> => {
+    const lastMessage = await WhatsAppMessage.findOne({
+      $or: [
+        { fromNumber: phoneNumber, toNumber: withPhoneNumber },
+        { fromNumber: withPhoneNumber, toNumber: phoneNumber },
+      ],
+      text: { $ne: '' },
+    }).sort({ createdAt: -1 });
+
+    if (!lastMessage) {
+      return { returnCode: 1 };
+    }
+
+    await messageReplyHandler(lastMessage._id, 0);
+
+    return { returnCode: 0 };
   },
 };

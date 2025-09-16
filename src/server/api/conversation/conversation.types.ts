@@ -42,6 +42,7 @@ export type ConversationPairItem = {
   interested?: InterestResult['interested'];
   reason?: InterestResult['reason'];
   intent?: InterestResult['intent'];
+  hasStartMessage: boolean;
 };
 
 export type SearchAllConversationsReq = { 

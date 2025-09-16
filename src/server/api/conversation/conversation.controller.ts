@@ -18,6 +18,7 @@ import {
   SEARCH_ALL_CONVERSATIONS,
   SEND_MESSAGE,
   DELETE_CONVERSATION,
+  AI_REASONING_CONVERSATION,
 } from '@server/api/conversation/conversation.map';
 import { conversationService } from '@server/api/conversation/conversation.service';
 import { BaseResponse } from '@server/models';
@@ -85,5 +86,14 @@ export const conversationController = {
     ]).validate();
 
     res.send(await conversationService[DELETE_CONVERSATION](fromNumber, toNumber));
+  },
+
+  [AI_REASONING_CONVERSATION]: async (req: Request<{ phoneNumber: string; withPhoneNumber: string }>, res: Response<BaseResponse>) => {
+    const { phoneNumber, withPhoneNumber } = await new RecordValidator({ ...req.params, ...req.body }, [
+      ['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+      ['withPhoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+    ]).validate();
+
+    res.send(await conversationService[AI_REASONING_CONVERSATION](phoneNumber, withPhoneNumber));
   },
 };

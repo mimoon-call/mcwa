@@ -84,7 +84,8 @@
     "CONVERSATION_DELETED_SUCCESSFULLY": "השיחה נמחקה בהצלחה",
     "NOTHING_TO_DELETE": "אין מה למחוק - השיחה כבר ריקה",
     "DELETE_FAILED": "נכשל במחיקת השיחה",
-    "COPY_CONTACT_DETAILS": "העתק פרטי קשר"
+    "COPY_CONTACT_DETAILS": "העתק פרטי קשר",
+    "CALCULATE_AI_REASONING": "חשב ניתוח AI"
   },
   "QUEUE": {
     "TITLE": "שידור",

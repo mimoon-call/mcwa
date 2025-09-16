@@ -49,6 +49,9 @@ export const CHAT_RETRY_COOLDOWNS = 'retryCooldowns';
 // Reset constants
 export const CHAT_RESET_SEARCH_VALUE = 'reset-search-value';
 
+// AI Reasoning constants
+export const AI_REASONING_CONVERSATION = 'ai-reasoning-conversation';
+
 // Action constants
 export const CHAT_SET_EXTERNAL_FLAG = 'set-external-flag';
 export const CHAT_SET_RETRY_COOLDOWN = 'set-retry-cooldown';
