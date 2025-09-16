@@ -58,5 +58,8 @@ export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw
   };
 
   const { _id } = await WhatsAppMessage.insertOne(messageData);
+
+  if (!messageData.text) return;
+
   await messageReplyHandler(_id);
 };
