@@ -172,9 +172,11 @@ const Queue = () => {
           onClick: startSend,
           disabled: () => !!(queuePagination.totalItems === 0 || queueLoading),
         },
+    { type: 'divider' },
     {
       label: 'QUEUE.DELETE_ALL',
       iconName: 'svg:trash',
+      className: 'text-red-600',
       onClick: onClear,
       disabled: () => !!(queuePagination.totalItems === 0 || queueLoading || isSendingInProgress),
     },
