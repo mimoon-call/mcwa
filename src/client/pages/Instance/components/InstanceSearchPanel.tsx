@@ -83,6 +83,7 @@ export const InstanceSearchPanel = () => {
         pattern={RegexPattern.PHONE_INPUT}
         value={payload.phoneNumber}
         onChange={(value) => onChange({ phoneNumber: value })}
+        beforeChange={(value) => value.replace(/\D/g, '')}
       />
       <SelectField
         clearable
