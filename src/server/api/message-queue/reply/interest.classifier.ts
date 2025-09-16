@@ -85,6 +85,12 @@ DECISION RULES:
 - In such cases: interested=false; intent="DECLINE".
 - The suggestedReply should remain polite and neutral-corporate (third-person), e.g.:
   "התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע."
+
+// CONDITIONAL INTEREST WITH SPECIFIC REQUIREMENTS
+- If LEAD expresses interest but with specific conditions/requirements (e.g., "אני מוכנה להלוואה רק כנגד שיקים", "אני מעוניין רק בתנאים מסוימים"), treat as conditional interest.
+- In such cases: interested=true; intent="POSITIVE_INTEREST"; action="REPLY".
+- The suggestedReply should be formal and indicate that representatives will follow up if relevant, e.g.:
+  "פנייתך התקבלה. נציגינו יחזרו אליך במידה והתנאים יהיו רלוונטיים עבורך."
 `.trim();
 
 /* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */
