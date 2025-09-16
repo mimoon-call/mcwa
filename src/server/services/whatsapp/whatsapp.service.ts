@@ -161,7 +161,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
         setTimeout(async () => {
           try {
             const instance = await this.createInstance(phoneNumber);
-            if (!instance.connected) await instance.connect();
+            if (!instance.connected && !instance.connecting) await instance.connect();
 
             resolve();
           } catch (error: any) {

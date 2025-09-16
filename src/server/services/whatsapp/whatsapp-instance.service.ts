@@ -68,6 +68,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private appState: WAAppAuth<T> | null = null;
   private hasManualDisconnected: boolean = false;
   private agent?: HttpAgent | HttpsAgent;
+  private isConnecting: boolean = false;
+  private lastConnectionAttempt: number = 0;
+  private connectionLock: Promise<void> | null = null;
 
   // Intervals
   private keepAliveInterval: NodeJS.Timeout | undefined = undefined;
@@ -99,6 +102,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   public readonly phoneNumber: string;
   public connected: boolean = false;
   private recovering: boolean = false;
+
+  public get connecting(): boolean {
+    return this.isConnecting;
+  }
 
   private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
   private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
@@ -749,6 +756,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       if (connection === 'open') {
         this.log('info', 'Connected successfully');
         this.connected = true;
+        this.isConnecting = false;
 
         // Start keep-alive and health check
         this.startKeepAlive();
@@ -782,6 +790,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       if (connection === 'close') {
         this.connected = false;
+        this.isConnecting = false;
         const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const reason = (lastDisconnect?.error as Boom)?.message || 'Unknown';
 
@@ -798,6 +807,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('error', '🚫 Unauthorized (401) - Authentication failed, this usually means invalid credentials');
         } else if (code === 403) {
           this.log('error', '🚫 Forbidden (403) - Access denied, this usually means insufficient permissions');
+        } else if (code === 440) {
+          this.log('warn', '⚠️ Stream Error (440) - Conflict detected, this may be due to multiple sessions or rapid reconnections');
         }
 
         // Stop intervals
@@ -1063,10 +1074,39 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
-
       return;
     }
 
+    // Special handling for 440 errors (Stream Errored - conflict)
+    if (reason.includes('440: Stream Errored (conflict)')) {
+      this.log('warn', '🔄 440 conflict detected, implementing smart reconnection strategy...');
+
+      // For 440 errors, use exponential backoff with longer delays
+      const baseDelay = 30000; // 30 seconds base delay
+      const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempts - 1), 300000); // Max 5 minutes
+      const jitter = Math.random() * 10000; // Add up to 10 seconds of jitter
+      const delay = exponentialDelay + jitter;
+
+      this.log('info', `⏳ Waiting ${Math.round(delay / 1000)}s before reconnection attempt ${attempts}/${maxRetry}`);
+
+      if (attempts < maxRetry && this.appState?.isActive === true) {
+        setTimeout(async () => {
+          try {
+            // Add a small random delay to prevent multiple instances from reconnecting simultaneously
+            const randomDelay = Math.random() * 5000;
+            await new Promise((resolve) => setTimeout(resolve, randomDelay));
+
+            await this.connect();
+          } catch (_error) {
+            this.log('warn', '🔄 Instance reconnect attempt failed', `${attempts + 1}/${maxRetry}`);
+            await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
+          }
+        }, delay);
+        return;
+      }
+    }
+
+    // Standard reconnection logic for other errors
     if (attempts < maxRetry && this.appState?.isActive === true) {
       const delay = 15000; // 15 seconds
       setTimeout(async () => {
@@ -1074,13 +1114,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.connect();
         } catch (_error) {
           this.log('warn', '🔄 Instance reconnect attempt', `${attempts + 1}/${maxRetry}`);
-
           await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
         }
       }, delay);
     } else {
       this.log('error', '🚫 Max reconnection attempts reached', `${attempts}/${maxRetry}`, reason);
-
       this.onDisconnect(reason);
     }
   }
@@ -1639,7 +1677,41 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   public async connect(disconnectBeforeFlag: boolean = false): Promise<void> {
+    // Prevent concurrent connection attempts
+    if (this.connectionLock) {
+      this.log('debug', 'Connection already in progress, waiting...');
+      await this.connectionLock;
+      return;
+    }
+
+    // Check if we're already connected
+    if (this.connected && !disconnectBeforeFlag) {
+      this.log('debug', 'Already connected, skipping connection attempt');
+      return;
+    }
+
+    // Rate limiting: prevent too frequent connection attempts
+    const now = Date.now();
+    const timeSinceLastAttempt = now - this.lastConnectionAttempt;
+    if (timeSinceLastAttempt < 5000) {
+      // 5 second minimum between attempts
+      this.log('warn', 'Connection attempt too soon, waiting...');
+      await new Promise((resolve) => setTimeout(resolve, 5000 - timeSinceLastAttempt));
+    }
+
+    this.connectionLock = this.performConnect(disconnectBeforeFlag);
+    this.lastConnectionAttempt = now;
+
+    try {
+      await this.connectionLock;
+    } finally {
+      this.connectionLock = null;
+    }
+  }
+
+  private async performConnect(disconnectBeforeFlag: boolean = false): Promise<void> {
     this.appState ??= await this.getAppAuth();
+    this.isConnecting = true;
 
     if (this.connected && disconnectBeforeFlag) await this.disconnect();
     await this.update({ isActive: true } as Partial<WAAppAuth<T>>);
