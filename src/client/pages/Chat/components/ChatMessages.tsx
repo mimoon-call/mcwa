@@ -57,7 +57,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
     if (error) return <div className="flex items-center justify-center h-32 text-red-500">{t('GENERAL.ERROR')}</div>;
     if (messages.length === 0) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.EMPTY')}</div>;
 
-    const items = messages.map((message, index) => {
+    const items = [...messages].reverse().map((message, index) => {
       const isFromUser = isMessageFromUser(message);
       const messageKey = message.messageId || message.tempId || `${message.createdAt}-${index}`;
       const isLastMessage = index === messages.length - 1;

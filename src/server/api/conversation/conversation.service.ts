@@ -39,7 +39,7 @@ export const conversationService = {
           ],
         },
       },
-      { $sort: { createdAt: 1 } },
+      { $sort: { createdAt: -1 } },
       {
         $project: {
           _id: 0,
@@ -52,9 +52,7 @@ export const conversationService = {
           playedAt: 1,
           status: 1,
           messageId: 1,
-          tempId: {
-            $cond: [{ $eq: ['$status', 'ERROR'] }, '$messageId', null],
-          },
+          tempId: { $cond: [{ $eq: ['$status', 'ERROR'] }, '$messageId', null] },
         },
       },
     ]);

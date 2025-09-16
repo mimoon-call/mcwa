@@ -130,9 +130,9 @@ const searchAllConversations = createAsyncThunk(
   async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.searchPagination || initialState.searchPagination;
+      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_SEARCH_PAGINATION] || initialState[CHAT_SEARCH_PAGINATION];
       const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
-      const lastSearchParams = state[StoreEnum.globalChat]?.globalLastSearchParams;
+      const lastSearchParams = state[StoreEnum.globalChat]?.[GLOBAL_LAST_SEARCH_PARAMS];
       const data = {
         page: { ...currentPagination, ...(page || {}) },
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
@@ -158,7 +158,7 @@ const searchConversations = createAsyncThunk(
   async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.chat]?.searchPagination || initialState.searchPagination;
+      const currentPagination = state[StoreEnum.chat]?.[CHAT_SEARCH_PAGINATION] || initialState[CHAT_SEARCH_PAGINATION];
       const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
       const data = {
         page: { ...currentPagination, ...(page || {}) },
@@ -185,7 +185,7 @@ const getGlobalConversation = createAsyncThunk(
   async ({ phoneNumber, withPhoneNumber, page }: GetConversationReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.messagesPagination || initialState.messagesPagination;
+      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const data = { page: { ...currentPagination, ...(page || {}) } };
 
       return await Http.post<GetConversationRes, typeof data>(`/conversation/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
@@ -201,7 +201,7 @@ const getInstanceConversation = createAsyncThunk(
   async ({ phoneNumber, withPhoneNumber, page }: GetConversationReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.chat]?.messagesPagination || initialState.messagesPagination;
+      const currentPagination = state[StoreEnum.chat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const data = { page: { ...currentPagination, ...(page || {}) } };
 
       return await Http.post<GetConversationRes, typeof data>(`/conversation/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
@@ -217,7 +217,7 @@ const loadMoreGlobalMessages = createAsyncThunk(
   async ({ phoneNumber, withPhoneNumber }: { phoneNumber: string; withPhoneNumber: string }, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.globalChat]?.messagesPagination || initialState.messagesPagination;
+      const currentPagination = state[StoreEnum.globalChat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
       const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
 
@@ -234,7 +234,7 @@ const loadMoreInstanceMessages = createAsyncThunk(
   async ({ phoneNumber, withPhoneNumber }: { phoneNumber: string; withPhoneNumber: string }, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentPagination = state[StoreEnum.chat]?.messagesPagination || initialState.messagesPagination;
+      const currentPagination = state[StoreEnum.chat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
       const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
 
@@ -251,8 +251,8 @@ const loadMoreGlobalConversations = createAsyncThunk(
   async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentSearchValue = state[StoreEnum.globalChat]?.searchValue || '';
-      const lastSearchParams = state[StoreEnum.globalChat]?.globalLastSearchParams;
+      const currentSearchValue = state[StoreEnum.globalChat]?.[CHAT_SEARCH_VALUE] || '';
+      const lastSearchParams = state[StoreEnum.globalChat]?.[GLOBAL_LAST_SEARCH_PARAMS];
       const data = {
         page,
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
@@ -274,7 +274,7 @@ const loadMoreInstanceConversations = createAsyncThunk(
   async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
+      const currentSearchValue = state[StoreEnum.chat]?.[CHAT_SEARCH_VALUE] || '';
       const data = {
         page,
         searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
@@ -343,9 +343,7 @@ const chatSliceReducer = createSlice({
     },
     removeGlobalMessage: (state, action) => {
       const { messageId } = action.payload;
-      if (state.messagesData) {
-        state.messagesData = state.messagesData.filter((msg) => msg.messageId !== messageId);
-      }
+      state[CHAT_MESSAGES_DATA] = state[CHAT_MESSAGES_DATA]?.filter((msg) => msg.messageId !== messageId) || null;
     },
 
     // Instance chat actions
@@ -371,17 +369,17 @@ const chatSliceReducer = createSlice({
     builder
       // Global chat reducers
       .addCase(searchAllConversations.pending, (state) => {
-        state.searchLoading = true;
-        state.error = null;
+        state[SEARCH_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(searchAllConversations.fulfilled, (state, action) => {
-        const currentSearchValue = state.searchValue || '';
+        const currentSearchValue = state[CHAT_SEARCH_VALUE] || '';
         const searchValue = action.meta.arg.searchValue || currentSearchValue;
-        const shouldResetPagination = !state.globalLastSearchParams || state.globalLastSearchParams.searchValue !== searchValue;
+        const shouldResetPagination = !state[GLOBAL_LAST_SEARCH_PARAMS] || state[GLOBAL_LAST_SEARCH_PARAMS][CHAT_SEARCH_VALUE] !== searchValue;
 
         if (shouldResetPagination) {
-          state.searchData = deduplicateGlobalConversations(action.payload.data);
-          state.searchPagination = {
+          state[CHAT_SEARCH_DATA] = deduplicateGlobalConversations(action.payload.data);
+          state[CHAT_SEARCH_PAGINATION] = {
             totalItems: action.payload.totalItems,
             hasMore: action.payload.hasMore,
             pageIndex: action.payload.pageIndex,
@@ -390,29 +388,29 @@ const chatSliceReducer = createSlice({
             pageSort: action.payload.pageSort,
           };
         } else {
-          state.searchData = deduplicateGlobalConversations(action.payload.data);
+          state[CHAT_SEARCH_DATA] = deduplicateGlobalConversations(action.payload.data);
         }
 
-        state.searchValue = searchValue;
-        state.globalLastSearchParams = { 
-          searchValue, 
+        state[CHAT_SEARCH_VALUE] = searchValue;
+        state[GLOBAL_LAST_SEARCH_PARAMS] = {
+          searchValue,
           intents: action.meta.arg.intents,
           departments: action.meta.arg.departments,
-          interested: action.meta.arg.interested ?? undefined
+          interested: action.meta.arg.interested ?? undefined,
         };
-        state.searchLoading = false;
+        state[SEARCH_LOADING] = false;
       })
       .addCase(searchAllConversations.rejected, (state, action) => {
-        state.searchLoading = false;
-        state.error = action.payload as ErrorResponse;
+        state[SEARCH_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(getGlobalConversation.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state[CHAT_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(getGlobalConversation.fulfilled, (state, action) => {
-        state.messagesData = deduplicateMessages(action.payload.data);
-        state.messagesPagination = {
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(action.payload.data);
+        state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -420,21 +418,21 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.loading = false;
+        state[CHAT_LOADING] = false;
       })
       .addCase(getGlobalConversation.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as ErrorResponse;
+        state[CHAT_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(loadMoreGlobalMessages.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state[CHAT_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(loadMoreGlobalMessages.fulfilled, (state, action) => {
-        const existingMessages = state.messagesData || [];
+        const existingMessages = state[CHAT_MESSAGES_DATA] || [];
         const combinedMessages = [...action.payload.data, ...existingMessages];
-        state.messagesData = deduplicateMessages(combinedMessages);
-        state.messagesPagination = {
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(combinedMessages);
+        state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -442,21 +440,21 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.loading = false;
+        state[CHAT_LOADING] = false;
       })
       .addCase(loadMoreGlobalMessages.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as ErrorResponse;
+        state[CHAT_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(loadMoreGlobalConversations.pending, (state) => {
-        state.searchLoading = true;
-        state.error = null;
+        state[SEARCH_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(loadMoreGlobalConversations.fulfilled, (state, action) => {
-        const existingConversations = (state.searchData as GlobalChatContact[]) || [];
+        const existingConversations = (state[CHAT_SEARCH_DATA] as GlobalChatContact[]) || [];
         const combinedConversations = [...existingConversations, ...action.payload.data];
-        state.searchData = deduplicateGlobalConversations(combinedConversations);
-        state.searchPagination = {
+        state[CHAT_SEARCH_DATA] = deduplicateGlobalConversations(combinedConversations);
+        state[CHAT_SEARCH_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -464,29 +462,29 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.searchLoading = false;
+        state[SEARCH_LOADING] = false;
       })
       .addCase(loadMoreGlobalConversations.rejected, (state, action) => {
-        state.searchLoading = false;
-        state.error = action.payload as ErrorResponse;
+        state[SEARCH_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
 
       // Instance chat reducers
       .addCase(searchConversations.pending, (state) => {
-        state.searchLoading = true;
-        state.error = null;
+        state[SEARCH_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(searchConversations.fulfilled, (state, action) => {
         const { phoneNumber } = action.payload as SearchConversationsRes & { isNewSearch: boolean; phoneNumber: string };
-        const currentSearchValue = state.searchValue || '';
+        const currentSearchValue = state[CHAT_SEARCH_VALUE] || '';
         const searchValue = action.meta.arg.searchValue || currentSearchValue;
-        const isNewPhoneNumber = !state.instanceLastSearchParams || state.instanceLastSearchParams.phoneNumber !== phoneNumber;
-        const isNewSearchValue = !state.instanceLastSearchParams || state.instanceLastSearchParams.searchValue !== searchValue;
+        const isNewPhoneNumber = !state[INSTANCE_LAST_SEARCH_PARAMS] || state[INSTANCE_LAST_SEARCH_PARAMS].phoneNumber !== phoneNumber;
+        const isNewSearchValue = !state[INSTANCE_LAST_SEARCH_PARAMS] || state[INSTANCE_LAST_SEARCH_PARAMS][CHAT_SEARCH_VALUE] !== searchValue;
         const shouldResetPagination = isNewPhoneNumber || isNewSearchValue;
 
         if (shouldResetPagination) {
-          state.searchData = deduplicateInstanceConversations(action.payload.data);
-          state.searchPagination = {
+          state[CHAT_SEARCH_DATA] = deduplicateInstanceConversations(action.payload.data);
+          state[CHAT_SEARCH_PAGINATION] = {
             totalItems: action.payload.totalItems,
             hasMore: action.payload.hasMore,
             pageIndex: action.payload.pageIndex,
@@ -495,34 +493,31 @@ const chatSliceReducer = createSlice({
             pageSort: action.payload.pageSort,
           };
         } else {
-          state.searchData = deduplicateInstanceConversations(action.payload.data);
+          state[CHAT_SEARCH_DATA] = deduplicateInstanceConversations(action.payload.data);
         }
 
-        state.instanceSearchMetadata = {
+        state[INSTANCE_SEARCH_METADATA] = {
           isConnected: action.payload.isConnected,
           statusCode: action.payload.statusCode,
           errorMessage: action.payload.errorMessage,
           profilePictureUrl: action.payload.profilePictureUrl,
         };
 
-        state.searchValue = searchValue;
-        state.instanceLastSearchParams = { 
-          phoneNumber, 
-          searchValue
-        };
-        state.searchLoading = false;
+        state[CHAT_SEARCH_VALUE] = searchValue;
+        state[INSTANCE_LAST_SEARCH_PARAMS] = { phoneNumber, searchValue };
+        state[SEARCH_LOADING] = false;
       })
       .addCase(searchConversations.rejected, (state, action) => {
-        state.searchLoading = false;
-        state.error = action.payload as ErrorResponse;
+        state[SEARCH_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(getInstanceConversation.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state[CHAT_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(getInstanceConversation.fulfilled, (state, action) => {
-        state.messagesData = deduplicateMessages(action.payload.data);
-        state.messagesPagination = {
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(action.payload.data);
+        state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -530,21 +525,21 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.loading = false;
+        state[CHAT_LOADING] = false;
       })
       .addCase(getInstanceConversation.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as ErrorResponse;
+        state[CHAT_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(loadMoreInstanceMessages.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state[CHAT_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(loadMoreInstanceMessages.fulfilled, (state, action) => {
-        const existingMessages = state.messagesData || [];
+        const existingMessages = state[CHAT_MESSAGES_DATA] || [];
         const combinedMessages = [...action.payload.data, ...existingMessages];
-        state.messagesData = deduplicateMessages(combinedMessages);
-        state.messagesPagination = {
+        state[CHAT_MESSAGES_DATA] = deduplicateMessages(combinedMessages);
+        state[CHAT_MESSAGES_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -552,21 +547,21 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.loading = false;
+        state[CHAT_LOADING] = false;
       })
       .addCase(loadMoreInstanceMessages.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as ErrorResponse;
+        state[CHAT_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       })
       .addCase(loadMoreInstanceConversations.pending, (state) => {
-        state.searchLoading = true;
-        state.error = null;
+        state[SEARCH_LOADING] = true;
+        state[CHAT_ERROR] = null;
       })
       .addCase(loadMoreInstanceConversations.fulfilled, (state, action) => {
-        const existingConversations = state.searchData || [];
+        const existingConversations = state[CHAT_SEARCH_DATA] || [];
         const combinedConversations = [...existingConversations, ...action.payload.data];
-        state.searchData = deduplicateInstanceConversations(combinedConversations);
-        state.searchPagination = {
+        state[CHAT_SEARCH_DATA] = deduplicateInstanceConversations(combinedConversations);
+        state[CHAT_SEARCH_PAGINATION] = {
           totalItems: action.payload.totalItems,
           hasMore: action.payload.hasMore,
           pageIndex: action.payload.pageIndex,
@@ -574,11 +569,11 @@ const chatSliceReducer = createSlice({
           totalPages: action.payload.totalPages,
           pageSort: action.payload.pageSort,
         };
-        state.searchLoading = false;
+        state[SEARCH_LOADING] = false;
       })
       .addCase(loadMoreInstanceConversations.rejected, (state, action) => {
-        state.searchLoading = false;
-        state.error = action.payload as ErrorResponse;
+        state[SEARCH_LOADING] = false;
+        state[CHAT_ERROR] = action.payload as ErrorResponse;
       });
   },
 });
