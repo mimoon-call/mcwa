@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState, ReactNode, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import { TextField } from '@components/Fields';

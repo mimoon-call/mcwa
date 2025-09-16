@@ -9,7 +9,7 @@ import getClientSocket from '@helpers/get-client-socket.helper';
 import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
-import { MessageQueueActiveEvent } from '@server/api/message-queue/message-queue.types';
+import type { MessageQueueActiveEvent } from '@client/pages/Queue/store/message-queue.types';
 
 const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
   const { t } = useTranslation();
@@ -22,7 +22,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     const socket = getClientSocket();
 
     const update = (data: MessageQueueActiveEvent) => {
-      dispatch(updateMessageCount({ messageCount: total, messagePass: current, ...data }));
+      dispatch(updateMessageCount({ ...data, messageCount: total, messagePass: current }));
     };
 
     socket?.on(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);

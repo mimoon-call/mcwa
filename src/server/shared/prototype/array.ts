@@ -19,3 +19,5 @@ if (!Array.prototype.shuffle) {
     enumerable: false,
   });
 }
+
+export {};

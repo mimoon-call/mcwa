@@ -4,7 +4,7 @@ import TextField from '../../../shared/components/Fields/TextField/TextField';
 import { RegexPattern } from '@client-constants';
 import { SelectField } from '@components/Fields';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
+import type { SearchInstanceReq } from '@client/pages/Instance/store/instance.types';
 import { useTranslation } from 'react-i18next';
 import { statusCodeMap } from '@client/pages/Instance/constants/status-code.map';
 import { useDispatch, useSelector } from 'react-redux';

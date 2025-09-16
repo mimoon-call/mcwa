@@ -35,5 +35,5 @@
     }
   },
   "rootDir": "src",
-  "include": ["src/**/*"]
+  "include": ["src/server/**/*", "src/client/**/*.ts", "src/client/**/*.tsx", "src/client/**/*.json", "src/dir.ts"]
 }

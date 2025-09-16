@@ -15,7 +15,6 @@ export const deduplicateMessages = (messages: ChatMessage[]): ChatMessage[] => {
     } else {
       // For messages without messageId, we need to deduplicate by other criteria
       // Use a combination of fromNumber, toNumber, text, and createdAt as a unique key
-      const uniqueKey = `${message.fromNumber}-${message.toNumber}-${message.text}-${message.createdAt}`;
       const existingIndex = messagesWithoutId.findIndex(msg => 
         msg.fromNumber === message.fromNumber &&
         msg.toNumber === message.toNumber &&

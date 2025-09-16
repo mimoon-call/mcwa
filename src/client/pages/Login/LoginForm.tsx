@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
 import authSlice from '@client/store/auth.slice';
 import { AUTH_STATE_ERROR, AUTH_STATE_LOADING, IS_AUTHENTICATED } from '@client/store/auth.constants';
-import { LOGIN } from '@server/api/auth/auth.map';
+import { LOGIN } from '@client/store/auth.constants';
 import { useTranslation } from 'react-i18next';
 import Button from '@components/Button/Button';
 import TextField from '@components/Fields/TextField/TextField';

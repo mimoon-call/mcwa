@@ -41,5 +41,6 @@
     "noFallthroughCasesInSwitch": true,
     "typeRoots": ["src/client/types", "./node_modules/@types"]
   },
-  "include": ["src/client/**/*.ts", "src/client/**/*.d.ts", "src/client/**/*.{tsx,jsx}"]
+  "include": ["src/client/**/*.ts", "src/client/**/*.d.ts", "src/client/**/*.tsx", "src/client/**/*.jsx"],
+  "files": ["src/client/types/global.d.ts"]
 }

@@ -3,12 +3,13 @@ import React, { type ReactNode } from 'react';
 import { IS_AUTHENTICATED } from '@client/store/auth.constants';
 import { useDispatch, useSelector } from 'react-redux';
 import { StoreEnum } from '@client/store/store.enum';
-import { LOGOUT } from '@server/api/auth/auth.map';
+import { LOGOUT } from '@client/store/auth.constants';
 import authSlice from '@client/store/auth.slice';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import Button from '@components/Button/Button';
 import LanguageSwitcher from '@components/LanguageSwitcher/LanguageSwitcher';
+// @ts-ignore
 import mimoonCallLogo from '@client/assets/mimoon-call-logo.png';
 
 interface NavWrapperProps {

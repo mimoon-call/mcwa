@@ -6,7 +6,7 @@ import LoginForm from '@client/pages/Login/LoginForm';
 import { useDispatch, useSelector } from 'react-redux';
 import authSlice from '@client/store/auth.slice';
 import globalSlice from '@client/store/global.slice';
-import { REFRESH_TOKEN } from '@server/api/auth/auth.map';
+import { REFRESH_TOKEN } from '@client/store/auth.constants';
 import { IS_AUTHENTICATED, SET_AUTH_STATE } from '@client/store/auth.constants';
 import { StoreEnum } from '@client/store/store.enum';
 import '@client/shared/prototype';
