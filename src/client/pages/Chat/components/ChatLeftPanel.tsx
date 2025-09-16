@@ -47,12 +47,20 @@ const Filter = <T = string | boolean | number,>(props: {
   return options.map((option) => {
     const title = typeof option.title === 'string' ? t(option.title) : option.title;
     const isSelected = isMultiSelect ? Array.isArray(selectedOptions) && selectedOptions.includes(option.value) : selectedOptions === option.value;
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const onClick = () => {
+      handleToggle(option.value);
+
+      setTimeout(() => buttonRef.current?.blur(), 50);
+    };
 
     return (
       <button
+        ref={buttonRef}
         key={String(option.value)}
         type="button"
-        onClick={() => handleToggle(option.value)}
+        onClick={onClick}
         className={cn(
           'px-3 py-0.5 rounded-full text-sm font-medium transition-colors duration-200',
           'border border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1',
