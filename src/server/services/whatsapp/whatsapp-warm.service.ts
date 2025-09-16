@@ -232,6 +232,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     } else if (warmUpDay <= 14) {
       dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
     } else {
+      instance.update({ hasWarmedUp: true });
       dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
     }
 
