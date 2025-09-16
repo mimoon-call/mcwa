@@ -168,16 +168,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.log('debug', `[${conversationKey}] Marked pair as failed - will avoid for 24 hours`);
   }
 
-  private randomDelayBetween(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  private getRealisticDelay(min: number, max: number): number {
-    if (Math.random() < 0.8) return this.randomDelayBetween(min, max);
-
-    return this.randomDelayBetween(min * 3, max * 3);
-  }
-
   private async getLastMessages(fromNumber: string, toNumber: string, limit: number = 10): Promise<WAConversation[]> {
     try {
       return await WhatsAppMessage.aggregate<WAConversation>([

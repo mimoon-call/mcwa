@@ -103,8 +103,13 @@ export class WhatsappService<T extends object = Record<never, never>> {
       const internalPhoneNumber = (await this.listAppAuth()).map(({ phoneNumber }) => phoneNumber);
       const internalFlag = internalPhoneNumber.includes(message.fromNumber);
 
-      const fromInstance = this.instances.get(message.fromNumber);
-      fromInstance?.read(raw.key);
+      setTimeout(
+        () => {
+          const fromInstance = this.instances.get(message.fromNumber);
+          fromInstance?.read(raw.key);
+        },
+        this.getRealisticDelay(500, 2000)
+      );
 
       return Promise.allSettled([
         config.onIncomingMessage?.({ ...message, internalFlag }, raw, ...arg),
@@ -120,6 +125,16 @@ export class WhatsappService<T extends object = Record<never, never>> {
     this.suppressBaileysNoise();
     this.setupGracefulShutdown();
     this.load();
+  }
+
+  protected randomDelayBetween(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  protected getRealisticDelay(min: number, max: number): number {
+    if (Math.random() < 0.8) return this.randomDelayBetween(min, max);
+
+    return this.randomDelayBetween(min * 3, max * 3);
   }
 
   protected log(type: 'info' | 'warn' | 'error' | 'debug', name: string, ...args: any[]) {
