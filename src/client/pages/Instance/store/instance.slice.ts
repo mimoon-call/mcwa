@@ -42,6 +42,8 @@ const initialState: InstanceState = {
   [INSTANCE_ERROR]: null,
 };
 
+const BASE_URL = `/instance`;
+
 // Async thunk for search instance
 const searchInstance = createAsyncThunk(
   `${StoreEnum.instance}/${SEARCH_INSTANCE}`,
@@ -54,11 +56,7 @@ const searchInstance = createAsyncThunk(
 
       return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data, { allowOnceAtTime: true });
     } catch (error: unknown) {
-      // Handle canceled requests - don't store them as errors
-      if (error instanceof Error && error.name === 'CanceledError') {
-        // Return a rejected promise without storing in state
-        return Promise.reject(error);
-      }
+      if (error instanceof Error && error.name === 'CanceledError') return Promise.reject(error);
 
       // For other errors, create a serializable error object
       const serializableError =
@@ -76,28 +74,25 @@ const instanceQr = async (phoneNumber: string) => {
 };
 
 const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
-  await Http.delete<void>(`${StoreEnum.instance}/${DELETE_INSTANCE}/${phoneNumber}`);
+  await Http.delete<void>(`${BASE_URL}/${DELETE_INSTANCE}/${phoneNumber}`);
   await dispatch(searchInstance({}));
 });
 
-const toggleInstanceActivate = createAsyncThunk(
-  `${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}`,
-  async (phoneNumber: string, { dispatch, getState }) => {
-    const state = getState() as RootState;
-    const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
-    const isActive = !!currentInstance?.isActive;
-    await Http.post<void>(`${StoreEnum.instance}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
+const toggleInstanceActivate = createAsyncThunk(`${BASE_URL}/${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string, { dispatch, getState }) => {
+  const state = getState() as RootState;
+  const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
+  const isActive = !!currentInstance?.isActive;
+  await Http.post<void>(`${BASE_URL}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
 
-    dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
-  }
-);
+  dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
+});
 
-const refreshInstance = createAsyncThunk(`${StoreEnum.instance}/${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
-  await Http.post<void>(`${StoreEnum.instance}/${INSTANCE_REFRESH}/${phoneNumber}`);
+const refreshInstance = createAsyncThunk(`${BASE_URL}/${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
+  await Http.post<void>(`${BASE_URL}/${INSTANCE_REFRESH}/${phoneNumber}`);
   await dispatch(searchInstance({}));
 });
 
-const resetInstance = createAsyncThunk(`${StoreEnum.instance}/reset`, async (_, { dispatch }) => {
+const resetInstance = createAsyncThunk(`${BASE_URL}/reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
   dispatch(instanceSlice.actions.reset());
   await dispatch(searchInstance({}));
@@ -130,7 +125,7 @@ const instanceSlice = createSlice({
 
       state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
       state[INSTANCE_SEARCH_PAGINATION] = { ...state[INSTANCE_SEARCH_PAGINATION], pageIndex: 0 };
-      
+
       // Auto-save filter to localStorage
       saveInstanceFilter(state[INSTANCE_SEARCH_FILTER]);
     },

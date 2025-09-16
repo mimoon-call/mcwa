@@ -28,6 +28,8 @@ const initialState: AuthState = {
   [AUTH_STATE_ERROR]: null,
 };
 
+const BASE_URL = '/auth';
+
 const connectSocket = () => {
   const socket = getClientSocket();
 
@@ -47,7 +49,7 @@ const disconnectSocket = () => {
 // Async thunk for logout
 const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejectWithValue }) => {
   try {
-    await Http.post(`/${StoreEnum.auth}/${LOGOUT}`, {});
+    await Http.post(`${BASE_URL}/${LOGOUT}`, {});
     disconnectSocket();
 
     return true;
@@ -59,7 +61,7 @@ const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejec
 // Async thunk for login
 const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue }) => {
   try {
-    await Http.post(`/${StoreEnum.auth}/${LOGIN}`, payload);
+    await Http.post(`${BASE_URL}/${LOGIN}`, payload);
     connectSocket();
 
     return true;
@@ -72,7 +74,7 @@ const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: Log
 
 // Async thunk for checking authentication status (returnCode 1 means not authenticated)
 const refreshToken = createAsyncThunk(`${StoreEnum.auth}/${REFRESH_TOKEN}`, async (_, { dispatch }) => {
-  const res = await Http.get<BaseResponse>(`/${StoreEnum.auth}/${REFRESH_TOKEN}`);
+  const res = await Http.get<BaseResponse>(`${BASE_URL}/${REFRESH_TOKEN}`);
 
   if (res?.returnCode === 1) {
     disconnectSocket();
