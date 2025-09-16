@@ -3,7 +3,6 @@ import type { LoginReq } from '@client/store/auth.type';
 import type { BaseResponse, ErrorResponse } from '@services/http/types';
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import getClientSocket from '@helpers/get-client-socket.helper';
-import { Http } from '@services/http';
 import {
   AUTH_STATE_ERROR,
   AUTH_STATE_LOADING,
@@ -15,6 +14,7 @@ import {
   SET_AUTHENTICATED,
 } from '@client/store/auth.constants';
 import { StoreEnum } from '@client/store/store.enum';
+import { ApiService } from '@services/http/api.service';
 
 export interface AuthState {
   [IS_AUTHENTICATED]: boolean;
@@ -28,7 +28,7 @@ const initialState: AuthState = {
   [AUTH_STATE_ERROR]: null,
 };
 
-const BASE_URL = '/auth';
+const api = new ApiService('/auth');
 
 const connectSocket = () => {
   const socket = getClientSocket();
@@ -49,7 +49,7 @@ const disconnectSocket = () => {
 // Async thunk for logout
 const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejectWithValue }) => {
   try {
-    await Http.post(`${BASE_URL}/${LOGOUT}`, {});
+    await api.post(LOGOUT, {});
     disconnectSocket();
 
     return true;
@@ -61,7 +61,7 @@ const logout = createAsyncThunk(`${StoreEnum.auth}/${LOGOUT}`, async (_, { rejec
 // Async thunk for login
 const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: LoginReq, { rejectWithValue }) => {
   try {
-    await Http.post(`${BASE_URL}/${LOGIN}`, payload);
+    await api.post(LOGIN, payload);
     connectSocket();
 
     return true;
@@ -74,7 +74,7 @@ const login = createAsyncThunk(`${StoreEnum.auth}/${LOGIN}`, async (payload: Log
 
 // Async thunk for checking authentication status (returnCode 1 means not authenticated)
 const refreshToken = createAsyncThunk(`${StoreEnum.auth}/${REFRESH_TOKEN}`, async (_, { dispatch }) => {
-  const res = await Http.get<BaseResponse>(`${BASE_URL}/${REFRESH_TOKEN}`);
+  const res = await api.get<BaseResponse>(REFRESH_TOKEN);
 
   if (res?.returnCode === 1) {
     disconnectSocket();

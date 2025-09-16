@@ -1,6 +1,5 @@
 // src/client/pages/Chat/store/chat.slice.ts
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { Http } from '@services/http';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';
 import {
@@ -70,6 +69,7 @@ import {
   handleOptimisticMessageStatusUpdate,
 } from './chat-message-handler';
 import { MAX_CHAT_CONVERSATIONS, MAX_CHAT_MESSAGES } from '@client/pages/Chat/constants/chat.constants';
+import { ApiService } from '@services/http/api.service';
 
 // Chat State Interface - combines both global and instance functionality
 export interface ChatState {
@@ -124,7 +124,7 @@ const initialState: ChatState = {
   [CHAT_RETRY_COOLDOWNS]: {},
 };
 
-const BASE_URL = '/conversation';
+const api = new ApiService('/conversation');
 
 // Async thunk for search all conversations (Global Chat)
 const searchAllConversations = createAsyncThunk(
@@ -142,12 +142,10 @@ const searchAllConversations = createAsyncThunk(
         departments: departments !== undefined ? departments : lastSearchParams?.departments,
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
-      const result = await Http.post<SearchAllConversationsRes, typeof data>(`${BASE_URL}/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
 
-      return {
-        ...result,
-        isNewSearch: searchValue !== currentSearchValue,
-      };
+      const result = await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ALL_CONVERSATIONS, data);
+
+      return { ...result, isNewSearch: searchValue !== currentSearchValue };
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -168,7 +166,7 @@ const searchConversations = createAsyncThunk(
         externalFlag,
       };
 
-      const result = await Http.post<SearchConversationsRes, typeof data>(`${BASE_URL}/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
+      const result = await api.post<SearchConversationsRes, typeof data>(`${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
 
       return {
         ...result,
@@ -190,7 +188,7 @@ const getGlobalConversation = createAsyncThunk(
       const currentPagination = state[StoreEnum.globalChat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const data = { page: { ...currentPagination, ...(page || {}) } };
 
-      return await Http.post<GetConversationRes, typeof data>(`${BASE_URL}/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+      return await api.post<GetConversationRes, typeof data>(`${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -206,7 +204,7 @@ const getInstanceConversation = createAsyncThunk(
       const currentPagination = state[StoreEnum.chat]?.[CHAT_MESSAGES_PAGINATION] || initialState[CHAT_MESSAGES_PAGINATION];
       const data = { page: { ...currentPagination, ...(page || {}) } };
 
-      return await Http.post<GetConversationRes, typeof data>(`${BASE_URL}/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+      return await api.post<GetConversationRes, typeof data>(`${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -223,7 +221,7 @@ const loadMoreGlobalMessages = createAsyncThunk(
       const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
       const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
 
-      return await Http.post<GetConversationRes, typeof data>(`${BASE_URL}/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+      return await api.post<GetConversationRes, typeof data>(`${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -240,7 +238,7 @@ const loadMoreInstanceMessages = createAsyncThunk(
       const nextPageIndex = (currentPagination.pageIndex || 0) + 1;
       const data = { page: { ...currentPagination, pageIndex: nextPageIndex } };
 
-      return await Http.post<GetConversationRes, typeof data>(`${BASE_URL}/${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
+      return await api.post<GetConversationRes, typeof data>(`${CHAT_GET_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -263,7 +261,7 @@ const loadMoreGlobalConversations = createAsyncThunk(
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
 
-      return await Http.post<SearchAllConversationsRes, typeof data>(`${BASE_URL}/${CHAT_SEARCH_ALL_CONVERSATIONS}`, data);
+      return await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ALL_CONVERSATIONS, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -283,7 +281,7 @@ const loadMoreInstanceConversations = createAsyncThunk(
         externalFlag,
       };
 
-      return await Http.post<SearchConversationsRes, typeof data>(`${BASE_URL}/${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
+      return await api.post<SearchConversationsRes, typeof data>(`${CHAT_SEARCH_CONVERSATIONS}/${phoneNumber}`, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -292,12 +290,12 @@ const loadMoreInstanceConversations = createAsyncThunk(
 
 // Async function for send message
 const sendMessage = async ({ fromNumber, toNumber, ...data }: SendMessageReq): Promise<void> => {
-  return await Http.post<void, Omit<SendMessageReq, 'fromNumber' | 'toNumber'>>(`${BASE_URL}/${CHAT_SEND_MESSAGE}/${fromNumber}/${toNumber}`, data);
+  return await api.post<void, Omit<SendMessageReq, 'fromNumber' | 'toNumber'>>(`${CHAT_SEND_MESSAGE}/${fromNumber}/${toNumber}`, data);
 };
 
 // Async function for delete conversation
 const deleteConversation = async ({ fromNumber, toNumber }: DeleteConversationReq): Promise<DeleteConversationRes> => {
-  return await Http.delete<DeleteConversationRes>(`${BASE_URL}/${CHAT_DELETE_CONVERSATION}/${fromNumber}/${toNumber}`);
+  return await api.delete<DeleteConversationRes>(`${CHAT_DELETE_CONVERSATION}/${fromNumber}/${toNumber}`);
 };
 
 // Chat Slice

@@ -3,7 +3,6 @@
 // Filter changes are automatically saved to localStorage
 // On mount, saved filter data is loaded from localStorage into the initial state
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { Http } from '@services/http';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';
 import {
@@ -25,6 +24,7 @@ import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@clie
 import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
 import { loadInstanceFilter, saveInstanceFilter, clearInstanceStorage } from './instance.storage';
+import { ApiService } from '@services/http/api.service';
 
 export interface InstanceState {
   [INSTANCE_SEARCH_DATA]: SearchInstanceRes['data'] | null;
@@ -42,7 +42,7 @@ const initialState: InstanceState = {
   [INSTANCE_ERROR]: null,
 };
 
-const BASE_URL = `/instance`;
+const api = new ApiService('/instance');
 
 // Async thunk for search instance
 const searchInstance = createAsyncThunk(
@@ -54,7 +54,7 @@ const searchInstance = createAsyncThunk(
       const currentPagination = state[StoreEnum.instance]?.[INSTANCE_SEARCH_PAGINATION] || initialState[INSTANCE_SEARCH_PAGINATION];
       const data = { ...currentFilter, ...payload, page: { ...currentPagination, ...(page || {}) } };
 
-      return await Http.post<SearchInstanceRes, SearchInstanceReq>(`/${StoreEnum.instance}/${SEARCH_INSTANCE}`, data, { allowOnceAtTime: true });
+      return await api.post<SearchInstanceRes, SearchInstanceReq>(`${SEARCH_INSTANCE}`, data, { allowOnceAtTime: true });
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'CanceledError') return Promise.reject(error);
 
@@ -68,31 +68,31 @@ const searchInstance = createAsyncThunk(
 );
 
 const instanceQr = async (phoneNumber: string) => {
-  const { image } = await Http.get<AddInstanceRes>(`${StoreEnum.instance}/${ADD_INSTANCE}/${phoneNumber}`);
+  const { image } = await api.get<AddInstanceRes>(`${ADD_INSTANCE}/${phoneNumber}`);
 
   return image;
 };
 
 const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
-  await Http.delete<void>(`${BASE_URL}/${DELETE_INSTANCE}/${phoneNumber}`);
+  await api.delete<void>(`${DELETE_INSTANCE}/${phoneNumber}`);
   await dispatch(searchInstance({}));
 });
 
-const toggleInstanceActivate = createAsyncThunk(`${BASE_URL}/${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string, { dispatch, getState }) => {
+const toggleInstanceActivate = createAsyncThunk(`${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string, { dispatch, getState }) => {
   const state = getState() as RootState;
   const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
   const isActive = !!currentInstance?.isActive;
-  await Http.post<void>(`${BASE_URL}/${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
+  await api.post<void>(`${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
 
   dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
 });
 
-const refreshInstance = createAsyncThunk(`${BASE_URL}/${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
-  await Http.post<void>(`${BASE_URL}/${INSTANCE_REFRESH}/${phoneNumber}`);
+const refreshInstance = createAsyncThunk(`${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
+  await api.post<void>(`${INSTANCE_REFRESH}/${phoneNumber}`);
   await dispatch(searchInstance({}));
 });
 
-const resetInstance = createAsyncThunk(`${BASE_URL}/reset`, async (_, { dispatch }) => {
+const resetInstance = createAsyncThunk(`reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
   dispatch(instanceSlice.actions.reset());
   await dispatch(searchInstance({}));

@@ -27,7 +27,7 @@ import {
   CLEAR_MESSAGE_QUEUE,
   EDIT_MESSAGE_QUEUE,
 } from '@client/pages/Queue/store/message-queue.constants';
-import { Http } from '@services/http';
+import { ApiService } from '@services/http/api.service';
 
 export interface MessageQueueState {
   [MESSAGE_QUEUE_COUNT]: number;
@@ -49,7 +49,7 @@ const initialState: MessageQueueState = {
   [MESSAGE_SENDING_IN_PROGRESS]: false,
 };
 
-const BASE_URL = `/queue`;
+const api = new ApiService('/queue');
 
 const searchMessageQueue = createAsyncThunk(
   `${StoreEnum.queue}/${SEARCH_MESSAGE_QUEUE}`,
@@ -58,7 +58,7 @@ const searchMessageQueue = createAsyncThunk(
       const state = getState() as RootState;
       const currentPagination = state[StoreEnum.queue]?.[MESSAGE_QUEUE_PAGINATION] || initialState[MESSAGE_QUEUE_PAGINATION];
       const data = { page: { ...currentPagination, ...(payload?.page || {}) } };
-      return await Http.post<SearchMessageQueueRes, SearchMessageQueueReq>(`/${StoreEnum.queue}/${SEARCH_MESSAGE_QUEUE}`, data);
+      return await api.post<SearchMessageQueueRes, SearchMessageQueueReq>(SEARCH_MESSAGE_QUEUE, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -66,28 +66,28 @@ const searchMessageQueue = createAsyncThunk(
 );
 
 const addMessageQueue = async (data: AddMessageQueueReq) => {
-  return await Http.post<AddMessageQueueRes, AddMessageQueueReq>(`${BASE_URL}/${ADD_MESSAGE_QUEUE}`, data);
+  return await api.post<AddMessageQueueRes, AddMessageQueueReq>(ADD_MESSAGE_QUEUE, data);
 };
 
 const updateMessageQueue = async (data: EditMessageQueueReq) => {
-  await Http.post<void, EditMessageQueueReq>(`${BASE_URL}/${EDIT_MESSAGE_QUEUE}`, data);
+  await api.post<void, EditMessageQueueReq>(EDIT_MESSAGE_QUEUE, data);
 };
 
 const removeMessageQueue = async (queueId: string) => {
-  await Http.delete<void>(`${BASE_URL}/${REMOVE_MESSAGE_QUEUE}/${queueId}`);
+  await api.delete<void>(`${REMOVE_MESSAGE_QUEUE}/${queueId}`);
   messageQueueSlice.actions.deleteMessageQueue(queueId);
 };
 
 const startQueueSend = async () => {
-  await Http.post<void>(`${BASE_URL}/${START_QUEUE_SEND}`);
+  await api.post<void>(START_QUEUE_SEND);
 };
 
 const stopQueueSend = async () => {
-  await Http.post<void>(`${BASE_URL}/${STOP_QUEUE_SEND}`);
+  await api.post<void>(STOP_QUEUE_SEND);
 };
 
 const clearQueue = async () => {
-  await Http.delete<void>(`${BASE_URL}/${CLEAR_MESSAGE_QUEUE}`);
+  await api.delete<void>(CLEAR_MESSAGE_QUEUE);
 };
 
 const messageQueueSlice = createSlice({
