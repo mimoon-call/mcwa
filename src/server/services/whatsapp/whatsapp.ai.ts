@@ -171,12 +171,26 @@ Return only valid URLs, one per line, no explanations.`;
     return plan;
   }
 
-  private buildSpeakerOrder(total: number, aNumber: string, bNumber: string): { from: string; to: string }[] {
+  private buildSpeakerOrder(total: number, aNumber: string, bNumber: string, lastConversation?: WAConversation[]): { from: string; to: string }[] {
     // Validate input phone numbers
     if (!aNumber || !bNumber) return [];
 
     const plan = this.buildRunPlan(total);
-    const startWithA = Math.random() < 0.5;
+    
+    // Determine who should start based on previous conversation
+    let startWithA: boolean;
+    if (lastConversation && lastConversation.length > 0) {
+      // Get the last message from previous conversation
+      const lastMessage = lastConversation[lastConversation.length - 1];
+      const lastFromNumber = lastMessage.fromNumber;
+      
+      // If the last message was from A, start with B (and vice versa)
+      startWithA = lastFromNumber !== aNumber;
+    } else {
+      // If no previous conversation, randomly choose who starts
+      startWithA = Math.random() < 0.5;
+    }
+    
     let currentFrom = startWithA ? aNumber : bNumber;
     let currentTo = startWithA ? bNumber : aNumber;
 
@@ -417,7 +431,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
         const aNum = String(profileA.phoneNumber || '');
         const bNum = String(profileB.phoneNumber || '');
 
-        const speakerOrder = this.buildSpeakerOrder(totalMessages, aNum, bNum);
+        const speakerOrder = this.buildSpeakerOrder(totalMessages, aNum, bNum, lastConversation);
 
         // If speaker order is empty, return null
         if (speakerOrder.length === 0) return null;
