@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .whitespace-pre-line-clamp-3 {
+    white-space: pre-line;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+}
+
 :root {
     --color-primary: theme('colors.slate.900');
     --color-primary-bg: theme('colors.slate.200');

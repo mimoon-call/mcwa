@@ -21,7 +21,7 @@ import {
 import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
 import AddEditQueueModal, { type AddQueueModalRef } from '@client/pages/Queue/modal/AddEditQueueModal';
 import { openDeletePopup } from '@helpers/open-delete-popup';
-import { useToast } from '@hooks';
+import { useToast, useTooltip } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
 import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
@@ -60,8 +60,21 @@ const Queue = () => {
       component: ({ item }) => internationalPhonePrettier(item.phoneNumber, '-', true),
     },
     { title: 'QUEUE.FULL_NAME', value: 'fullName', class: ['whitespace-nowrap', 'min-w-[180px]'] },
-    { title: 'QUEUE.TEXT_MESSAGE', value: 'textMessage', class: ['whitespace-pre-line', 'min-w-[40vw]'] },
-    { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line', 'min-w-[240px]'] },
+    {
+      title: 'QUEUE.TEXT_MESSAGE',
+      value: 'textMessage',
+      class: ['min-w-[40vw]'],
+      component: ({ item }) => {
+        const divRef = useTooltip<HTMLDivElement>({ text: item.textMessage, style: { maxWidth: '50vw', padding: '1rem' } })!;
+
+        return (
+          <div ref={divRef} className="whitespace-pre-line-clamp-3">
+            {item.textMessage}
+          </div>
+        );
+      },
+    },
+    { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line-clamp-3', 'min-w-[240px]'] },
     { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center', 'w-[80px]'] },
   ];
 
