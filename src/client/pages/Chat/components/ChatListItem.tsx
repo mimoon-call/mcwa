@@ -40,12 +40,12 @@ const ChatListItem: React.FC<ChatListItemProps> = ({ contact, isSelected, onClic
       )}
       onClick={() => onClick(contact)}
     >
-      <Avatar size="48px" src={contact.profilePictureUrl} alt={contact.name} />
+      <Avatar size="48px" src={contact.profilePictureUrl} alt={typeof contact.name === 'string' ? contact.name : contact.phoneNumber} />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900 truncate" dir={isNaN(+contact.name) ? undefined : 'ltr'}>
-            {internationalPhonePrettier(contact.name, '-', true)}
+          <div className="font-semibold text-gray-900 truncate" dir={typeof contact.name === 'string' && isNaN(+contact.name) ? undefined : 'ltr'}>
+            {internationalPhonePrettier(typeof contact.name === 'string' ? contact.name : contact.phoneNumber, '-', true)}
           </div>
 
           <div className="text-xs text-gray-500">{formatTime(contact.lastMessageAt, t)}</div>
