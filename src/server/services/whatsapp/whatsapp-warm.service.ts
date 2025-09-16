@@ -316,6 +316,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
     this.conversationEndCallback?.({ phoneNumber1, phoneNumber2, totalMessages, sentMessages, unsentMessages });
 
+    if (totalMessages > 0 && sentMessages === 0) this.markPairAsFailed(conversationKey);
+
     this.log('debug', `[${conversationKey}]`, `total messages: ${totalMessages}, sent: ${sentMessages}, unsent: ${unsentMessages}`);
 
     // Update counters when conversation is complete (all messages sent) or has sent messages
@@ -537,8 +539,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             'error',
             `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber} failed, aborting conversation`
           );
-
-          if (currentState.every(({ sentAt }) => !sentAt)) this.markPairAsFailed(conversationKey);
 
           await this.cleanupConversation(conversationKey);
         }
