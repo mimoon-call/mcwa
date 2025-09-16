@@ -1,78 +1,52 @@
-// Browser-compatible crypto implementation using Web Crypto API
-const getCrypto = () => {
-  if (typeof window !== 'undefined' && window.crypto) {
-    return window.crypto;
+import crypto from 'crypto';
+
+const algorithm = 'aes-256-cbc'; // AES encryption algorithm
+const ivLength = 16; // IV length for AES
+
+const deriveKey = (key: string): Buffer => {
+  return crypto.createHash('sha256').update(key).digest(); // Generate a 256-bit key
+};
+
+const encryptString = (text: string, key: string): string => {
+  const derivedKey = deriveKey(key);
+  const iv = crypto.randomBytes(ivLength); // Generate a random IV
+  const cipher = crypto.createCipheriv(algorithm, derivedKey, iv);
+  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
+
+  return `${iv.toString('hex')}:${encrypted.toString('hex')}`; // Concatenate IV and encrypted data
+};
+
+const decryptString = (encryptedString: string, key: string): string => {
+  const derivedKey = deriveKey(key);
+
+  const [ivHex, encryptedHex] = encryptedString.split(':');
+
+  if (!ivHex || !encryptedHex) {
+    throw new Error('Invalid encrypted string format.');
   }
-  throw new Error('Crypto not available in this environment');
+
+  const iv = Buffer.from(ivHex, 'hex');
+  const encryptedText = Buffer.from(encryptedHex, 'hex');
+  const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv);
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+
+  return decrypted.toString('utf8');
 };
 
-const algorithm = 'AES-CBC';
+// Extend the String interface
+declare global {
+  interface String {
+    encrypt(key: string): string;
 
-const deriveKey = async (key: string): Promise<CryptoKey> => {
-  const crypto = getCrypto();
-  const encoder = new TextEncoder();
-  const data = encoder.encode(key);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  
-  return crypto.subtle.importKey(
-    'raw',
-    hashBuffer,
-    { name: algorithm },
-    false,
-    ['encrypt', 'decrypt']
-  );
-};
-
-const generateIV = (): Uint8Array => {
-  const crypto = getCrypto();
-  return crypto.getRandomValues(new Uint8Array(16));
-};
-
-const encryptString = async (text: string, key: string): Promise<string> => {
-  const crypto = getCrypto();
-  const derivedKey = await deriveKey(key);
-  const iv = generateIV();
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  
-  const encrypted = await crypto.subtle.encrypt(
-    { name: algorithm, iv },
-    derivedKey,
-    data
-  );
-  
-  const encryptedArray = new Uint8Array(encrypted);
-  const combined = new Uint8Array(iv.length + encryptedArray.length);
-  combined.set(iv);
-  combined.set(encryptedArray, iv.length);
-  
-  return Array.from(combined)
-    .map(byte => byte.toString(16).padStart(2, '0'))
-    .join('');
-};
-
-const decryptString = async (encryptedString: string, key: string): Promise<string> => {
-  const crypto = getCrypto();
-  const derivedKey = await deriveKey(key);
-  
-  // Convert hex string back to bytes
-  const bytes = new Uint8Array(encryptedString.length / 2);
-  for (let i = 0; i < encryptedString.length; i += 2) {
-    bytes[i / 2] = parseInt(encryptedString.substr(i, 2), 16);
+    decrypt(key: string): string;
   }
-  
-  const iv = bytes.slice(0, 16);
-  const encrypted = bytes.slice(16);
-  
-  const decrypted = await crypto.subtle.decrypt(
-    { name: algorithm, iv },
-    derivedKey,
-    encrypted
-  );
-  
-  const decoder = new TextDecoder();
-  return decoder.decode(decrypted);
+}
+
+// Add the methods to String's prototype
+String.prototype.encrypt = function (key: string): string {
+  return encryptString(this.toString(), key);
 };
 
-// Export the functions for use instead of extending String prototype
-export { encryptString, decryptString };
+String.prototype.decrypt = function (key: string): string {
+  return decryptString(this.toString(), key);
+};
