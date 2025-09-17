@@ -63,7 +63,7 @@ const Queue = () => {
     {
       title: 'QUEUE.TEXT_MESSAGE',
       value: 'textMessage',
-      class: ['min-w-[40vw]'],
+      class: ['min-w-[30vw]'],
       component: ({ item }) => {
         const divRef = useTooltip<HTMLDivElement>({ text: item.textMessage, style: { maxWidth: '50vw', padding: '1rem' } })!;
 
