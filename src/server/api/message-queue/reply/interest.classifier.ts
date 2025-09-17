@@ -1,7 +1,7 @@
 // interest.classifier.ts
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
-import { INTEREST_SCHEMA } from '@server/api/message-queue/reply/interest.schema';
 import { LeadActionEnum, LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
+import type { JsonSchema } from '@server/services/open-ai/open-ai.types';
 
 export type InterestResult = {
   interested: boolean;
@@ -38,25 +38,24 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-- CAR: Only if message specifically mentions car/vehicle purchase or car loan
-- MORTGAGE: Only if message specifically mentions mortgage (משכנתא) or home purchase with loan
-- GENERAL: For all other loan types, including:
-  * General loans (הלוואה כללית)
-  * Home renovation loans (שיפוץ הבית)
-  * Investment loans (השקעה)
-  * Debt consolidation (סגירת הלוואות קיימות)
-  * Multi-purpose loans that mention multiple uses
-  * Any loan that doesn't specifically fall into CAR or MORTGAGE categories
+- MORTGAGE: If message contains "כנגד נכס" (against property) OR if message contains "שיעבוד" with property/real estate context
+- CAR: If message contains "יש לך רכב" (you have a car) pattern OR if message contains "שיעבוד" with car/vehicle context
+- GENERAL: For all other messages that don't match the above patterns
+
+IMPORTANT: Messages containing "שיעבוד" (lien/collateral) CANNOT be GENERAL - they must be either CAR or MORTGAGE based on context.
 
 EXAMPLES:
+- YOU: "בדקת דרכנו הלוואה כנגד הנכס שלך" → department="MORTGAGE"
+- YOU: "יש לך רכב משנת 2020, יש לך זכאות להלוואה" → department="CAR"
+- YOU: "הלוואה עם שיעבוד על הנכס" → department="MORTGAGE"
+- YOU: "הלוואה עם שיעבוד על הרכב" → department="CAR"
 - YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
-- YOU: "הלוואת משכנתא לרכישת דירה" → department="MORTGAGE"
-- LEAD: "הלוואה לרכב" → department="CAR"
-- YOU: "הלוואה לשיפוץ הבית, רכישת רכב, השקעה" → department="GENERAL" (multi-purpose)
-- YOU: "הלוואה נוספת בתנאים מועדפים לשיפוץ, רכב, השקעה" → department="GENERAL" (multi-purpose)
+- YOU: "הלוואה לשיפוץ הבית, רכישת רכב, השקעה" → department="GENERAL"
+- YOU: "הלוואה נוספת בתנאים מועדפים" → department="GENERAL"
 
 YOUR TASK:
-- Consider the whole CONVERSATION for interest/intent and department classification.
+- Consider the whole CONVERSATION for interest/intent classification.
+- For department classification, ONLY consider the OUTREACH message (not conversation replies).
 - If LEAD suggests timing, set action=SCHEDULE_FOLLOW_UP and compute followUpAt.
 
 STYLE FOR suggestedReply:
@@ -95,58 +94,73 @@ DECISION RULES:
 
 /* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */
 /**
- * We still hard-guard the department locally to avoid LLM drift.
- * Rule: scan ALL messages from newest to oldest (both YOU and LEAD).
- * - If a message is CAR → CAR
- * - Else if a message matches MORTGAGE rule → MORTGAGE
- * - Else GENERAL
+ * Department classification based on outreach message only (not lead replies).
+ * Rule: Only check the outreach message for specific Hebrew patterns.
+ * - MORTGAGE: Contains "כנגד נכס" (against property) OR "שיעבוד" with property context
+ * - CAR: Contains "יש לך רכב" (you have a car) pattern OR "שיעבוד" with car context
+ * - GENERAL: All other messages (but NOT if they contain "שיעבוד")
  */
-const CAR_PATTERNS = [
-  /(?:^|\W)car(?:$|\W)|auto(?!\w)|vehicle|automobile/i,
+const MORTGAGE_PATTERN = /כנגד\s*ה?נכס/i;
+const CAR_PATTERN = /יש\s*לך\s*רכב/i;
+const SHIYABUD_PATTERN = /שיעבוד/i;
+
+// Property/real estate context patterns
+const PROPERTY_CONTEXT_PATTERNS = [
+  /נכס/i,
+  /בית/i,
+  /דירה/i,
+  /מקרקעין/i,
+  /נדל"ן/i,
+  /property/i,
+  /real\s*estate/i,
+  /home/i,
+  /house/i
+];
+
+// Car/vehicle context patterns
+const CAR_CONTEXT_PATTERNS = [
   /רכב/i,
-  /машин/i, // Russian stems
-  /voiture/i,
-  /coche/i,
-  /سيارة/i,
-  /자동차/i,
-  /🚗/,
+  /מכונית/i,
+  /אוטו/i,
+  /car/i,
+  /vehicle/i,
+  /auto/i,
+  /automobile/i
 ];
 
-const MORTGAGE_KEYWORDS = [
-  /mortgage/i,
-  /mortage/i,
-  /משכנת[אה]/i,
-  /ипотек/i,
-  /hipotec/i, // es/pt stems
-  /hypoth[eè]que/i,
-  /رهن\s?عقاري/i,
-  /房屋贷款|房贷/,
-  /home\s*loan/i,
-];
-
-const HOME_TOKENS = [/בית|דירה|נכס/i, /home|house|property|real\s*estate/i, /🏠/];
-
-const LOAN_TOKENS = /\b(loan|credit|financ\w+|הלווא[הות]?|אשראי)\b/i;
-
-function isCar(text: string): boolean {
-  return CAR_PATTERNS.some((r) => r.test(text));
-}
-
-/** Mortgage only if a mortgage word exists OR (home token AND loan token) exist in the SAME text */
-function isMortgage(text: string): boolean {
-  if (MORTGAGE_KEYWORDS.some((r) => r.test(text))) return true;
-  return HOME_TOKENS.some((r) => r.test(text)) && LOAN_TOKENS.test(text);
-}
-
-function inferDepartmentFromAllMessages(conversation: LeadReplyItem[]): LeadDepartmentEnum {
-  if (conversation.length === 0) return LeadDepartmentEnum.GENERAL;
-
-  // Scan all messages from newest to oldest
-  for (let i = conversation.length - 1; i >= 0; i--) {
-    const t = conversation[i]?.text ?? '';
-    if (isCar(t)) return LeadDepartmentEnum.CAR;
-    if (isMortgage(t)) return LeadDepartmentEnum.MORTGAGE;
+function isMortgageMessage(text: string): boolean {
+  // Direct mortgage pattern
+  if (MORTGAGE_PATTERN.test(text)) return true;
+  
+  // Shiyabud with property context
+  if (SHIYABUD_PATTERN.test(text)) {
+    return PROPERTY_CONTEXT_PATTERNS.some(pattern => pattern.test(text));
   }
+  
+  return false;
+}
+
+function isCarMessage(text: string): boolean {
+  // Direct car pattern
+  if (CAR_PATTERN.test(text)) return true;
+  
+  // Shiyabud with car context
+  if (SHIYABUD_PATTERN.test(text)) {
+    return CAR_CONTEXT_PATTERNS.some(pattern => pattern.test(text));
+  }
+  
+  return false;
+}
+
+function inferDepartmentFromOutreach(outreachText: string): LeadDepartmentEnum {
+  if (isMortgageMessage(outreachText)) return LeadDepartmentEnum.MORTGAGE;
+  if (isCarMessage(outreachText)) return LeadDepartmentEnum.CAR;
+  
+  // If message contains "שיעבוד" but no clear context, default to MORTGAGE
+  if (SHIYABUD_PATTERN.test(outreachText)) {
+    return LeadDepartmentEnum.MORTGAGE;
+  }
+  
   return LeadDepartmentEnum.GENERAL;
 }
 
@@ -173,7 +187,41 @@ export async function classifyInterest(
 
   const messages = [openai.createSystemMessage(SYSTEM_PROMPT), openai.createUserMessage(JSON.stringify(userPayload))];
 
-  const ai = await openai.requestWithJsonSchema<InterestResult>(messages, INTEREST_SCHEMA as any, {
+  const interestSchema: JsonSchema = {
+    name: 'classify_interest',
+    type: 'object',
+    description: 'Classify whether the lead is interested based on outreach and their reply.',
+    additionalProperties: false,
+    properties: {
+      interested: { type: 'boolean', description: 'True if the lead shows interest or asks for more info.' },
+      intent: {
+        type: 'string',
+        description: 'Fine-grained intent label.',
+        enum: Object.values(LeadIntentEnum),
+      },
+      reason: { type: 'string', description: 'One-sentence justification in plain language.' },
+      confidence: { type: 'number', minimum: 0, maximum: 1, description: 'Model confidence heuristic (0–1).' },
+      suggestedReply: { type: 'string', description: 'A concise reply to send next (same language as the lead).' },
+      action: {
+        type: 'string',
+        enum: Object.values(LeadActionEnum),
+        description: 'Operational action to take.',
+      },
+      followUpAt: {
+        type: 'string',
+        description: 'If action is SCHEDULE_FOLLOW_UP, an ISO-8601 datetime with numeric timezone offset (e.g., +03:00).',
+        format: 'date-time',
+      },
+      department: {
+        type: 'string',
+        description: 'Department inferred solely from messages sent by YOU (the sender).',
+        enum: Object.values(LeadDepartmentEnum),
+      },
+    },
+    required: ['interested', 'intent', 'reason', 'confidence', 'suggestedReply', 'department'],
+  };
+
+  const ai = await openai.requestWithJsonSchema<InterestResult>(messages, interestSchema, {
     model: 'gpt-4o-mini',
     temperature: 0 as const,
     max_tokens: 300 as const,
@@ -181,7 +229,8 @@ export async function classifyInterest(
 
   if (!ai) return null;
 
-  // Hard-guard department using ALL messages (latest precedence)
-  const safeDept = inferDepartmentFromAllMessages(userPayload.CONVERSATION);
+  // Hard-guard department using ONLY the outreach message (not lead replies or your replies)
+  // This ensures department never changes based on conversation flow
+  const safeDept = inferDepartmentFromOutreach(outreachText);
   return { ...ai, department: safeDept };
 }
