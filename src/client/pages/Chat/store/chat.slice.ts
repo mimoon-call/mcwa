@@ -138,7 +138,7 @@ const searchAllConversations = createAsyncThunk(
       const lastSearchParams = state[StoreEnum.globalChat]?.[GLOBAL_LAST_SEARCH_PARAMS];
       const data = {
         page: { ...currentPagination, ...(page || {}) },
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        searchValue: searchValue !== undefined ? searchValue : '',
         intents: intents !== undefined ? intents : lastSearchParams?.intents,
         departments: departments !== undefined ? departments : lastSearchParams?.departments,
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
@@ -163,7 +163,7 @@ const searchConversations = createAsyncThunk(
       const currentSearchValue = state[StoreEnum.chat]?.searchValue || '';
       const data = {
         page: { ...currentPagination, ...(page || {}) },
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        searchValue: searchValue !== undefined ? searchValue : '',
         externalFlag,
       };
 
@@ -252,11 +252,10 @@ const loadMoreGlobalConversations = createAsyncThunk(
   async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
-      const currentSearchValue = state[StoreEnum.globalChat]?.[CHAT_SEARCH_VALUE] || '';
       const lastSearchParams = state[StoreEnum.globalChat]?.[GLOBAL_LAST_SEARCH_PARAMS];
       const data = {
         page,
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        searchValue: searchValue !== undefined ? searchValue : '',
         intents: intents !== undefined ? intents : lastSearchParams?.intents,
         departments: departments !== undefined ? departments : lastSearchParams?.departments,
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
@@ -272,13 +271,11 @@ const loadMoreGlobalConversations = createAsyncThunk(
 // Async thunk for loading more conversations (Instance)
 const loadMoreInstanceConversations = createAsyncThunk(
   `${StoreEnum.chat}/loadMoreConversations`,
-  async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue, getState }) => {
+  async ({ phoneNumber, page, searchValue, externalFlag }: SearchConversationsReq, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const currentSearchValue = state[StoreEnum.chat]?.[CHAT_SEARCH_VALUE] || '';
       const data = {
         page,
-        searchValue: searchValue !== undefined ? searchValue : currentSearchValue,
+        searchValue: searchValue !== undefined ? searchValue : '',
         externalFlag,
       };
 
