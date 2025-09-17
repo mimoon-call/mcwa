@@ -4,7 +4,13 @@ import { ChatDepartmentEnum, ChatIntentEnum } from '@client/pages/Chat/store/cha
 export const MAX_CHAT_CONVERSATIONS = 100;
 export const MAX_CHAT_MESSAGES = 100;
 
-export const INTENT_OPTIONS: Options<string> = [ChatIntentEnum.NEUTRAL, ChatIntentEnum.DECLINE, ChatIntentEnum.UNSUBSCRIBE].map((intent) => ({
+export const INTENT_OPTIONS: Options<string> = [
+  ChatIntentEnum.NEUTRAL,
+  ChatIntentEnum.DECLINE,
+  ChatIntentEnum.UNSUBSCRIBE,
+  ChatIntentEnum.OUT_OF_SCOPE,
+  ChatIntentEnum.AMBIGUOUS,
+].map((intent) => ({
   title: `CHAT.INTENT.${intent}`,
   value: intent,
 }));

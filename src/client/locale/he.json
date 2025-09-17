@@ -68,12 +68,12 @@
       "MORTGAGE": "משכנתא"
     },
     "INTENT": {
-      "POSITIVE_INTEREST": "עניין חיובי",
+      "POSITIVE_INTEREST": "מעוניין",
       "REQUEST_INFO": "בקשת מידע",
       "NEUTRAL": "ניטרלי",
       "NOT_NOW": "לא עכשיו",
       "DECLINE": "דחייה",
-      "UNSUBSCRIBE": "הסרה מרשימה",
+      "UNSUBSCRIBE": "הסרה",
       "OUT_OF_SCOPE": "מחוץ לתחום",
       "AMBIGUOUS": "מעורפל",
       "ABUSIVE": "פוגעני"
