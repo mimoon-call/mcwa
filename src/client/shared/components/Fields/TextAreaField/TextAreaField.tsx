@@ -282,6 +282,7 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
   }, [value, fieldMaps]);
 
   const minHeight = rows * 1.5; // Approximate line height
+  const maxHeight = rows * 1.5; // Set max height to same as min height to prevent expansion
 
   return (
     <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange}>
@@ -289,7 +290,7 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
         ref={divRef}
         contentEditable
         className={cn(global['field'], styles['text-area'], 'min-h-0 resize-none overflow-auto', className)}
-        style={{ minHeight: `${minHeight}rem`, whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
+        style={{ minHeight: `${minHeight}rem`, maxHeight: `${maxHeight}rem`, whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
         placeholder={placeholder}
         onInput={handleInput}
         onPaste={handlePaste}
