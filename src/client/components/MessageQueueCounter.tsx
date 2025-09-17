@@ -22,7 +22,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     const socket = getClientSocket();
 
     const update = (data: MessageQueueActiveEvent) => {
-      dispatch(updateMessageCount({ ...data, messageCount: total, messagePass: current }));
+      dispatch(updateMessageCount(data));
     };
 
     socket?.on(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);
@@ -30,7 +30,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     return () => {
       socket?.off(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);
     };
-  }, [dispatch]);
+  }, [dispatch, updateMessageCount]);
 
   return (
     <div className={cn('px-2 flex gap-2', className)}>
