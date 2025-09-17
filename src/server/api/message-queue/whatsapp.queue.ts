@@ -1,7 +1,7 @@
 import type { MessageQueueItem } from '@server/api/message-queue/message-queue.types';
 import { MongoService } from '@server/services/database/mongo.service';
 
-export const MessageQueueDb = new MongoService<MessageQueueItem>(
+export const WhatsappQueue = new MongoService<MessageQueueItem>(
   'WhatsappQueue',
   {
     fullName: { type: String, required: true },

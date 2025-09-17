@@ -18,7 +18,7 @@ import {
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
 } from '@server/api/message-queue/message-queue.map';
-import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
+import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { app } from '@server/index';
 import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
 import replaceStringVariable from '@server/helpers/replace-string-variable';
@@ -44,19 +44,19 @@ const isWithinWorkHours = (): boolean => {
   const now = dayjs().tz(TIMEZONE);
   const currentDay = now.day(); // 0 = Sunday, 1 = Monday, etc.
   const currentHour = now.hour();
-  
+
   // Check if current day is a workday
   const isWorkday = WORKDAYS.includes(currentDay);
-  
+
   // Check if current hour is within work hours
   const isWorkHour = currentHour >= WORKHOURS[0] && currentHour < WORKHOURS[1];
-  
+
   return isWorkday && isWorkHour;
 };
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
-    const data = await MessageQueueDb.pagination<MessageQueueItem>(
+    const data = await WhatsappQueue.pagination<MessageQueueItem>(
       { page },
       [
         { $match: { sentAt: { $exists: !!hasBeenSent } } },
@@ -79,21 +79,21 @@ export const messageQueueService = {
       .filter(({ phoneNumber }) => !blocked.includes(phoneNumber))
       .map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), tts, createdAt: getLocalTime() }));
 
-    const inserted = await MessageQueueDb.insertMany(bulk);
+    const inserted = await WhatsappQueue.insertMany(bulk);
 
     return { returnCode: 0, addedCount: inserted.length, blockedCount: blocked.length };
   },
 
   [EDIT_MESSAGE_QUEUE]: async ({ _id, ...data }: EditMessageQueueReq): Promise<BaseResponse> => {
     const id = new ObjectId(_id);
-    await MessageQueueDb.updateOne({ _id: id }, { $set: data });
+    await WhatsappQueue.updateOne({ _id: id }, { $set: data });
 
     return { returnCode: 0 };
   },
 
   [REMOVE_MESSAGE_QUEUE]: async (queueId: string): Promise<BaseResponse> => {
     const _id = new ObjectId(queueId);
-    await MessageQueueDb.deleteOne({ _id });
+    await WhatsappQueue.deleteOne({ _id });
 
     return { returnCode: 0 };
   },
@@ -109,12 +109,12 @@ export const messageQueueService = {
     (async () => {
       isSending = true;
       messagePass = 0;
-      messageCount = await MessageQueueDb.countDocuments({ sentAt: { $exists: false } });
+      messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
       for (messageAttempt = 0; messageAttempt < 3; messageAttempt++) {
         // Process all documents with current attempt number (randomly)
-        let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
+        let doc = await WhatsappQueue.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
 
         while (doc && isSending) {
           // Check work hours before each message
@@ -129,7 +129,7 @@ export const messageQueueService = {
           app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
 
           // Get next document with same attempt number (randomly)
-          [doc] = await MessageQueueDb.aggregate([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
+          [doc] = await WhatsappQueue.aggregate([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
         }
       }
 
@@ -157,7 +157,7 @@ export const messageQueueService = {
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
     }
 
-    await MessageQueueDb.deleteMany({ sentAt: { $exists: false } });
+    await WhatsappQueue.deleteMany({ sentAt: { $exists: false } });
 
     return { returnCode: 0 };
   },

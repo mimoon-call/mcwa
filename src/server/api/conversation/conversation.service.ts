@@ -8,7 +8,7 @@ import {
   GetConversationItem,
 } from '@server/api/conversation/conversation.types';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
-import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
+import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import {
   GET_CONVERSATION,
   SEARCH_CONVERSATIONS,
@@ -471,7 +471,7 @@ export const conversationService = {
     // Delete messages from WhatsAppQueue collection
     // Delete messages where instanceNumber matches either fromNumber or toNumber
     // and phoneNumber matches the other participant
-    const queueDeleteResult = await MessageQueueDb.deleteMany({
+    const queueDeleteResult = await WhatsappQueue.deleteMany({
       $or: [
         { instanceNumber: fromNumber, phoneNumber: toNumber },
         { instanceNumber: toNumber, phoneNumber: fromNumber },

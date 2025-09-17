@@ -5,7 +5,7 @@ import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { wa, app } from '@server/index';
 import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
-import { MessageQueueDb } from '@server/api/message-queue/message-queue.db';
+import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
@@ -96,7 +96,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
     app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_CONVERSATION, conversationData);
 
-    const startMessage = await MessageQueueDb.findOne(
+    const startMessage = await WhatsappQueue.findOne(
       {
         $and: [
           {
