@@ -1357,6 +1357,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       const delivery = this.messageDeliveries.get(messageId);
       if (!delivery) return;
 
+      const currentDelivery = this.messageDeliveries.get(messageId);
+      if (currentDelivery?.status === delivery.status) return;
+      this.messageDeliveries.set(messageId, delivery);
+
       // Trigger message update callbacks
       try {
         // Call message-specific callback
