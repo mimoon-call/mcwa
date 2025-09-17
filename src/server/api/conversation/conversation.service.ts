@@ -378,10 +378,15 @@ export const conversationService = {
 
     // Add filter conditions for intents, departments, and interested
     const filterConditions: any[] = [];
+    const orConditions: any[] = [];
 
-    if (intents && intents.length > 0) filterConditions.push({ intent: { $in: intents } });
+    if (intents && intents.length > 0) orConditions.push({ intent: { $in: intents } });
     if (departments && departments.length > 0) filterConditions.push({ department: { $in: departments } });
-    if (interested !== undefined && interested !== null) filterConditions.push({ interested: interested });
+    if (interested === true) orConditions.push({ interested: true });
+    
+    // Add OR condition for intents or interested
+    if (orConditions.length > 0) filterConditions.push({ $or: orConditions });
+    
     if (filterConditions.length > 0) pipeline.push({ $match: { $and: filterConditions } });
 
     const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline);

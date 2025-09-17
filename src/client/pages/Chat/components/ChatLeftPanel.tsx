@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import { TextField } from '@components/Fields';
-import { DEPARTMENT_OPTIONS, INTERESTED_OPTIONS } from '@client/pages/Chat/constants/chat.constants';
+import { DEPARTMENT_OPTIONS, INTENT_OPTIONS, INTERESTED_OPTIONS } from '@client/pages/Chat/constants/chat.constants';
 import type { Options } from '@models';
 
 type ChatLeftPanelProps<T = object> = {
@@ -162,8 +162,10 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
     className,
     onLoadMore,
     hasMore,
+    selectedIntents = [],
     selectedDepartments = [],
     selectedInterested = null,
+    onIntentsChange,
     onDepartmentsChange,
     onInterestedChange,
     ...listProps
@@ -188,6 +190,15 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
   const handleSearchChange = useCallback((value: string) => {
     setLocalSearchValue(value);
   }, []);
+
+  const handleIntentToggle = useCallback(
+    (intent: string) => {
+      if (!onIntentsChange) return;
+      const newIntents = selectedIntents.includes(intent) ? selectedIntents.filter((i) => i !== intent) : [...selectedIntents, intent];
+      onIntentsChange(newIntents);
+    },
+    [selectedIntents, onIntentsChange]
+  );
 
   const handleDepartmentToggle = useCallback(
     (department: string) => {
@@ -232,6 +243,9 @@ const ChatLeftPanel = <T extends object>(props: ChatLeftPanelProps<T>) => {
             {onInterestedChange && (
               <Filter options={INTERESTED_OPTIONS} handleToggle={handleInterestedToggle} selectedOptions={selectedInterested} isMultiSelect={false} />
             )}
+
+            {/* Intent Filter */}
+            {onIntentsChange && <Filter options={INTENT_OPTIONS} handleToggle={handleIntentToggle} selectedOptions={selectedIntents} />}
 
             {/* Department Filter */}
             {onDepartmentsChange && (
