@@ -144,13 +144,11 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         return;
       }
 
-      console.log(nonInvalidData);
-
       const customHeaders: TableHeaders<MessageQueueItem & { checkFlag?: boolean; columns?: Record<string, string> }> = [];
 
       Object.entries(columns).forEach(([value, title]) => {
         if (value === primaryKey) {
-          customHeaders.push({
+          customHeaders.unshift({
             title,
             value,
             component: ({ item }) => (
