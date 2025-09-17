@@ -25,11 +25,34 @@ import replaceStringVariable from '@server/helpers/replace-string-variable';
 import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
 import getLocalTime from '@server/helpers/get-local-time';
 import { WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
+import { WORKDAYS, WORKHOURS, TIMEZONE } from './message-queue.constants';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+// Extend dayjs with timezone plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 let isSending = false;
 let messageCount = 0;
 let messagePass = 0;
 let messageAttempt = 0;
+
+// Check if current time is within work hours and workdays
+const isWithinWorkHours = (): boolean => {
+  const now = dayjs().tz(TIMEZONE);
+  const currentDay = now.day(); // 0 = Sunday, 1 = Monday, etc.
+  const currentHour = now.hour();
+  
+  // Check if current day is a workday
+  const isWorkday = WORKDAYS.includes(currentDay);
+  
+  // Check if current hour is within work hours
+  const isWorkHour = currentHour >= WORKHOURS[0] && currentHour < WORKHOURS[1];
+  
+  return isWorkday && isWorkHour;
+};
 
 export const messageQueueService = {
   [SEARCH_MESSAGE_QUEUE]: async (page: Pagination, hasBeenSent?: boolean): Promise<SearchMessageQueueRes> => {
@@ -75,7 +98,12 @@ export const messageQueueService = {
     return { returnCode: 0 };
   },
 
-  [START_QUEUE_SEND]: (): BaseResponse => {
+  [START_QUEUE_SEND]: (): BaseResponse<{ message?: string }> => {
+    // Check if we're within work hours before starting
+    if (!isWithinWorkHours()) {
+      return { returnCode: 1, message: 'Queue cannot start outside work hours' };
+    }
+
     messageAttempt = 0;
 
     (async () => {
@@ -89,8 +117,14 @@ export const messageQueueService = {
         let doc = await MessageQueueDb.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
 
         while (doc && isSending) {
+          // Check work hours before each message
+          if (!isWithinWorkHours()) {
+            isSending = false;
+            app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+            return;
+          }
+
           await sendQueueMessage(doc, () => messagePass++);
-          await new Promise((resolve) => setTimeout(resolve, 20000));
 
           app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
 
