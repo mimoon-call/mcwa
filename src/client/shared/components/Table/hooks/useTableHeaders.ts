@@ -160,7 +160,7 @@ export const useTableHeaders = ({ headers, sort, onSort, storageKey }: TableHead
 
   const onClick = useCallback(
     (value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
-      if (!storageKey || edgeIndex !== null || !sortable || didDrag.current) return;
+      if (edgeIndex !== null || !sortable || didDrag.current) return;
 
       const newSort = { ...(sort || {}) };
       const toggle = (k: string) => {
