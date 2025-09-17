@@ -38,6 +38,7 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
+- GENERAL: If message contains "ללא צורך בערבויות ובטחונות" (no need for guarantees and securities) - this takes priority
 - MORTGAGE: If message contains "כנגד נכס" (against property) OR if message contains "שיעבוד" with property/real estate context
 - CAR: If message contains "יש לך רכב" (you have a car) pattern OR if message contains "שיעבוד" with car/vehicle context
 - GENERAL: For all other messages that don't match the above patterns
@@ -45,6 +46,7 @@ DEPARTMENT CLASSIFICATION (DETERMINISTIC):
 IMPORTANT: Messages containing "שיעבוד" (lien/collateral) CANNOT be GENERAL - they must be either CAR or MORTGAGE based on context.
 
 EXAMPLES:
+- YOU: "ללא צורך בערבויות ובטחונות" → department="GENERAL"
 - YOU: "בדקת דרכנו הלוואה כנגד הנכס שלך" → department="MORTGAGE"
 - YOU: "יש לך רכב משנת 2020, יש לך זכאות להלוואה" → department="CAR"
 - YOU: "הלוואה עם שיעבוד על הנכס" → department="MORTGAGE"
@@ -103,6 +105,7 @@ DECISION RULES:
 const MORTGAGE_PATTERN = /כנגד\s*ה?נכס/i;
 const CAR_PATTERN = /יש\s*לך\s*רכב/i;
 const SHIYABUD_PATTERN = /שיעבוד/i;
+const NO_GUARANTEES_PATTERN = /ללא\s*צורך\s*בערבויות\s*ובטחונות/i;
 
 // Property/real estate context patterns
 const PROPERTY_CONTEXT_PATTERNS = [
@@ -152,7 +155,14 @@ function isCarMessage(text: string): boolean {
   return false;
 }
 
+function isNoGuaranteesMessage(text: string): boolean {
+  return NO_GUARANTEES_PATTERN.test(text);
+}
+
 function inferDepartmentFromOutreach(outreachText: string): LeadDepartmentEnum {
+  // Check for no-guarantees pattern first - this should always be GENERAL
+  if (isNoGuaranteesMessage(outreachText)) return LeadDepartmentEnum.GENERAL;
+  
   if (isMortgageMessage(outreachText)) return LeadDepartmentEnum.MORTGAGE;
   if (isCarMessage(outreachText)) return LeadDepartmentEnum.CAR;
   
