@@ -72,6 +72,7 @@ TIME & SCHEDULING:
 
 DECISION RULES:
 - interested=true for clear positive signals (requests for info/demo/callback).
+- interested=true for NOT_NOW responses (leads saying "not now" but not declining).
 - interested=false for declines, unsubscribe, abuse, or out-of-scope.
 - If unclear, intent="AMBIGUOUS" with a brief clarifying suggestedReply.
 
