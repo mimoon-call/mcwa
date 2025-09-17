@@ -17,9 +17,12 @@ import { RegexPattern } from '@client-constants';
 import { useToast } from '@hooks';
 import { useTranslation } from 'react-i18next';
 import Button from '@components/Button/Button';
+import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
-type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & { open: (data: AddMessageQueueReq['data'], map: Record<string, string>) => void };
-type PayloadData = (Pick<MessageQueueItem, 'phoneNumber' | 'fullName'> & { checkFlag?: boolean })[];
+type AddBulkQueueModalRef = Omit<ModalRef, 'open'> & {
+  open: (data: Record<string, string>[], map: Record<string, string>, primaryKey: string) => void;
+};
+type PayloadData = (Pick<MessageQueueItem, 'phoneNumber'> & { checkFlag?: boolean })[];
 
 const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   const { t } = useTranslation();
@@ -37,21 +40,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 
-  const headers: TableHeaders<MessageQueueItem & { checkFlag?: boolean }> = [
-    {
-      title: 'QUEUE.PHONE_NUMBER',
-      value: 'phoneNumber',
-      component: ({ item }) => (
-        <Checkbox
-          label={item.phoneNumber}
-          id={item.phoneNumber}
-          value={item.checkFlag}
-          onChange={() => onMarkChange(item.phoneNumber, !item.checkFlag)}
-        />
-      ),
-    },
-    { title: 'QUEUE.FULL_NAME', value: 'fullName' },
-  ];
+  const [headers, setHeaders] = useState<TableHeaders<MessageQueueItem & { checkFlag?: boolean }>>([]);
 
   const List = (
     <InputWrapper
@@ -121,7 +110,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
     const data = {
       textMessage: payload.textMessage,
       tts: payload.tts,
-      data: payload.data.filter((item) => item.checkFlag).map((item) => ({ phoneNumber: item.phoneNumber, fullName: item.fullName })),
+      data: payload.data.filter((item) => item.checkFlag),
     };
 
     const { addedCount, blockedCount } = await addQueue(data);
@@ -137,9 +126,15 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
   };
 
   useImperativeHandle(ref, () => ({
-    open: async (data, map): Promise<void> => {
-      const payloadData = data.map((val) => ({ ...val, phoneNumber: val.phoneNumber.replace(/\D/g, '') }));
+    open: async (data, columns, primaryKey: string): Promise<void> => {
+      const payloadData = data.map((val) => {
+        const phoneNumber = val[primaryKey].replace(/\D/g, '');
+
+        return { phoneNumber, columns: { ...val, [primaryKey]: internationalPhonePrettier(phoneNumber, '-', true) } };
+      });
+
       const nonDuplicateData = payloadData.uniqueBy(['phoneNumber']);
+
       const nonInvalidData = nonDuplicateData
         .filter((value) => RegexPattern.MOBILE_PHONE_IL.test(value.phoneNumber))
         .map((value) => ({ ...value, checkFlag: true }));
@@ -149,8 +144,33 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         return;
       }
 
+      console.log(nonInvalidData);
+
+      const customHeaders: TableHeaders<MessageQueueItem & { checkFlag?: boolean; columns?: Record<string, string> }> = [];
+
+      Object.entries(columns).forEach(([value, title]) => {
+        if (value === primaryKey) {
+          customHeaders.push({
+            title,
+            value,
+            component: ({ item }) => (
+              <Checkbox
+                id={item.phoneNumber}
+                label={<span dir="ltr">{item.columns?.[value]}</span>}
+                value={item.checkFlag}
+                onChange={() => onMarkChange(item.phoneNumber, !item.checkFlag)}
+              />
+            ),
+          });
+        } else {
+          customHeaders.push({ title, value, component: ({ item }) => item.columns?.[value as keyof typeof item] });
+        }
+      });
+
+      setHeaders(customHeaders);
+
       setPayload({ textMessage: '', tts: false, data: nonInvalidData });
-      setDynamicFields(map);
+      setDynamicFields(columns);
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),

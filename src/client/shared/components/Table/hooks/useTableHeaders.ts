@@ -1,7 +1,6 @@
 // src/client/shared/components/Table/hooks/useTableHeaders.ts
 import type { TableHeader, TableHeaderProps, TableHeaders } from '../Table.type';
 import { type MouseEvent as ReactMouseEvent, useEffect, useRef, useState, useCallback } from 'react';
-import { uniqueKey } from '@helpers/unique-key';
 
 type DragData = {
   startX: number;
@@ -12,7 +11,7 @@ type DragData = {
 const RESIZE_THRESHOLD = 6;
 const MIN_WIDTH = 60;
 
-export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => {
+export const useTableHeaders = ({ headers, sort, onSort, storageKey }: TableHeaderProps) => {
   const theadRef = useRef<HTMLTableSectionElement | null>(null);
   const colRefs = useRef<(HTMLTableCellElement | null)[]>([]);
   const [tableHeaders, setTableHeaders] = useState<TableHeaders>(headers);
@@ -23,11 +22,12 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
   const isRtl = useCallback(() => theadRef.current && window.getComputedStyle(theadRef.current).direction === 'rtl', []);
 
   const getColumnWidth = useCallback(() => {
-    const key = uniqueKey(headers.map(({ value }) => value));
-    const storeValue = localStorage.getItem(key);
+    if (!storageKey) return null;
+
+    const storeValue = localStorage.getItem(storageKey);
 
     return storeValue ? JSON.parse(storeValue) : null;
-  }, [headers]);
+  }, [headers, storageKey]);
 
   useEffect(() => {
     const columnWidth: Record<string, string> | null = getColumnWidth();
@@ -45,7 +45,7 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
         return { ...header, style: { ...(header.style || {}), width } };
       });
     });
-  }, [headers]);
+  }, [headers, storageKey]);
 
   const detectEdge = useCallback(
     (e: ReactMouseEvent<HTMLElement>, cell: HTMLElement, headerIndex: number) => {
@@ -89,43 +89,39 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
   );
 
   const stopResize = useCallback(() => {
+    if (!storageKey) return;
+
     dragData.current = null;
     setEdgeIndex(null);
-
     document.body.style.cursor = '';
     window.removeEventListener('mousemove', mouseMoveHandler);
     window.removeEventListener('mouseup', stopResize);
 
     // Save column widths...
-    if (theadRef.current) {
-      const tableWidth = theadRef.current.getBoundingClientRect().width;
-      const columnWidth = headers
-        .filter(({ hidden }) => !hidden)
-        .reduce((acc: Record<string, string>, { value }, headerIndex) => {
-          const width = colRefs.current[headerIndex]?.getBoundingClientRect().width;
+    if (!theadRef.current || !storageKey) return;
 
-          if (!width) return acc;
+    const tableWidth = theadRef.current.getBoundingClientRect().width;
+    const columnWidth = headers
+      .filter(({ hidden }) => !hidden)
+      .reduce((acc: Record<string, string>, { value }, headerIndex) => {
+        const width = colRefs.current[headerIndex]?.getBoundingClientRect().width;
 
-          const widthPercentage = (width / tableWidth) * 100;
-          return { ...acc, [value]: `${widthPercentage}%` };
-        }, {});
-      const key = uniqueKey(headers.map(({ value }) => value));
-      localStorage.setItem(key, JSON.stringify(columnWidth));
-    }
+        if (!width) return acc;
+
+        const widthPercentage = (width / tableWidth) * 100;
+        return { ...acc, [value]: `${widthPercentage}%` };
+      }, {});
+
+    localStorage.setItem(storageKey, JSON.stringify(columnWidth));
 
     // Reset drag flag after next frame
-    requestAnimationFrame(() => {
-      didDrag.current = false;
-    });
+    requestAnimationFrame(() => (didDrag.current = false));
   }, [mouseMoveHandler, headers, colRefs, theadRef]);
 
   const onMouseOver = useCallback(
     (headerIndex: number) => (e: ReactMouseEvent<HTMLElement>) => {
+      if (typeof window === 'undefined' || !storageKey) return;
       const cell = e.currentTarget as HTMLElement;
-
-      if (typeof window === 'undefined') {
-        return;
-      }
 
       const { onLeft, onRight } = detectEdge(e, cell, headerIndex);
 
@@ -145,23 +141,14 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
 
   const onMouseDown = useCallback(
     (e: ReactMouseEvent<HTMLElement>) => {
-      if (edgeIndex === null) {
-        return;
-      }
-
-      if (typeof window === 'undefined') {
-        return;
-      }
+      if (typeof window === 'undefined' || edgeIndex === null || !storageKey) return;
 
       e.preventDefault();
       e.stopPropagation();
 
       const leftWidth = colRefs.current[edgeIndex]?.getBoundingClientRect().width;
       const rightWidth = colRefs.current[edgeIndex + 1]?.getBoundingClientRect().width;
-
-      if (!leftWidth || !rightWidth) {
-        return;
-      }
+      if (!leftWidth || !rightWidth) return;
 
       dragData.current = { startX: e.clientX, leftWidth, rightWidth };
       document.body.style.cursor = 'ew-resize';
@@ -173,12 +160,9 @@ export const useTableHeaders = ({ headers, sort, onSort }: TableHeaderProps) => 
 
   const onClick = useCallback(
     (value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
-      if (edgeIndex !== null || !sortable || didDrag.current) {
-        return;
-      }
+      if (!storageKey || edgeIndex !== null || !sortable || didDrag.current) return;
 
       const newSort = { ...(sort || {}) };
-
       const toggle = (k: string) => {
         if (newSort[k] === 1) {
           delete newSort[k];

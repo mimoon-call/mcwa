@@ -89,8 +89,9 @@
   },
   "QUEUE": {
     "TITLE": "Broadcast",
+    "ADD_MODAL_TITLE": "Add message to queue",
+    "EDIT_MODAL_TITLE": "Edit queued message",
     "PHONE_NUMBER": "Phone number",
-    "FULL_NAME": "Full name",
     "TEXT_MESSAGE": "Message",
     "CONTACT_LIST": "Contact list",
     "SENT_AT": "Sent at",

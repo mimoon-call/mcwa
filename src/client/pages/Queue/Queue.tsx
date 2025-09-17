@@ -29,6 +29,7 @@ import FileService from '@services/file.service';
 import loadCsvFromFile from '@helpers/load-csv-from-file.helper';
 import AddBulkQueueModal from '@client/pages/Queue/modal/AddBulkQueueModal';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
+import findPhoneFieldHelper from '@helpers/find-phone-field.helper';
 
 const Queue = () => {
   const { t } = useTranslation();
@@ -59,7 +60,6 @@ const Queue = () => {
       class: ['whitespace-nowrap', 'min-w-[180px]'],
       component: ({ item }) => internationalPhonePrettier(item.phoneNumber, '-', true),
     },
-    { title: 'QUEUE.FULL_NAME', value: 'fullName', class: ['whitespace-nowrap', 'min-w-[180px]'] },
     {
       title: 'QUEUE.TEXT_MESSAGE',
       value: 'textMessage',
@@ -113,16 +113,20 @@ const Queue = () => {
 
   const importFile = async () => {
     const file = await FileService.uploadFile();
-    const [data, map] = await (async () => {
+    const [data, map, key] = await (async () => {
       try {
-        return await loadCsvFromFile<Pick<MessageQueueItem, 'phoneNumber' | 'fullName'>>(file![0], ['fullName', 'phoneNumber'], true);
+        const [data, headers] = await loadCsvFromFile(file![0]);
+        const phoneNumberKey = findPhoneFieldHelper(data);
+        if (!phoneNumberKey) throw new Error();
+
+        return [data, headers, phoneNumberKey];
       } catch {
         toast.error('VALIDATE.INVALID_FILE');
         throw new Error();
       }
     })();
 
-    addBulkQueueModalRef.current?.open(data, map);
+    addBulkQueueModalRef.current?.open(data, map, key);
   };
 
   useEffect(() => {

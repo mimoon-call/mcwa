@@ -23,7 +23,10 @@ export const Checkbox: React.FC<CheckboxProps> = ({ id, label, value = false, de
   const checkboxLabel = typeof label === 'string' ? <span>{t(label)}</span> : label;
 
   return (
-    <label htmlFor={id} className={cn('inline-flex items-center gap-2 cursor-pointer', disabled && 'opacity-50 cursor-not-allowed', className)}>
+    <label
+      htmlFor={id}
+      className={cn('inline-flex items-center gap-2 cursor-pointer select-none', disabled && 'opacity-50 cursor-not-allowed', className)}
+    >
       <input
         id={id}
         type="checkbox"

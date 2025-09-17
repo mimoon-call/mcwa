@@ -13,9 +13,8 @@ import TextAreaField, { type TextAreaFieldRef } from '@components/Fields/TextAre
 import { Checkbox } from '@components/Checkbox/Checkbox';
 import { useToast } from '@hooks';
 import { useTranslation } from 'react-i18next';
-import Button from '@components/Button/Button';
 
-type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'fullName' | 'textMessage' | 'tts'> & Partial<{ _id: string }>;
+type Payload = Pick<MessageQueueItem, 'phoneNumber' | 'textMessage' | 'tts'> & Partial<{ _id: string }>;
 export type AddQueueModalRef = Omit<ModalRef, 'open'> & { open: (payload?: Partial<Payload>) => Promise<void> };
 
 const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
@@ -24,18 +23,18 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   const dispatch = useDispatch<AppDispatch>();
   const modalRef = useRef<ModalRef>(null);
   const textAreaRef = useRef<TextAreaFieldRef>(null);
-  const [payload, setPayload] = useState<Payload>({ phoneNumber: '', fullName: '', textMessage: '' });
+  const [payload, setPayload] = useState<Payload>({ phoneNumber: '', textMessage: '' });
   const [isEditMode, setIsEditMode] = useState(false);
 
   const { [ADD_MESSAGE_QUEUE]: addQueue, [EDIT_MESSAGE_QUEUE]: updateQueue, [SEARCH_MESSAGE_QUEUE]: searchQueue } = messageQueueSlice;
 
   const submit = async () => {
-    const { phoneNumber, fullName, textMessage, tts } = payload;
+    const { phoneNumber, textMessage, tts } = payload;
 
     if (payload._id) {
-      await updateQueue({ _id: payload._id, phoneNumber, fullName, textMessage });
+      await updateQueue({ _id: payload._id, phoneNumber, textMessage });
     } else {
-      const data: AddMessageQueueReq = { data: [{ phoneNumber, fullName }], textMessage, tts };
+      const data: AddMessageQueueReq = { data: [{ phoneNumber }], textMessage, tts };
       const { addedCount, blockedCount } = await addQueue(data);
 
       if (blockedCount > 0 && addedCount > 0) {
@@ -54,7 +53,7 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   useImperativeHandle(ref, () => ({
     open: async (payload?: Partial<Payload>): Promise<void> => {
       setIsEditMode(!!payload);
-      setPayload({ phoneNumber: '', fullName: '', textMessage: '', ...(payload || {}) });
+      setPayload({ phoneNumber: '', textMessage: '', ...(payload || {}) });
       modalRef.current?.open();
     },
     close: (...args: unknown[]) => modalRef.current?.close(...args),
@@ -64,16 +63,17 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
   return (
     <Modal
       ref={modalRef}
+      title={isEditMode ? 'QUEUE.EDIT_MODAL_TITLE' : 'QUEUE.ADD_MODAL_TITLE'}
       submitText={isEditMode ? 'GENERAL.UPDATE' : 'GENERAL.ADD'}
       size={OverlayEnum.MD}
       closeCallback={async () => dispatch(searchQueue({}))}
       submitCallback={submit}
       additionalActions={<Checkbox label="QUEUE.TEXT_TO_SPEECH" value={!!payload.tts} onChange={(value) => setPayload({ ...payload, tts: value })} />}
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 pt-1">
         <div className="flex gap-2">
           <TextField
-            className="flex-grow"
+            className="basis-1/3"
             name="phoneNumber"
             autoComplete="off"
             label="QUEUE.PHONE_NUMBER"
@@ -84,17 +84,6 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
             onChange={(value) => setPayload({ ...payload, phoneNumber: value })}
             beforeChange={(value) => value.replace(/\D/g, '')}
           />
-
-          <TextField
-            className="flex-grow"
-            name="fullName"
-            autoComplete="off"
-            label="QUEUE.FULL_NAME"
-            disabled={isEditMode && !!payload.fullName}
-            value={payload.fullName}
-            rules={{ required: [true] }}
-            onChange={(value) => setPayload({ ...payload, fullName: value })}
-          />
         </div>
 
         <TextAreaField
@@ -104,22 +93,8 @@ const AddEditQueueModal = forwardRef<AddQueueModalRef>((_props, ref) => {
           rules={{ required: [true] }}
           value={payload.textMessage}
           onChange={(value) => setPayload((prev) => ({ ...prev, textMessage: value }))}
-          rows={12}
+          rows={13}
         />
-
-        <div className="flex gap-2">
-          {Object.entries({ fullName: 'QUEUE.FULL_NAME', phoneNumber: 'QUEUE.PHONE_NUMBER' }).map(([value, title]) => (
-            <Button
-              key={value}
-              className="bg-blue-50 outline-0"
-              type="button"
-              buttonType="flat"
-              onClick={() => textAreaRef.current?.insertDynamicField(t(title), `{${value}}`)}
-            >
-              {t(title)}
-            </Button>
-          ))}
-        </div>
       </div>
     </Modal>
   );

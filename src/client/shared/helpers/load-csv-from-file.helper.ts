@@ -4,43 +4,80 @@
  * Load CSV content from a file (Blob or File) in the browser.
  *
  * @param file            A File or Blob (e.g. from <input type="file">)
- * @param columns         The array of field names
- * @param isHeadersIncluded   Whether to skip the first line (usually header)
+ * @param columns         The array of field names (optional - if not provided, will use headers from CSV)
  */
 
-async function loadCsvFromFile<T extends object>(
-  file: Blob,
-  columns: (keyof T)[],
-  isHeadersIncluded: boolean
-): Promise<[Record<keyof T, string>[], Record<string, string>]> {
-  if (file.type !== 'text/csv') {
-    throw new Error('Invalid file type');
+async function loadCsvFromFile<T extends object>(file: Blob, columns?: (keyof T)[]): Promise<[Record<string, string>[], Record<string, string>]> {
+  // Check if it's a CSV file by MIME type or file extension
+  const isCsvByMimeType = file.type === 'text/csv' || file.type === 'application/csv';
+  const isCsvByExtension = file instanceof File && file.name.toLowerCase().endsWith('.csv');
+
+  if (!isCsvByMimeType && !isCsvByExtension) {
+    throw new Error('Invalid file type. Please select a CSV file.');
   }
 
   const text = await file.text();
-  const lines = text.trim().split(/\r?\n/);
 
-  const dataLines = isHeadersIncluded ? lines.slice(1) : lines;
-  const headers = isHeadersIncluded
-    ? lines[0].split(',').reduce((acc: Record<string, string>, value, index) => {
-        return { ...acc, [columns[index] as string]: value };
-      }, {})
-    : {};
+  if (!text.trim()) {
+    throw new Error('The CSV file is empty.');
+  }
 
-  const data = dataLines.map((line, rowIdx) => {
-    const cells = line.split(',');
+  const lines = text
+    .trim()
+    .split(/\r?\n/)
+    .filter((line) => line.trim()); // Remove empty lines
 
-    if (cells.length !== columns.length) {
-      throw new Error(`Row ${rowIdx + 1} has ${cells.length} columns, expected ${columns.length}`);
+  if (lines.length === 0) {
+    throw new Error('No data found in the CSV file.');
+  }
+
+  // Determine columns - use provided columns or extract from headers
+  let actualColumns: string[];
+  let headers: Record<string, string> = {};
+
+  if (!columns) {
+    if (lines.length < 2) {
+      throw new Error('CSV file has headers but no data rows.');
     }
 
-    return columns.reduce(
-      (acc, col, i) => {
-        acc[col as keyof T] = cells[i]?.trim() ?? '';
+    const headerLine = lines[0].split(',').map((h) => h.trim());
+    actualColumns = columns || headerLine;
 
+    // Create header mapping if columns were provided
+    if (columns) {
+      headers = headerLine.reduce((acc: Record<string, string>, value, index) => {
+        return { ...acc, [columns[index] as string]: value };
+      }, {});
+    } else {
+      // Use headers as-is for dynamic columns
+      headers = headerLine.reduce((acc: Record<string, string>, value) => {
+        return { ...acc, [value]: value };
+      }, {});
+    }
+  } else {
+    if (!columns) {
+      throw new Error('Columns must be provided when headers are not included in CSV.');
+    }
+    actualColumns = columns as string[];
+  }
+
+  const dataLines = !columns ? lines.slice(1) : lines;
+
+  const data = dataLines.map((line, rowIdx) => {
+    const cells = line.split(',').map((cell) => cell.trim());
+
+    if (cells.length !== actualColumns.length) {
+      throw new Error(
+        `Row ${rowIdx + (!columns ? 2 : 1)} has ${cells.length} columns, expected ${actualColumns.length}. Expected columns: ${actualColumns.join(', ')}`
+      );
+    }
+
+    return actualColumns.reduce(
+      (acc, col, i) => {
+        acc[col] = cells[i] ?? '';
         return acc;
       },
-      {} as Record<keyof T, string>
+      {} as Record<string, string>
     );
   });
 

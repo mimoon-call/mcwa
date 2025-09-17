@@ -89,8 +89,9 @@
   },
   "QUEUE": {
     "TITLE": "שידור",
+    "ADD_MODAL_TITLE": "הוסף הודעה לתור",
+    "EDIT_MODAL_TITLE": "ערוך הודעה בתור",
     "PHONE_NUMBER": "מספר טלפון",
-    "FULL_NAME": "שם",
     "TEXT_MESSAGE": "הודעה",
     "CONTACT_LIST": "רשימת אנשי קשר",
     "SENT_AT": "נשלח בתאריך",

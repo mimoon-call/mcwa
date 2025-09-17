@@ -51,9 +51,9 @@ const getHeadersWithActions = (props: Pick<TableProps, 'headers' | 'updateCallba
   ];
 };
 
-const Header = ({ headers, draggable, sort, onSort, actions }: TableHeaderProps) => {
+const Header = ({ headers, draggable, sort, onSort, actions, storageKey }: TableHeaderProps) => {
   const { t } = useTranslation();
-  const { theadRef, colRefs, tableHeaders, onClick, onMouseOver, onMouseDown } = useTableHeaders({ headers, draggable, sort, onSort });
+  const { theadRef, colRefs, tableHeaders, onClick, onMouseOver, onMouseDown } = useTableHeaders({ headers, draggable, sort, onSort, storageKey });
 
   return (
     <thead ref={theadRef} className="relative">
@@ -320,7 +320,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   ) : null;
 };
 
-export default function Table({ className, pageIndex, ...props }: TableProps) {
+export default function Table({ className, pageIndex, storageKey, ...props }: TableProps) {
   const { t } = useTranslation();
   const tableRef = useRef<HTMLDivElement | null>(null);
   const { items, totalPages } = useTableItems(props);
@@ -335,7 +335,14 @@ export default function Table({ className, pageIndex, ...props }: TableProps) {
     <div className={cn('overflow-x-auto', styles['data-table'], className, props.loading && styles['data-table--loading'])}>
       <div ref={tableRef} className={cn(props.items?.length && 'h-full')}>
         <table className={cn('flex-grow', props.showGrid && styles['data-table--grid'])}>
-          <Header headers={headers} sort={props.pageSort} draggable={props.draggable} actions={actions} onSort={props.onSort} />
+          <Header
+            storageKey={storageKey}
+            headers={headers}
+            sort={props.pageSort}
+            draggable={props.draggable}
+            actions={actions}
+            onSort={props.onSort}
+          />
 
           <Body
             headers={headers}

@@ -4,7 +4,6 @@ import { MongoService } from '@server/services/database/mongo.service';
 export const WhatsappQueue = new MongoService<MessageQueueItem>(
   'WhatsappQueue',
   {
-    fullName: { type: String, required: true },
     phoneNumber: { type: String, required: true },
     textMessage: { type: String, required: true },
     tts: { type: Boolean, default: false },

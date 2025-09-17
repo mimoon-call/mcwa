@@ -37,7 +37,7 @@ export const messageQueueController = {
       ['tts', { type: ['Boolean'] }],
       ['textMessage', { required: [true] }],
       ['data.*.phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
-      ['data.*.fullName', { required: [true] }],
+      ['data.*.columns', { type: ['Object'] }],
     ]).validate();
 
     res.send(await messageQueueService[ADD_MESSAGE_QUEUE](textMessage, !!tts, data));
@@ -48,7 +48,6 @@ export const messageQueueController = {
       ['_id', { required: [true] }],
       ['tts', { type: ['Boolean'] }],
       ['phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }],
-      ['fullName', { required: [true] }],
       ['textMessage', { required: [true] }],
     ]).validate();
 

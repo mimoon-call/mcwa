@@ -30,6 +30,7 @@ export type TableHeaderProps = Pick<TableProps, 'headers' | 'draggable'> & {
   sort: Pagination['pageSort'] | undefined;
   onSort: TableProps['onSort'] | undefined;
   actions?: ReactNode;
+  storageKey: string | undefined;
 };
 
 export type TablePaginationProps = {
@@ -76,4 +77,5 @@ export type TableProps<T extends object = DefaultTableItem> = {
   exportCallback?: () => unknown | Promise<unknown>;
   customActions?: TableItemAction<T>[];
   tableActions?: MenuItem[];
+  storageKey?: string;
 };

@@ -79,7 +79,14 @@ export const messageQueueService = {
 
     const bulk = data
       .filter(({ phoneNumber }) => !blocked.includes(phoneNumber))
-      .map((value) => ({ ...value, textMessage: replaceStringVariable(textMessage, value), tts, createdAt: getLocalTime() }));
+      .map(({ phoneNumber, columns }) => {
+        return {
+          phoneNumber,
+          textMessage: replaceStringVariable(textMessage, { phoneNumber, ...(columns || {}) }),
+          tts,
+          createdAt: getLocalTime(),
+        };
+      });
 
     const inserted = await WhatsappQueue.insertMany(bulk);
 
