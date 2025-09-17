@@ -21,7 +21,7 @@ import { ConversationEventEnum } from '@server/api/conversation/conversation-eve
 import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
 import { BaseResponse } from '@server/models';
-import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
+import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -383,10 +383,10 @@ export const conversationService = {
     if (intents && intents.length > 0) orConditions.push({ intent: { $in: intents } });
     if (departments && departments.length > 0) filterConditions.push({ department: { $in: departments } });
     if (interested === true) orConditions.push({ interested: true });
-    
+
     // Add OR condition for intents or interested
     if (orConditions.length > 0) filterConditions.push({ $or: orConditions });
-    
+
     if (filterConditions.length > 0) pipeline.push({ $match: { $and: filterConditions } });
 
     const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline);
@@ -501,7 +501,7 @@ export const conversationService = {
       return { returnCode: 1 };
     }
 
-    await messageReplyHandler(lastMessage._id, 0);
+    await conversationAiHandler(lastMessage._id, { debounceTime: 0, sendAutoReplyFlag: false, callWebhookFlag: false });
 
     return { returnCode: 0 };
   },

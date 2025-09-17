@@ -11,6 +11,7 @@ import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
+type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean }>;
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
 
@@ -53,7 +54,8 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
   }
 };
 
-export const messageReplyHandler = async (id: ObjectId, debounceTime: number = 30 * 1000): Promise<void> => {
+export const conversationAiHandler = async (id: ObjectId, options?: Options): Promise<void> => {
+  const { debounceTime = 15000, sendAutoReplyFlag = true, callWebhookFlag = true } = options || {};
   const { fromNumber, toNumber, messageId, text, sentAt } = await (async () => {
     const message = await WhatsAppMessage.findOne({ _id: id });
 
@@ -95,7 +97,17 @@ export const messageReplyHandler = async (id: ObjectId, debounceTime: number = 3
     app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_CONVERSATION, conversationData);
 
     const startMessage = await MessageQueueDb.findOne(
-      { phoneNumber: message.fromNumber, instanceNumber: message.toNumber, sentAt: { $exists: true } },
+      {
+        $and: [
+          {
+            $or: [
+              { phoneNumber: message.fromNumber, instanceNumber: message.toNumber },
+              { phoneNumber: message.toNumber, instanceNumber: message.fromNumber },
+            ],
+          },
+          { sentAt: { $exists: true } },
+        ],
+      },
       null,
       { sort: { sentAt: -1 } }
     );
@@ -181,9 +193,9 @@ export const messageReplyHandler = async (id: ObjectId, debounceTime: number = 3
 
         // persist classification on the outreach message
         await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
-        await handleAiInterest(leadNumber, text, ai);
+        if (callWebhookFlag) await handleAiInterest(leadNumber, text, ai);
 
-        if (ai.suggestedReply) {
+        if (ai.suggestedReply && sendAutoReplyFlag) {
           // Check if there are active members in the conversation room
           const conversationKey = `conversation:${yourNumber}:${leadNumber}`;
           const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);

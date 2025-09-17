@@ -3,7 +3,7 @@ import getLocalTime from '@server/helpers/get-local-time';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
-import { messageReplyHandler } from '@server/api/message-queue/helpers/message-reply.handler';
+import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
 
 const speechToText = async (raw: WAMessageIncomingRaw) => {
   // Check if raw message contains audio and has buffer
@@ -61,5 +61,5 @@ export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw
 
   if (!messageData.text) return;
 
-  await messageReplyHandler(_id);
+  await conversationAiHandler(_id);
 };
