@@ -65,21 +65,21 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
         <Avatar size="3rem" src={null} alt={contact.name || contact.phoneNumber} />
 
         <div className="flex flex-col pt-1">
-          <h1 className="font-medium">{contactName}</h1>
-          <p>{phoneNumber}</p>
+          <h1 className="font-medium whitespace-nowrap">{contactName}</h1>
+          <p className="whitespace-nowrap">{phoneNumber}</p>
         </div>
 
         {contact.department && (
           <div className="flex flex-col pt-1 ps-4 border-s">
-            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.DEPARTMENT')}</label>
-            <p>{t(`CHAT.DEPARTMENT.${contact.department}`)}</p>
+            <label className="whitespace-nowrap text-gray-500 text-sm font-medium">{t('QUEUE.DEPARTMENT')}</label>
+            <p className="whitespace-nowrap">{t(`CHAT.DEPARTMENT.${contact.department}`)}</p>
           </div>
         )}
 
         {contact.intent && (
           <div className="flex flex-col pt-1 ps-4 border-s">
-            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.ANALYSIS')}</label>
-            <p>{t(`CHAT.INTENT.${contact.intent}`)}</p>
+            <label className="whitespace-nowrap text-gray-500 text-sm font-medium">{t('QUEUE.ANALYSIS')}</label>
+            <p className="whitespace-nowrap">{t(`CHAT.INTENT.${contact.intent}`)}</p>
           </div>
         )}
 

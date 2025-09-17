@@ -364,6 +364,7 @@ export const conversationService = {
           department: { $arrayElemAt: ['$messageDetails.department', 0] },
           interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
           reason: { $arrayElemAt: ['$messageDetails.reason', 0] },
+          followUpAt: { $arrayElemAt: ['$messageDetails.followUpAt', 0] },
           unsubscribedAt: { $arrayElemAt: ['$unsubscribedData.createdAt', 0] },
           hasStartMessage: { $cond: [{ $gt: [{ $size: '$lastQueueMessage' }, 0] }, true, false] },
         },

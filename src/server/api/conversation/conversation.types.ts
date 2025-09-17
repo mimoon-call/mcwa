@@ -4,10 +4,10 @@ import { InterestResult } from '@server/api/message-queue/reply/interest.classif
 
 export type SearchConversationItem = { phoneNumber: string; name: string | null; lastMessage: string; lastMessageAt: string; messageCount: number };
 
-export type SearchConversationReq = { 
-  searchValue?: string; 
-  externalFlag?: boolean; 
-  page: Pagination 
+export type SearchConversationReq = {
+  searchValue?: string;
+  externalFlag?: boolean;
+  page: Pagination;
 };
 
 export type SearchConversationRes = EntityList<
@@ -42,11 +42,12 @@ export type ConversationPairItem = {
   interested?: InterestResult['interested'];
   reason?: InterestResult['reason'];
   intent?: InterestResult['intent'];
+  followUpAt?: InterestResult['followUpAt'];
   hasStartMessage: boolean;
 };
 
-export type SearchAllConversationsReq = { 
-  page: Pagination; 
+export type SearchAllConversationsReq = {
+  page: Pagination;
   searchValue?: string;
   intents?: string[];
   departments?: string[];
