@@ -25,7 +25,7 @@ import replaceStringVariable from '@server/helpers/replace-string-variable';
 import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
 import getLocalTime from '@server/helpers/get-local-time';
 import { WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
-import { WORKDAYS, WORKHOURS, TIMEZONE } from './message-queue.constants';
+import { WORKDAYS, WORKHOURS, TIMEZONE, MAX_SEND_ATTEMPT } from './message-queue.constants';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -61,6 +61,7 @@ export const messageQueueService = {
       [
         { $match: { sentAt: { $exists: !!hasBeenSent } } },
         { $project: { phoneNumber: 1, fullName: 1, textMessage: 1, sentAt: 1, instanceNumber: 1, createdAt: 1, lastError: 1, attempt: 1 } },
+        { $sort: { attempt: 1 } },
       ],
       []
     );
@@ -112,7 +113,7 @@ export const messageQueueService = {
       messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
-      for (messageAttempt = 0; messageAttempt < 3; messageAttempt++) {
+      for (messageAttempt = 0; messageAttempt < MAX_SEND_ATTEMPT; messageAttempt++) {
         // Process all documents with current attempt number (randomly)
         let doc = await WhatsappQueue.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
 

@@ -1236,7 +1236,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   // Wait for message to reach specific status
   private async waitForMessageStatus(messageId: string, options: WASendOptions): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = options.waitTimeout || 30000;
+      const timeout = options.waitTimeout || options.deliveryTrackingTimeout || 30000;
       const targetStatus = options.waitForRead ? MessageStatusEnum.READ : MessageStatusEnum.DELIVERED;
       let callbackDebounce: NodeJS.Timeout | undefined = undefined;
 
