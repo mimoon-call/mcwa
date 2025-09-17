@@ -29,6 +29,7 @@ import { WORKDAYS, WORKHOURS, TIMEZONE, MAX_SEND_ATTEMPT } from './message-queue
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import ServerError from '@server/middleware/errors/server-error';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
@@ -101,9 +102,7 @@ export const messageQueueService = {
 
   [START_QUEUE_SEND]: (): BaseResponse<{ message?: string }> => {
     // Check if we're within work hours before starting
-    if (!isWithinWorkHours()) {
-      return { returnCode: 1, message: 'Queue cannot start outside work hours' };
-    }
+    if (!isWithinWorkHours()) throw new ServerError('Queue cannot start outside work hours', 400);
 
     messageAttempt = 0;
 
@@ -121,6 +120,7 @@ export const messageQueueService = {
           // Check work hours before each message
           if (!isWithinWorkHours()) {
             isSending = false;
+
             app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
             return;
           }
