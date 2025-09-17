@@ -3,6 +3,7 @@ import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Ta
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
+import type { MenuItem } from '@components/Menu/Menu.type';
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -19,8 +20,10 @@ import {
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
+  IS_GLOBAL_WARMING_UP,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE,
+  WARMUP_TOGGLE,
 } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
@@ -49,6 +52,8 @@ const InstanceTable = () => {
     [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
     [INSTANCE_REFRESH]: refreshInstance,
     [UPDATE_INSTANCE]: updateInstance,
+    [WARMUP_TOGGLE]: toggleWarmup,
+    actions: instanceActions,
   } = instanceStore;
 
   const {
@@ -56,6 +61,7 @@ const InstanceTable = () => {
     [INSTANCE_SEARCH_FILTER]: instanceFilter,
     [INSTANCE_SEARCH_PAGINATION]: instancePagination,
     [INSTANCE_LOADING]: instanceLoading,
+    [IS_GLOBAL_WARMING_UP]: isGlobalWarmingUp,
   } = useSelector((state: RootState) => state[StoreEnum.instance]);
 
   const headers: TableHeaders<InstanceItem> = [
@@ -159,6 +165,16 @@ const InstanceTable = () => {
     }
   }, [dispatch, instanceList]);
 
+  // Initialize global warming status based on any instance warming status
+  useEffect(() => {
+    if (instanceList && instanceList.length > 0) {
+      const anyInstanceWarming = instanceList.some(instance => instance.isWarmingUp);
+      if (anyInstanceWarming !== isGlobalWarmingUp) {
+        dispatch(instanceActions.setGlobalWarmingStatus(anyInstanceWarming));
+      }
+    }
+  }, [dispatch, instanceList, isGlobalWarmingUp, instanceActions]);
+
   // Set up socket listener for instance updates
   useEffect(() => {
     const socket = getClientSocket();
@@ -211,11 +227,16 @@ const InstanceTable = () => {
       toast.success(text);
     };
 
+    const warmingStatusChange = ({ isWarming }: { isWarming: boolean }) => {
+      dispatch(instanceActions.setGlobalWarmingStatus(isWarming));
+    };
+
     socket?.on(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
     socket?.on(InstanceEventEnum.INSTANCE_WARM_START, warmStartToast);
     socket?.on(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
     socket?.on(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
     socket?.on(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
+    socket?.on(InstanceEventEnum.INSTANCE_WARMING_STATUS, warmingStatusChange);
 
     return () => {
       socket?.off(InstanceEventEnum.INSTANCE_WARM_END, warmEndToast);
@@ -223,6 +244,7 @@ const InstanceTable = () => {
       socket?.off(InstanceEventEnum.INSTANCE_WARM_ACTIVE, activeWarm);
       socket?.off(InstanceEventEnum.INSTANCE_REGISTERED, registerToast);
       socket?.off(InstanceEventEnum.INSTANCE_UPDATE, instanceUpdate);
+      socket?.off(InstanceEventEnum.INSTANCE_WARMING_STATUS, warmingStatusChange);
     };
   }, [dispatch]);
 
@@ -233,6 +255,7 @@ const InstanceTable = () => {
     });
   const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
+  const onWarmUp = async () => await dispatch(toggleWarmup());
 
   const customActions: TableProps<InstanceItem>['customActions'] = [
     {
@@ -253,6 +276,14 @@ const InstanceTable = () => {
     },
   ];
 
+  const tableActions: MenuItem[] = [
+    {
+      label: isGlobalWarmingUp ? 'INSTANCE.STOP_WARM_UP' : 'INSTANCE.START_WARM_UP',
+      iconName: 'svg:warm',
+      onClick: onWarmUp,
+    },
+  ];
+
   return (
     <div className="h-full flex flex-col">
       <InstanceSearchPanel />
@@ -269,6 +300,7 @@ const InstanceTable = () => {
         headers={headers}
         items={instanceList || []}
         createCallback={() => modelRef.current?.open()}
+        tableActions={tableActions}
         onPageChange={onPageChange}
         deleteCallback={onDelete}
         onSort={onSort}

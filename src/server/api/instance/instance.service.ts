@@ -1,6 +1,6 @@
 import type { EntityList, Pagination } from '@models';
 import type { InstanceItem, SearchInstanceReq } from '@server/api/instance/instance.types';
-import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE } from '@server/api/instance/instance.map';
+import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE, WARMUP_TOGGLE } from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
@@ -95,5 +95,17 @@ export const instanceService = {
     }
 
     await instance.connect(true);
+  },
+
+  [WARMUP_TOGGLE]: async (): Promise<{ isWarmingUp: boolean }> => {
+    if (wa.isWarming) {
+      wa.stopWarmingUp();
+    } else {
+      wa.startWarmingUp();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    return { isWarmingUp: wa.isWarming };
   },
 };

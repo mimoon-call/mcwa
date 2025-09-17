@@ -15,10 +15,12 @@ import {
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
+  IS_GLOBAL_WARMING_UP,
   RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_FILTER,
   UPDATE_INSTANCE,
+  WARMUP_TOGGLE,
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
 import type { ErrorResponse } from '@services/http/types';
@@ -32,6 +34,7 @@ export interface InstanceState {
   [INSTANCE_SEARCH_FILTER]: Partial<Omit<SearchInstanceReq, 'page'>>;
   [INSTANCE_LOADING]: boolean;
   [INSTANCE_ERROR]: ErrorResponse | null;
+  [IS_GLOBAL_WARMING_UP]: boolean;
 }
 
 const initialState: InstanceState = {
@@ -40,6 +43,7 @@ const initialState: InstanceState = {
   [INSTANCE_SEARCH_FILTER]: loadInstanceFilter(),
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
+  [IS_GLOBAL_WARMING_UP]: false,
 };
 
 const api = new ApiService('/instance');
@@ -92,6 +96,12 @@ const refreshInstance = createAsyncThunk(`${INSTANCE_REFRESH}`, async (phoneNumb
   await dispatch(searchInstance({}));
 });
 
+const toggleWarmup = createAsyncThunk(`${WARMUP_TOGGLE}`, async (_, { dispatch }) => {
+  const response = await api.post<{ isWarmingUp: boolean }>(`${WARMUP_TOGGLE}`);
+  dispatch(instanceSlice.actions.setGlobalWarmingStatus(response.isWarmingUp));
+  return response.isWarmingUp;
+});
+
 const resetInstance = createAsyncThunk(`reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
   dispatch(instanceSlice.actions.reset());
@@ -129,6 +139,9 @@ const instanceSlice = createSlice({
       // Auto-save filter to localStorage
       saveInstanceFilter(state[INSTANCE_SEARCH_FILTER]);
     },
+    setGlobalWarmingStatus: (state, action) => {
+      state[IS_GLOBAL_WARMING_UP] = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -164,8 +177,10 @@ export default {
   [DELETE_INSTANCE]: deleteInstance,
   [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
   [INSTANCE_REFRESH]: refreshInstance,
+  [WARMUP_TOGGLE]: toggleWarmup,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
   [UPDATE_FILTER]: instanceSlice.actions.updateFilter,
   [RESET_INSTANCE]: resetInstance,
+  actions: instanceSlice.actions,
 };

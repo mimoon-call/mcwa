@@ -19,12 +19,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
   private dailyScheduleTimeHour = 9;
   private dailyScheduleTimeMinute = 0;
-  private isWarming: boolean = false;
+  private isWarmingRunning: boolean = false;
   private nextStartWarming: NodeJS.Timeout | undefined;
   private conversationEndCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationStartCallback: ((data: WAWarmUpdate) => unknown) | undefined;
   private conversationActiveCallback: ((data: WAActiveWarm) => unknown) | undefined;
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
+  private warmingStatusCallback: ((isWarming: boolean) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
   private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
   private dailyTimeWindow = [
@@ -32,6 +33,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     [7, 59],
   ];
   public nextWarmUp: Date | null = null;
+
+  public get isWarming() {
+    return this.isWarmingRunning;
+  }
 
   constructor({ warmUpOnReady, ...config }: Config<WAPersona>) {
     // incoming message callback wrapper
@@ -80,7 +85,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   private setWarmUpActive(value: boolean) {
-    this.isWarming = value;
+    this.isWarmingRunning = value;
+    this.warmingStatusCallback?.(value);
 
     if (!value) {
       this.nextWarmUp = null;
@@ -336,9 +342,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const stillNeededWarm = this.listInstanceNumbers({ hasWarmedUp: false });
 
     // Only start new warming if we're still in warming mode and no active conversations
-    if (!this.isWarming) {
+    if (!this.isWarmingRunning) {
       this.stopWarmingUp();
     } else if (this.activeConversation.size === 0) {
+      // All conversations finished, stop warming and set up next session
+      this.setWarmUpActive(false);
       clearTimeout(this.nextStartWarming);
       this.nextCheckUpdate?.(null);
 
@@ -443,7 +451,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private async handleConversationMessage(conversationKey: string): Promise<void> {
     clearTimeout(this.timeoutConversation.get(conversationKey));
 
-    if (!this.isWarming) {
+    if (!this.isWarmingRunning) {
       await this.cleanupConversation(conversationKey);
 
       return;
@@ -565,7 +573,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const nextWarmingTime = this.getNextWarmingTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
 
-        this.setWarmUpActive(false);
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
         this.nextWarmUp = getLocalTime(nextWarmingTime);
         this.nextCheckUpdate?.(this.nextWarmUp);
@@ -608,7 +615,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
     } catch (error) {
       this.log('error', 'Error occurred in warming process', error);
-      // Don't retry automatically - let the scheduled warming handle it
+      // Stop warming on error and let the scheduled warming handle it
+      this.setWarmUpActive(false);
     }
   }
 
@@ -644,6 +652,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   onConversationActive(callback?: (data: WAActiveWarm) => unknown) {
     this.conversationActiveCallback = callback;
+  }
+
+  onWarmingStatusChange(callback?: (isWarming: boolean) => unknown) {
+    this.warmingStatusCallback = callback;
   }
 
   onMessage(callback?: WAMessageIncomingCallback) {

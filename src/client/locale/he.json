@@ -144,6 +144,8 @@
     "WARMUP": {
       "NEXT_WARMUP": "חימום {{timeLeft}}"
     },
+    "START_WARM_UP": "התחל חימום",
+    "STOP_WARM_UP": "עצור חימום",
     "STATUS": {
       "CONNECTED": "מחובר",
       "DISCONNECTED": "מנותק",

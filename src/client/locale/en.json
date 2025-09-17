@@ -144,6 +144,8 @@
     "WARMUP": {
       "NEXT_WARMUP": "Warm {{timeLeft}}"
     },
+    "START_WARM_UP": "Start Warm Up",
+    "STOP_WARM_UP": "Stop Warm Up",
     "STATUS": {
       "CONNECTED": "Connected",
       "DISCONNECTED": "Disconnected",

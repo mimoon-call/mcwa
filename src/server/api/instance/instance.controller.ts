@@ -1,9 +1,17 @@
 import type { Request, Response } from 'express';
 import { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@server/api/instance/instance.types';
 import RecordValidator from '@server/services/record-validator';
-import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE } from '@server/api/instance/instance.map';
+import {
+  ACTIVE_TOGGLE_INSTANCE,
+  ADD_INSTANCE,
+  DELETE_INSTANCE,
+  INSTANCE_REFRESH,
+  SEARCH_INSTANCE,
+  WARMUP_TOGGLE,
+} from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
+import { BaseResponse } from '@server/models';
 
 export const instanceController = {
   [SEARCH_INSTANCE]: async (req: Request<never, never, SearchInstanceReq>, res: Response<SearchInstanceRes>) => {
@@ -45,5 +53,11 @@ export const instanceController = {
     await instanceService[INSTANCE_REFRESH](phoneNumber);
 
     res.send();
+  },
+
+  [WARMUP_TOGGLE]: async (_req: Request, res: Response<BaseResponse<{ isWarmingUp: boolean }>>) => {
+    const result = await instanceService[WARMUP_TOGGLE]();
+
+    res.send({ ...result, returnCode: 0 });
   },
 };
