@@ -19,7 +19,7 @@ import {
   STOP_QUEUE_SEND,
 } from '@server/api/message-queue/message-queue.map';
 import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
-import { app } from '@server/index';
+import { app, wa } from '@server/index';
 import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
 import replaceStringVariable from '@server/helpers/replace-string-variable';
 import { sendQueueMessage } from '@server/api/message-queue/helpers/send-queue-message';
@@ -118,11 +118,12 @@ export const messageQueueService = {
       messagePass = 0;
       messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
+      wa.stopWarmingUp();
 
       for (messageAttempt = 0; messageAttempt < MAX_SEND_ATTEMPT; messageAttempt++) {
         // Process all documents with current attempt number (randomly)
         let hasMoreDocs = true;
-        
+
         while (hasMoreDocs && isSending) {
           // Check work hours before each message
           if (!isWithinWorkHours()) {
@@ -132,8 +133,11 @@ export const messageQueueService = {
           }
 
           // Get next document with current attempt number (randomly)
-          const docs = await WhatsappQueue.aggregate<MessageQueueItem>([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
-          
+          const docs = await WhatsappQueue.aggregate<MessageQueueItem>([
+            { $match: { sentAt: { $exists: false }, attempt: messageAttempt } },
+            { $sample: { size: 1 } },
+          ]);
+
           if (docs.length === 0) {
             hasMoreDocs = false;
             break;
@@ -146,6 +150,7 @@ export const messageQueueService = {
         }
       }
 
+      wa.stopWarmingUp();
       isSending = false;
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
