@@ -63,7 +63,7 @@ const AddBulkQueueModal = forwardRef<AddBulkQueueModalRef>((_props, ref) => {
         rules={{ required: [true], minLength: [4] }}
         value={payload.textMessage}
         onChange={(value) => setPayload({ ...payload, textMessage: value })}
-        rows={13}
+        rows={15}
       />
 
       <div className="mb-6">
