@@ -38,9 +38,9 @@ LANGUAGE ENFORCEMENT (CRITICAL):
 - "followUpAt" is an ISO datetime (not natural language).
 
 DEPARTMENT CLASSIFICATION (DETERMINISTIC):
-- GENERAL: If message contains "ללא צורך בערבויות ובטחונות" (no need for guarantees and securities) - this takes priority
 - MORTGAGE: If message contains "כנגד נכס" (against property) OR if message contains "שיעבוד" with property/real estate context
 - CAR: If message contains "יש לך רכב" (you have a car) pattern OR if message contains "שיעבוד" with car/vehicle context
+- GENERAL: If message contains "ללא צורך בערבויות ובטחונות" (no need for guarantees and securities) - only if not already classified as MORTGAGE or CAR
 - GENERAL: For all other messages that don't match the above patterns
 
 IMPORTANT: Messages containing "שיעבוד" (lien/collateral) CANNOT be GENERAL - they must be either CAR or MORTGAGE based on context.
@@ -51,6 +51,9 @@ EXAMPLES:
 - YOU: "יש לך רכב משנת 2020, יש לך זכאות להלוואה" → department="CAR"
 - YOU: "הלוואה עם שיעבוד על הנכס" → department="MORTGAGE"
 - YOU: "הלוואה עם שיעבוד על הרכב" → department="CAR"
+- YOU: "הלוואה של עד 100,000 ₪ על בסיס שעבוד הרכב" → department="CAR"
+- YOU: "הלוואה של עד 100,000 ₪ על שעבוד רכב" → department="CAR"
+- YOU: "הלוואה של עד 100,000 ₪ על שעבוד הרכב" → department="CAR"
 - YOU: "הלוואה דיגיטלית בתנאים מיוחדים" → department="GENERAL"
 - YOU: "הלוואה לשיפוץ הבית, רכישת רכב, השקעה" → department="GENERAL"
 - YOU: "הלוואה נוספת בתנאים מועדפים" → department="GENERAL"
@@ -105,7 +108,7 @@ DECISION RULES:
  */
 const MORTGAGE_PATTERN = /כנגד\s*ה?נכס/i;
 const CAR_PATTERN = /יש\s*לך\s*רכב/i;
-const SHIYABUD_PATTERN = /שיעבוד/i;
+const SHIYABUD_PATTERN = /שעבוד/i;
 const NO_GUARANTEES_PATTERN = /ללא\s*צורך\s*בערבויות\s*ובטחונות/i;
 
 // Property/real estate context patterns
@@ -126,6 +129,9 @@ const CAR_CONTEXT_PATTERNS = [
   /רכב/i,
   /מכונית/i,
   /אוטו/i,
+  /בסיס\s*שעבוד\s*הרכב/i,
+  /שעבוד\s*רכב/i,
+  /שעבוד\s*הרכב/i,
   /car/i,
   /vehicle/i,
   /auto/i,
@@ -161,11 +167,12 @@ function isNoGuaranteesMessage(text: string): boolean {
 }
 
 function inferDepartmentFromOutreach(outreachText: string): LeadDepartmentEnum {
-  // Check for no-guarantees pattern first - this should always be GENERAL
-  if (isNoGuaranteesMessage(outreachText)) return LeadDepartmentEnum.GENERAL;
-  
+  // Check for specific loan types first (these take priority over general patterns)
   if (isMortgageMessage(outreachText)) return LeadDepartmentEnum.MORTGAGE;
   if (isCarMessage(outreachText)) return LeadDepartmentEnum.CAR;
+  
+  // Check for no-guarantees pattern - this should be GENERAL only if not already classified
+  if (isNoGuaranteesMessage(outreachText)) return LeadDepartmentEnum.GENERAL;
   
   // If message contains "שיעבוד" but no clear context, default to MORTGAGE
   if (SHIYABUD_PATTERN.test(outreachText)) {

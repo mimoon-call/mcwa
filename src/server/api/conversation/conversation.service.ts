@@ -502,7 +502,7 @@ export const conversationService = {
       return { returnCode: 1 };
     }
 
-    await conversationAiHandler(lastMessage._id, { debounceTime: 0, sendAutoReplyFlag: false, callWebhookFlag: false });
+    await conversationAiHandler(lastMessage._id, { debounceTime: 0, sendAutoReplyFlag: false, callWebhookFlag: false, instanceNumber: phoneNumber });
 
     return { returnCode: 0 };
   },

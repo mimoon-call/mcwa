@@ -11,7 +11,7 @@ import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
-type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean }>;
+type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean; instanceNumber: string }>;
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
 
@@ -123,9 +123,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
     };
   })();
 
-  if (!messageId || !sentAt) {
-    return;
-  }
+  if (!messageId || !sentAt) return;
 
   const conversationKey = [fromNumber, toNumber].sort().join(':');
 
@@ -139,42 +137,46 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
   const handle = setTimeout(async () => {
     try {
-      console.log('handler started for', conversationKey);
-      const leadNumber = fromNumber; // LEAD
-      const yourNumber = toNumber; // YOU
+      console.log('conversationAiHandler', 'started for', conversationKey);
+      const phoneNumber1 = fromNumber;
+      const phoneNumber2 = toNumber;
 
       const originalMessage = await WhatsAppMessage.findOne({
         messageId,
         $or: [
-          { fromNumber: leadNumber, toNumber: yourNumber },
-          { fromNumber: yourNumber, toNumber: leadNumber },
+          { fromNumber: phoneNumber1, toNumber: phoneNumber2 },
+          { fromNumber: phoneNumber2, toNumber: phoneNumber1 },
         ],
       });
 
-      if (!originalMessage?.createdAt) {
-        return;
-      }
+      if (!originalMessage?.createdAt) return;
 
       const allPreviousMessages = await WhatsAppMessage.find(
         {
           createdAt: { $gte: new Date(originalMessage.createdAt) },
           $or: [
-            { fromNumber: leadNumber, toNumber: yourNumber },
-            { fromNumber: yourNumber, toNumber: leadNumber },
+            { fromNumber: phoneNumber1, toNumber: phoneNumber2 },
+            { fromNumber: phoneNumber2, toNumber: phoneNumber1 },
           ],
         },
         { text: 1, createdAt: 1, fromNumber: 1, toNumber: 1 },
         { sort: { createdAt: 1 }, lean: true }
       );
 
+      let primaryNumber: string | undefined = options?.instanceNumber || undefined;
+
       // role-aware, ordered transcript (skip empty texts)
       const leadReplies: TranscriptItem[] = allPreviousMessages
         .filter((m) => typeof m.text === 'string' && m.text.trim().length > 0)
-        .map((m) => ({
-          from: m.fromNumber === leadNumber ? 'LEAD' : 'YOU',
-          text: m.text!.trim(),
-          at: (m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt)).toISOString(),
-        }));
+        .map((m, index) => {
+          if (!primaryNumber && index === 0) primaryNumber = m.fromNumber;
+
+          return {
+            from: m.fromNumber === primaryNumber ? 'YOU' : 'LEAD',
+            text: m.text!.trim(),
+            at: (m.createdAt instanceof Date ? m.createdAt : new Date(m.createdAt)).toISOString(),
+          };
+        });
 
       const svc = new OpenAiService();
 
@@ -193,11 +195,11 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
         // persist classification on the outreach message
         await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
-        if (callWebhookFlag) await handleAiInterest(leadNumber, text, ai);
+        if (callWebhookFlag) await handleAiInterest(phoneNumber1, text, ai);
 
         if (ai.suggestedReply && sendAutoReplyFlag) {
           // Check if there are active members in the conversation room
-          const conversationKey = `conversation:${yourNumber}:${leadNumber}`;
+          const conversationKey = `conversation:${phoneNumber2}:${phoneNumber1}`;
           const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);
 
           if (hasActiveMembers) {
@@ -208,7 +210,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           console.log(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
 
           try {
-            const sendResult = await wa.sendMessage(yourNumber, leadNumber, ai.suggestedReply, {
+            const sendResult = await wa.sendMessage(phoneNumber2, phoneNumber1, ai.suggestedReply, {
               trackDelivery: true,
               waitForDelivery: true,
               onUpdate: (messageId, deliveryStatus) =>
@@ -217,8 +219,8 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
             // Broadcast the sent message with actual messageId from WhatsApp
             const sentMessageData = {
-              fromNumber: yourNumber,
-              toNumber: leadNumber,
+              fromNumber: phoneNumber2,
+              toNumber: phoneNumber1,
               text: ai.suggestedReply,
               createdAt: new Date().toISOString(),
               status: MessageStatusEnum.PENDING,
