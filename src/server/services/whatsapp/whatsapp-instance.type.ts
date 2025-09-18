@@ -61,6 +61,8 @@ export type WASendOptions = {
   retryDelay?: number;
   onSuccess?: (...arg: any[]) => void;
   onFailure?: (error: any, attempts: number) => void;
+  // Check whatsapp number status before sending
+  onWhatsapp?: boolean; // default true
   // Delivery tracking options
   trackDelivery?: boolean;
   // Timeout for delivery tracking (when messages are marked as ERROR)

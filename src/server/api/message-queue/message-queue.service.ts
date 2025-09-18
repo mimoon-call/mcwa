@@ -121,23 +121,28 @@ export const messageQueueService = {
 
       for (messageAttempt = 0; messageAttempt < MAX_SEND_ATTEMPT; messageAttempt++) {
         // Process all documents with current attempt number (randomly)
-        let doc = await WhatsappQueue.findOne({ sentAt: { $exists: false }, attempt: messageAttempt });
-
-        while (doc && isSending) {
+        let hasMoreDocs = true;
+        
+        while (hasMoreDocs && isSending) {
           // Check work hours before each message
           if (!isWithinWorkHours()) {
             isSending = false;
-
             app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
             return;
           }
 
+          // Get next document with current attempt number (randomly)
+          const docs = await WhatsappQueue.aggregate<MessageQueueItem>([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
+          
+          if (docs.length === 0) {
+            hasMoreDocs = false;
+            break;
+          }
+
+          const doc = docs[0];
+
           await sendQueueMessage(doc, () => messagePass++);
-
           app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
-
-          // Get next document with same attempt number (randomly)
-          [doc] = await WhatsappQueue.aggregate([{ $match: { sentAt: { $exists: false }, attempt: messageAttempt } }, { $sample: { size: 1 } }]);
         }
       }
 

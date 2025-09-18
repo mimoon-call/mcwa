@@ -1804,9 +1804,28 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
+  public async onWhatsapp(phoneNumber: string) {
+    if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
+
+    try {
+      const result = await this.socket.onWhatsApp(this.numberToJid(phoneNumber));
+
+      return !!result?.[0].exists;
+    } catch {
+      this.log('error', `Failed to check WhatsApp registration for ${phoneNumber}`);
+
+      return false;
+    }
+  }
+
   public async send(toNumber: string, payload: WAOutgoingContent, options?: WASendOptions): Promise<WebMessageInfo & Partial<WAMessageDelivery>> {
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
     if (this.appState?.isActive === false) throw new Error('Instance is not active');
+
+    if (options?.onWhatsapp) {
+      const hasWhatsappRegistered = await this.onWhatsapp(toNumber);
+      if (!hasWhatsappRegistered) throw new Error(`The number ${toNumber} is not registered on WhatsApp`);
+    }
 
     const { maxRetries = 3, retryDelay = 1000, onSuccess, onFailure } = options || {};
     let lastError: any;
