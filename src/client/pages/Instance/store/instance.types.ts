@@ -24,7 +24,7 @@ export type InstanceItem = {
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;
-export type SearchInstanceReq = Partial<{ isActive: boolean; phoneNumber: string; statusCode: number; page: Pagination }>;
+export type SearchInstanceReq = Partial<{ isActive: boolean; hasWarmedUp: boolean; phoneNumber: string; statusCode: number; page: Pagination }>;
 
 export type AddInstanceRes = { image: string };
 

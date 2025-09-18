@@ -30,6 +30,10 @@ export const instanceService = {
       pipeline.push({ $match: { isActive: payload.isActive } });
     }
 
+    if (payload.hasWarmedUp !== undefined) {
+      pipeline.push({ $match: { hasWarmedUp: payload.hasWarmedUp } });
+    }
+
     pipeline.push({
       $project: {
         phoneNumber: 1,

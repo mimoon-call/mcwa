@@ -16,7 +16,7 @@ export type InstanceItem = Pick<
   | 'lastIpAddress'
 > & { isWarmingUp: boolean; isConnected: boolean };
 
-export type SearchInstanceReq = Partial<{ phoneNumber: string; statusCode: number; isActive: boolean; page: Pagination }>;
+export type SearchInstanceReq = Partial<{ phoneNumber: string; statusCode: number; isActive: boolean; hasWarmedUp: boolean; page: Pagination }>;
 export type SearchInstanceRes = EntityList<InstanceItem>;
 
 export type AddInstanceRes = { image: string };

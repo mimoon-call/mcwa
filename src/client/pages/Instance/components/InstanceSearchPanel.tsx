@@ -73,7 +73,7 @@ export const InstanceSearchPanel = () => {
   }, [dispatch]);
 
   return (
-    <SearchPanel onSearch={onSearch} onClear={onClear} payload={instanceFilter} debounce={500}>
+    <SearchPanel payload={instanceFilter} debounce={500} numColumnsInRow={5} minWidth={'200px'} onSearch={onSearch} onClear={onClear}>
       <TextField
         clearable
         hideDetails
@@ -101,6 +101,14 @@ export const InstanceSearchPanel = () => {
         value={payload.isActive}
         options={statusOptions}
         onChange={(value) => onChange({ isActive: value })}
+      />
+      <SelectField
+        clearable
+        name="hasWarmedUp"
+        label="INSTANCE.HAS_WARMED_UP"
+        value={payload.hasWarmedUp}
+        options={statusOptions}
+        onChange={(value) => onChange({ hasWarmedUp: value })}
       />
     </SearchPanel>
   );
