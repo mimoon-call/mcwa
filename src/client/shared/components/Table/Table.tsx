@@ -33,7 +33,7 @@ const getHeadersWithActions = (props: Pick<TableProps, 'headers' | 'updateCallba
   }
 
   if (props.deleteCallback) {
-    actions.push({ label: 'GENERAL.DELETE', onClick: props.deleteCallback, iconName: 'svg:trash', className: 'text-red-900' });
+    actions.push({ label: 'GENERAL.DELETE', onClick: props.deleteCallback, iconName: 'svg:trash', className: 'text-red-800' });
   }
 
   if (!actions.length) {

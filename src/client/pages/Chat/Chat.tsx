@@ -518,7 +518,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     {
       label: !selectedContact?.unsubscribedAt ? 'QUEUE.UNSUBSCRIBE_NUMBER' : 'QUEUE.RESUBSCRIBE_NUMBER',
       iconName: 'svg:megaphone',
-      className: !selectedContact?.unsubscribedAt ? 'text-red-800' : 'text-green-800',
+      className: !selectedContact?.unsubscribedAt ? 'text-yellow-800' : 'text-green-700',
       disabled: !selectedContact,
       onClick: handleSubscribeNumber,
     },

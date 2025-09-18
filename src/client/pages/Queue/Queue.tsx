@@ -184,7 +184,7 @@ const Queue = () => {
     {
       label: 'QUEUE.DELETE_ALL',
       iconName: 'svg:trash',
-      className: 'text-red-600',
+      className: 'text-red-800',
       onClick: onClear,
       disabled: () => !!(queuePagination.totalItems === 0 || queueLoading || isSendingInProgress),
     },
