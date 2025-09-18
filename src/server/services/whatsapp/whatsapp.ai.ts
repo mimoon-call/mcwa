@@ -17,63 +17,6 @@ export class WhatsappAiService {
   private recent = <K extends string>(arr: K[], n: number) => arr.slice(-n);
   private getRandomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
 
-  /**
-   * Generate real, localized links based on persona location and topic using AI
-   */
-  private async getLocalizedLinksAI(topic: string, location?: string): Promise<string[]> {
-    if (!location) return this.getDefaultLinks(topic);
-
-    try {
-      const prompt = `You are ChatGPT. Generate 3-5 REAL, WORKING URLs for ${topic} in ${location} that actually exist and work.
-
-Use your knowledge to provide REAL URLs like ChatGPT does when giving sources:
-- Travel: Real YouTube travel videos (https://www.youtube.com/watch?v=VIDEO_ID), actual booking.com pages, real TripAdvisor attraction pages
-- Books: Real Amazon book pages (https://www.amazon.com/s?k=SEARCH), actual Goodreads book pages, real library pages
-- Music: Real Spotify playlists (https://open.spotify.com/playlist/ID), actual YouTube music videos, real SoundCloud tracks
-- Restaurants: Real Yelp restaurant pages, actual TripAdvisor restaurant reviews, real Google Maps locations
-- Movies: Real IMDb movie pages (https://www.imdb.com/title/ttID/), actual Netflix shows, real YouTube trailers
-- Shopping: Real Amazon product pages, actual eBay listings, real store pages
-
-IMPORTANT: Use your training data to provide REAL URLs that exist and work, just like when you provide sources to users. Include specific video IDs, product IDs, or search terms.
-
-Return only valid URLs, one per line, no explanations.`;
-
-      const response = await this.ai.request([this.ai.createUserMessage(prompt)], { max_tokens: 200, temperature: 0.7 });
-
-      if (response?.choices?.[0]?.message?.content) {
-        const content = response.choices[0].message.content;
-        const urls = content
-          .split('\n')
-          .map((line) => line.trim())
-          .filter((line) => line.startsWith('http') && line.length > 10)
-          .slice(0, 5);
-
-        return urls.length > 0 ? urls : this.getDefaultLinks(topic);
-      }
-    } catch (error) {
-      console.warn('Failed to generate AI links, falling back to defaults:', error);
-    }
-
-    return this.getDefaultLinks(topic);
-  }
-
-  /**
-   * Get default fallback links for when AI generation fails
-   */
-  private getDefaultLinks(topic: string): string[] {
-    const defaultLinks: Record<string, string[]> = {
-      travel: ['https://www.youtube.com/results?search_query=travel+guide', 'https://www.booking.com/', 'https://www.tripadvisor.com/'],
-      books: ['https://www.amazon.com/', 'https://www.goodreads.com/', 'https://www.bookdepository.com/'],
-      music: ['https://open.spotify.com/', 'https://www.youtube.com/music', 'https://music.apple.com/'],
-      restaurants: ['https://www.tripadvisor.com/Restaurants', 'https://www.yelp.com/', 'https://www.opentable.com/'],
-      movies: ['https://www.imdb.com/', 'https://www.netflix.com/', 'https://www.rottentomatoes.com/'],
-      shopping: ['https://www.amazon.com/', 'https://www.ebay.com/', 'https://www.walmart.com/'],
-    };
-
-    const topicKey = Object.keys(defaultLinks).find((key) => topic.includes(key)) || 'travel';
-    return defaultLinks[topicKey];
-  }
-
   // Conversation
   /** Pick a lightweight topic-hint based on personas + recent chat (no books) */
   private buildTopicHint(a: WAPersona, b: WAPersona, prev?: WAConversation[]): string {
@@ -114,15 +57,6 @@ Return only valid URLs, one per line, no explanations.`;
     if ((hasKidsA || hasKidsB) && !mentioned('school')) seeds.push('school_pickup');
     if (!mentioned('series') && !mentioned('episode')) seeds.push('tv_series');
     if (!mentioned('gym') && !mentioned('workout')) seeds.push('quick_workout');
-
-    // New advanced topics with link potential
-    if (!mentioned('travel') && !mentioned('trip')) seeds.push('travel_planning');
-    if (!mentioned('book') && !mentioned('read')) seeds.push('book_recommendation');
-    if (!mentioned('music') && !mentioned('song')) seeds.push('music_discovery');
-    if (!mentioned('youtube') && !mentioned('video')) seeds.push('youtube_video');
-    if (!mentioned('website') && !mentioned('app')) seeds.push('website_review');
-    if (!mentioned('movie') && !mentioned('film')) seeds.push('movie_recommendation');
-    if (!mentioned('restaurant') && !mentioned('food')) seeds.push('restaurant_review');
 
     // If nothing suitable, leave empty so base prompt handles "small talk"
     if (!seeds.length) return '';
@@ -274,8 +208,7 @@ Return only valid URLs, one per line, no explanations.`;
     messageCount: number,
     previousConversation: WAConversation[] | undefined,
     speakerOrder: { from: string; to: string }[],
-    topicHint?: string,
-    localizedLinks: Record<string, string[]> = {}
+    topicHint?: string
   ): string {
     const languageName = this.langMap[a.language] || 'Hebrew';
     const formatChildren = (children: { name: string; age: number }[]) =>
@@ -300,8 +233,7 @@ Infer relationship, tone, and slang level from this context. Continue naturally 
 - Keep topics everyday and lightweight
 - Allowed seeds (examples): kids_birthday, night_out, meet_partner, work_colleagues,
   coffee_catchup, traffic_parking, delivery_pickup, phone_battery, quick_groceries,
-  school_pickup, tv_series, quick_workout, travel_planning, book_recommendation, 
-  music_discovery, youtube_video, website_review
+  school_pickup, tv_series, quick_workout
 - Avoid niche hobbies, politics, or deep analysis
 - No book discussions unless it naturally appears in PREVIOUS CONTEXT (then keep it to a passing mention only)
 `.trim();
@@ -336,45 +268,18 @@ ${topicLine}${rulesBlock}
 # GLOBAL STYLE (must follow)
 - Messages are short and chatty: ~3–12 words, one sentence each.
 - **Use casual, friend-like language - avoid formal phrases like "Check out this" or "Please review"**
-- **Context-aware link sharing**: Be specific about platforms - "It's on Apple TV", "Found a hotel on Booking.com", "New series on Netflix", "Video on YouTube"
-- **DO NOT treat established platforms as "new" - Booking.com, Netflix, Apple TV, YouTube are well-known platforms**
-- **DO NOT say "look on new website" for established platforms - just mention the platform naturally**
 - Minimal punctuation; **do not end messages with "!" or "."**. "?" is allowed.
 - Variety: do NOT make every message a question; never two questions in a row.
 - **MANDATORY: Include 2-3 emojis throughout the conversation (mix of emoji-only messages and emojis within text)**
-- **Include 1-2 messages with relevant links to websites, YouTube videos, or music when discussing related topics**
 - Names only when natural.
 - No system notes.
 
-# LINK INTEGRATION (AI-POWERED & LOCALIZED)
-When discussing these topics, naturally include relevant links generated by AI based on persona location:
-- **Travel/Location**: Mention specific platforms like "Booking.com", "TripAdvisor", "YouTube travel videos"
-- **Books**: Reference established platforms like "Amazon", "Goodreads", "local bookstores"
-- **Music**: Specify platforms like "Spotify", "YouTube Music", "Apple Music"
-- **Movies/TV**: Name streaming services like "Netflix", "Apple TV+", "Disney+", "YouTube trailers"
-- **Food**: Reference platforms like "Yelp", "TripAdvisor", "Google Maps", "restaurant websites"
-- **Shopping**: Mention platforms like "Amazon", "eBay", "local store websites"
-- **Technology**: Reference established sites like "YouTube reviews", "product websites", "comparison sites"
-
-**CRITICAL**: Use the pre-generated localized links below. These are real, current URLs specific to the persona's location.
-Never use hardcoded or generic links - always use the provided localized links.
-**PLATFORM AWARENESS**: Always mention the specific platform name when sharing links - don't treat established platforms as "new discoveries".
-
-# PRE-GENERATED LOCALIZED LINKS (USE THESE EXACTLY)
-${Object.entries(localizedLinks)
-  .map(([topic, links]) => `**${topic.toUpperCase()}**: ${links.join(', ')}`)
-  .join('\n')}
-
 # CONVERSATION FLOW EXAMPLES (with required emojis)
-- **Travel**: "Found a great hotel on Booking.com https://example.com/hotel" → "🔥🔥🔥" → "I'm so excited to go! 😍"
-- **Books**: "It's available on Amazon https://example.com/books" → "👍 thanks!" → "Can't wait to read it! 📚"
-- **Music**: "New song on Spotify https://example.com/music" → "❤️ love it!" → "This song is amazing! 🎵"
-- **Restaurants**: "Menu on their website https://example.com/restaurants" → "😋 looks delicious" → "Let's go there! 🍕"
-- **TV/Movies**: "New series on Netflix https://example.com/series" → "😱 looks good!" → "I'll check it out! 📺"
-
-**IMPORTANT**: Use the exact links from the PRE-GENERATED LOCALIZED LINKS section above. 
-Copy and paste the URLs exactly as they appear - do not modify or create new ones.
-**LINK FORMATTING**: Include links directly in the text with platform context, like "New series on Netflix https://example.com" or "Hotel on Booking.com https://example.com" not generic phrases like "Check this out".
+- **Travel**: "Found a great hotel for our trip" → "🔥🔥🔥" → "I'm so excited to go! 😍"
+- **Books**: "Just finished reading that book" → "👍 thanks!" → "Can't wait to read it! 📚"
+- **Music**: "Heard this amazing new song" → "❤️ love it!" → "This song is amazing! 🎵"
+- **Restaurants**: "Tried that new place downtown" → "😋 looks delicious" → "Let's go there! 🍕"
+- **TV/Movies**: "Watched the new series last night" → "😱 looks good!" → "I'll check it out! 📺"
 
 # EMOJI RESPONSES (CONTEXTUAL) - MANDATORY 2-3 PER CONVERSATION
 **REQUIRED: Every conversation MUST include 2-3 emojis total, distributed as:**
@@ -406,7 +311,6 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
 - Each "text" is ${languageName} only, one sentence, **no trailing "!" or "."**.
 - **NEVER return empty strings for "text" - each message must have meaningful content.**
 - **MANDATORY: Include 2-3 emojis total (mix of emoji-only messages and emojis within text)**
-- **Include 1-2 messages with relevant links when discussing related topics**
 - If you cannot generate valid content for a message, omit that message entirely from the response.
 `.trim();
   }
@@ -438,20 +342,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
 
         const topicHint = await this.buildTopicHint(profileA, profileB, lastConversation);
 
-        // Pre-generate localized links for potential topics
-        const potentialTopics = ['travel', 'books', 'music', 'restaurants', 'movies', 'shopping'];
-        const localizedLinks: Record<string, string[]> = {};
-
-        for (const topic of potentialTopics) {
-          try {
-            localizedLinks[topic] = await this.getLocalizedLinksAI(topic, profileA.location || profileB.location);
-          } catch (error) {
-            console.warn(`Failed to generate links for ${topic}:`, error);
-            localizedLinks[topic] = this.getDefaultLinks(topic);
-          }
-        }
-
-        const prompt = this.buildConversationPrompt(profileA, profileB, totalMessages, lastConversation, speakerOrder, topicHint, localizedLinks);
+        const prompt = this.buildConversationPrompt(profileA, profileB, totalMessages, lastConversation, speakerOrder, topicHint);
 
         // Schema: keep from/to flexible (we enforce after parsing),
         // and forbid trailing "!" or "." on text
