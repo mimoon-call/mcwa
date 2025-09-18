@@ -4,9 +4,11 @@ import {
   CLEAR_MESSAGE_QUEUE,
   EDIT_MESSAGE_QUEUE,
   REMOVE_MESSAGE_QUEUE,
+  RESUBSCRIBE_NUMBER,
   SEARCH_MESSAGE_QUEUE,
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
+  UNSUBSCRIBE_NUMBER,
 } from '@server/api/message-queue/message-queue.map';
 import {
   AddMessageQueueReq,
@@ -70,5 +72,17 @@ export const messageQueueController = {
 
   [CLEAR_MESSAGE_QUEUE]: async (_req: Request, res: Response<BaseResponse>) => {
     res.send(await messageQueueService[CLEAR_MESSAGE_QUEUE]());
+  },
+
+  [UNSUBSCRIBE_NUMBER]: async (req: Request<{ phoneNumber: string }>, res: Response<BaseResponse>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }]]).validate();
+
+    res.send(await messageQueueService[UNSUBSCRIBE_NUMBER](phoneNumber));
+  },
+
+  [RESUBSCRIBE_NUMBER]: async (req: Request<{ phoneNumber: string }>, res: Response<BaseResponse>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { required: [true], regex: [RegexPattern.PHONE_IL] }]]).validate();
+
+    res.send(await messageQueueService[RESUBSCRIBE_NUMBER](phoneNumber));
   },
 };

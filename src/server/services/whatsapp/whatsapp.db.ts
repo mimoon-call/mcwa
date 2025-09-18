@@ -141,7 +141,7 @@ export const WhatsAppUnsubscribe = new MongoService<WAUnsubscribe>(
   'WhatsAppUnsubscribe',
   {
     phoneNumber: { type: String, required: true },
-    text: { type: String, required: true },
+    text: { type: String },
     intent: { type: String, enum: Object.values(LeadIntentEnum) },
     reason: { type: String },
     confidence: { type: Number }, // 0..1
@@ -154,6 +154,7 @@ export const WhatsAppUnsubscribe = new MongoService<WAUnsubscribe>(
       { fields: { phoneNumber: 1 }, options: { unique: true, name: 'phoneNumber_unique' } },
       { fields: { createdAt: 1 }, options: { name: 'createdAt_index' } },
     ],
+    preSave: setModifiedAndCreationDate,
   }
 );
 

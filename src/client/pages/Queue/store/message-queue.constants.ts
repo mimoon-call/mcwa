@@ -5,6 +5,8 @@ export const REMOVE_MESSAGE_QUEUE = 'remove-message-queue';
 export const START_QUEUE_SEND = 'start-queue-send';
 export const STOP_QUEUE_SEND = 'stop-queue-send';
 export const CLEAR_MESSAGE_QUEUE = 'clear-message-queue';
+export const UNSUBSCRIBE_NUMBER = 'unsubscribe-number';
+export const RESUBSCRIBE_NUMBER = 'resubscribe-number';
 
 export const UPDATE_MESSAGE_COUNT = 'update-message-count';
 export const DELETE_MESSAGE_QUEUE = 'delete-message-queue';

@@ -14,9 +14,11 @@ import {
   CLEAR_MESSAGE_QUEUE,
   EDIT_MESSAGE_QUEUE,
   REMOVE_MESSAGE_QUEUE,
+  RESUBSCRIBE_NUMBER,
   SEARCH_MESSAGE_QUEUE,
   START_QUEUE_SEND,
   STOP_QUEUE_SEND,
+  UNSUBSCRIBE_NUMBER,
 } from '@server/api/message-queue/message-queue.map';
 import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { app, wa } from '@server/index';
@@ -109,7 +111,7 @@ export const messageQueueService = {
 
   [START_QUEUE_SEND]: (): BaseResponse<{ message?: string }> => {
     // Check if we're within work hours before starting
-    if (!isWithinWorkHours()) throw new ServerError('Queue cannot start outside work hours', 400);
+    if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_OUT_WORKTIME', 400);
 
     messageAttempt = 0;
 
@@ -176,6 +178,18 @@ export const messageQueueService = {
     }
 
     await WhatsappQueue.deleteMany({ sentAt: { $exists: false } });
+
+    return { returnCode: 0 };
+  },
+
+  [UNSUBSCRIBE_NUMBER]: async (phoneNumber: string): Promise<BaseResponse> => {
+    await WhatsAppUnsubscribe.insertOne({ phoneNumber, createdAt: getLocalTime() });
+
+    return { returnCode: 0 };
+  },
+
+  [RESUBSCRIBE_NUMBER]: async (phoneNumber: string): Promise<BaseResponse> => {
+    await WhatsAppUnsubscribe.deleteOne({ phoneNumber });
 
     return { returnCode: 0 };
   },

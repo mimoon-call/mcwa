@@ -38,6 +38,7 @@ import {
   CHAT_CLEAR_RETRY_COOLDOWN,
   CHAT_LOAD_MORE_CONVERSATIONS,
   AI_REASONING_CONVERSATION,
+  UPDATE_GLOBAL_SELECTED_CONTACT,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -47,6 +48,9 @@ import { RouteName } from '@client/router/route-name';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import Avatar from '@components/Avatar/Avatar';
 import { useTranslation } from 'react-i18next';
+import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
+import { RESUBSCRIBE_NUMBER, UNSUBSCRIBE_NUMBER } from '@client/pages/Queue/store/message-queue.constants';
+import { useAsyncFn, useToast } from '@hooks';
 
 type ChatProps = {
   className?: string;
@@ -106,6 +110,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const lastSearchValueRef = useRef<string>('');
+  const toast = useToast();
 
   // Filter state
   const [selectedIntents, setSelectedIntents] = React.useState<string[]>([]);
@@ -129,10 +134,30 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
     [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
     [AI_REASONING_CONVERSATION]: aiReasoningConversation,
+    [UPDATE_GLOBAL_SELECTED_CONTACT]: updateGlobalSelectedContact,
   } = chatSlice;
 
   // Get retry cooldown actions
   const { [CHAT_SET_RETRY_COOLDOWN]: setRetryCooldown, [CHAT_CLEAR_RETRY_COOLDOWN]: clearRetryCooldown } = chatSlice;
+  const { [UNSUBSCRIBE_NUMBER]: unsubscribeNumber, [RESUBSCRIBE_NUMBER]: resubscribeNumber } = messageQueueSlice;
+
+  const { call: unsubscribeRequest } = useAsyncFn(unsubscribeNumber, {
+    errorCallback: (error) => toast.error(error.errorMessage![0].message),
+    successCallback: () => {
+      toast.success('QUEUE.NUMBER_UNSUBSCRIBED_SUCCESSFULLY');
+      dispatch(updateGlobalSelectedContact({ unsubscribedAt: new Date().toISOString() }));
+    },
+    throwError: true,
+  });
+
+  const { call: resubscribeRequest } = useAsyncFn(resubscribeNumber, {
+    errorCallback: (error) => toast.error(error.errorMessage![0].message),
+    successCallback: () => {
+      toast.success('QUEUE.NUMBER_RESUBSCRIBED_SUCCESSFULLY');
+      dispatch(updateGlobalSelectedContact({ unsubscribedAt: null }));
+    },
+    throwError: true,
+  });
 
   // Get data from store using constants
   const conversations = useSelector((state: RootState) => state[StoreEnum.globalChat][CHAT_SEARCH_DATA]) || [];
@@ -195,6 +220,11 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       dispatch(setSelectedContact(selectedContactFromUrl));
     }
   }, [selectedContactFromUrl, selectedContact, dispatch]);
+
+  // Debug selectedContact changes
+  useEffect(() => {
+    console.log('selectedContact changed:', selectedContact);
+  }, [selectedContact]);
 
   // Load messages when a chat is selected and join conversation room
   useEffect(() => {
@@ -324,12 +354,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     dispatch(setRetryCooldown({ messageId: id, timestamp: cooldownTimestamp }));
 
     // Update the message status back to PENDING
-    dispatch(
-      updateOptimisticMessageStatus({
-        tempId: id,
-        status: MessageStatusEnum.PENDING,
-      })
-    );
+    dispatch(updateOptimisticMessageStatus({ tempId: id, status: MessageStatusEnum.PENDING }));
 
     // Resend the message via socket
     const socket = getClientSocket();
@@ -361,12 +386,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         // Clear current data and search with new value
         dispatch(clearSearchData());
         dispatch(
-          searchConversations({
-            searchValue: value,
-            intents: selectedIntents,
-            departments: selectedDepartments,
-            interested: selectedInterested,
-          })
+          searchConversations({ searchValue: value, intents: selectedIntents, departments: selectedDepartments, interested: selectedInterested })
         );
       }
     },
@@ -450,18 +470,10 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       title: 'CHAT.DELETE_CONVERSATION',
       description: 'CHAT.DELETE_CONVERSATION_WARNING',
       callback: async () => {
-        await deleteConversation({
-          fromNumber: selectedContact.instanceNumber,
-          toNumber: selectedContact.phoneNumber,
-        });
+        await deleteConversation({ fromNumber: selectedContact.instanceNumber, toNumber: selectedContact.phoneNumber });
 
         // Remove conversation from state
-        dispatch(
-          removeConversation({
-            fromNumber: selectedContact.instanceNumber,
-            toNumber: selectedContact.phoneNumber,
-          })
-        );
+        dispatch(removeConversation({ fromNumber: selectedContact.instanceNumber, toNumber: selectedContact.phoneNumber }));
 
         // Clear selected contact and navigate to chat without params
         dispatch(setSelectedContact(null));
@@ -472,9 +484,21 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   };
 
   const handleCalculateAiReasoning = async () => {
-    if (!selectedContact?.phoneNumber || !selectedContact.instanceNumber) return;
+    await aiReasoningConversation(selectedContact!.instanceNumber, selectedContact!.phoneNumber);
+  };
 
-    await aiReasoningConversation(selectedContact.instanceNumber, selectedContact.phoneNumber);
+  const handleSubscribeNumber = async () => {
+    if (selectedContact?.unsubscribedAt) {
+      await resubscribeRequest(selectedContact!.phoneNumber);
+    } else {
+      await unsubscribeRequest(selectedContact!.phoneNumber);
+    }
+  };
+
+  const copyDetails = async () => {
+    const phoneNumber = internationalPhonePrettier(selectedContact!.phoneNumber, '-', true);
+    const contactText = selectedContact!.name ? `${selectedContact!.name}\n${phoneNumber}` : phoneNumber;
+    await navigator.clipboard.writeText(contactText);
   };
 
   const actions: MenuItem[] = [
@@ -482,21 +506,21 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       label: 'CHAT.COPY_CONTACT_DETAILS',
       iconName: 'svg:copy',
       disabled: !selectedContact,
-      onClick: async () => {
-        if (!selectedContact) return;
-
-        const phoneNumber = internationalPhonePrettier(selectedContact.phoneNumber, '-', true);
-        const contactText = selectedContact.name ? `${selectedContact.name}\n${phoneNumber}` : phoneNumber;
-
-        await navigator.clipboard.writeText(contactText);
-      },
+      onClick: copyDetails,
     },
     {
       label: 'CHAT.CALCULATE_AI_REASONING',
       iconName: 'svg:ai',
-      disabled: !selectedContact,
+      disabled: !selectedContact?.phoneNumber || !selectedContact?.instanceNumber,
       hidden: !selectedContact?.hasStartMessage,
       onClick: handleCalculateAiReasoning,
+    },
+    {
+      label: !selectedContact?.unsubscribedAt ? 'QUEUE.UNSUBSCRIBE_NUMBER' : 'QUEUE.RESUBSCRIBE_NUMBER',
+      iconName: 'svg:megaphone',
+      className: !selectedContact?.unsubscribedAt ? 'text-red-800' : 'text-green-800',
+      disabled: !selectedContact,
+      onClick: handleSubscribeNumber,
     },
     { type: 'divider' },
     {

@@ -26,6 +26,8 @@ import {
   UPDATE_MESSAGE_COUNT,
   CLEAR_MESSAGE_QUEUE,
   EDIT_MESSAGE_QUEUE,
+  UNSUBSCRIBE_NUMBER,
+  RESUBSCRIBE_NUMBER,
 } from '@client/pages/Queue/store/message-queue.constants';
 import { ApiService } from '@services/http/api.service';
 
@@ -86,6 +88,14 @@ const stopQueueSend = async () => {
   await api.post<void>(STOP_QUEUE_SEND);
 };
 
+const unsubscribeNumber = async (phoneNumber: string) => {
+  await api.post<void, { phoneNumber: string }>(`${UNSUBSCRIBE_NUMBER}/${phoneNumber}`);
+};
+
+const resubscribeNumber = async (phoneNumber: string) => {
+  await api.post<void, { phoneNumber: string }>(`${RESUBSCRIBE_NUMBER}/${phoneNumber}`);
+};
+
 const clearQueue = async () => {
   await api.delete<void>(CLEAR_MESSAGE_QUEUE);
 };
@@ -143,4 +153,6 @@ export default {
   [START_QUEUE_SEND]: startQueueSend,
   [STOP_QUEUE_SEND]: stopQueueSend,
   [CLEAR_MESSAGE_QUEUE]: clearQueue,
+  [UNSUBSCRIBE_NUMBER]: unsubscribeNumber,
+  [RESUBSCRIBE_NUMBER]: resubscribeNumber,
 };

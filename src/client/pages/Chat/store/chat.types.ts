@@ -21,6 +21,7 @@ export type GlobalChatContact = {
   profilePictureUrl?: string | null;
   followUpAt?: string | null;
   hasStartMessage: boolean;
+  unsubscribedAt?: string | null;
 };
 
 export type ChatMessage = {

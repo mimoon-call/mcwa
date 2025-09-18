@@ -349,8 +349,9 @@ export const conversationService = {
       {
         $lookup: {
           from: 'whatsappunsubscribes',
-          let: { phoneNumber: '$phoneNumber' },
-          pipeline: [{ $match: { $expr: { $eq: ['$phoneNumber', '$$phoneNumber'] } } }, { $project: { createdAt: 1 } }],
+          localField: 'phoneNumber',
+          foreignField: 'phoneNumber',
+          pipeline: [{ $project: { createdAt: 1 } }],
           as: 'unsubscribedData',
         },
       },

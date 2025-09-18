@@ -42,6 +42,7 @@ export const INSTANCE_LAST_SEARCH_PARAMS = 'instanceLastSearchParams';
 // Global-specific property constants (only for properties that remain separate)
 export const GLOBAL_SELECTED_CONTACT = 'globalSelectedContact';
 export const GLOBAL_LAST_SEARCH_PARAMS = 'globalLastSearchParams';
+export const UPDATE_GLOBAL_SELECTED_CONTACT = 'updateGlobalSelectedContact';
 
 // Retry cooldown constants
 export const CHAT_RETRY_COOLDOWNS = 'retryCooldowns';

@@ -44,6 +44,7 @@ import {
   CHAT_SET_RETRY_COOLDOWN,
   CHAT_CLEAR_RETRY_COOLDOWN,
   AI_REASONING_CONVERSATION,
+  UPDATE_GLOBAL_SELECTED_CONTACT,
 } from './chat.constants';
 import {
   type ChatMessage,
@@ -367,6 +368,12 @@ const chatSliceReducer = createSlice({
     resetSearchValue: (state) => {
       state[CHAT_SEARCH_VALUE] = '';
     },
+    updateGlobalSelectedContact: (state, action: { payload: Partial<GlobalChatContact> }) => {
+      if (!state[GLOBAL_SELECTED_CONTACT]) return;
+
+      state[GLOBAL_SELECTED_CONTACT] = { ...state[GLOBAL_SELECTED_CONTACT], ...action.payload };
+      console.log('updated global selected contact:', state[GLOBAL_SELECTED_CONTACT]);
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -619,6 +626,7 @@ export const chatSlice = {
   [CHAT_SET_RETRY_COOLDOWN]: chatSliceReducer.actions.setRetryCooldown,
   [CHAT_CLEAR_RETRY_COOLDOWN]: chatSliceReducer.actions.clearRetryCooldown,
   [CHAT_RESET_SEARCH_VALUE]: chatSliceReducer.actions.resetSearchValue,
+  [UPDATE_GLOBAL_SELECTED_CONTACT]: chatSliceReducer.actions.updateGlobalSelectedContact,
 };
 
 // Default export for backward compatibility
