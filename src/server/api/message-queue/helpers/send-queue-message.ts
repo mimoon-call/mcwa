@@ -9,6 +9,7 @@ import { AudioService } from '@server/services/ffmpeg/ffmpeg.service';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { LRUCache } from 'lru-cache';
+import { MAX_SEND_ATTEMPT } from '@server/api/message-queue/message-queue.constants';
 
 const SENT_STATUSES = [MessageStatusEnum.DELIVERED, MessageStatusEnum.READ, MessageStatusEnum.PLAYED];
 const deliveryCache = new LRUCache<string, WAMessageDelivery>({ max: 500, ttl: 1000 * 60 * 60 * 12 }); // Cache for 12 hours
@@ -35,6 +36,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, {
         ...doc,
         attempt: (doc.attempt || 0) + 1,
+        maxAttempts: MAX_SEND_ATTEMPT,
         error: deliveryStatus.errorMessage,
       });
     }
@@ -110,6 +112,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
     app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_FAILED, {
       ...doc,
       attempt: (doc.attempt || 0) + 1,
+      maxAttempts: MAX_SEND_ATTEMPT,
       error: String(e),
     });
   }

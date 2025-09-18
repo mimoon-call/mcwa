@@ -137,13 +137,17 @@ const Queue = () => {
     const socket = getClientSocket();
 
     const successToast = ({ phoneNumber }: MessageQueueItem) => {
-      const text = t('QUEUE.SENT_MESSAGE_SUCCESSFULLY', { phoneNumber }).toString();
+      const text = t('QUEUE.SENT_MESSAGE_SUCCESSFULLY', { phoneNumber: internationalPhonePrettier(phoneNumber, '-', true) }).toString();
       toast.success(text);
       dispatch(searchMessageQueue({}));
     };
 
-    const failedToast = ({ phoneNumber }: MessageQueueItem) => {
-      const text = t('QUEUE.SENT_MESSAGE_FAILED', { phoneNumber }).toString();
+    const failedToast = ({ phoneNumber, attempt, maxAttempts }: MessageQueueItem) => {
+      const text = t('QUEUE.SENT_MESSAGE_FAILED', {
+        phoneNumber: internationalPhonePrettier(phoneNumber, '-', true),
+        attempt,
+        maxAttempts,
+      }).toString();
       toast.error(text);
       dispatch(searchMessageQueue({}));
     };

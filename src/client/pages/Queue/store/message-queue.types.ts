@@ -9,6 +9,7 @@ export type MessageQueueItem = {
   instanceNumber?: string;
   attempt?: number;
   lastError?: string;
+  maxAttempts?: number;
 };
 
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;

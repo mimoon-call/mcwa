@@ -26,4 +26,4 @@ export type AddMessageQueueRes = BaseResponse<{ addedCount: number; blockedCount
 export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' | 'textMessage' | 'tts'>;
 
 export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;
-export type MessageQueueSendEvent = MessageQueueItem & { error?: string };
+export type MessageQueueSendEvent = MessageQueueItem & { error?: string; maxAttempts?: number };

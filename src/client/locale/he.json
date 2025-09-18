@@ -96,7 +96,7 @@
     "CONTACT_LIST": "רשימת אנשי קשר",
     "SENT_AT": "נשלח בתאריך",
     "SENT_MESSAGE_SUCCESSFULLY": "שליחת הודעה ל-{{phoneNumber}} הסתיימה בהצלחה",
-    "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה",
+    "SENT_MESSAGE_FAILED": "שליחת הודעה ל-{{phoneNumber}} נכשלה, ניסיון {{attempt}} מתוך {{maxAttempts}}",
     "START_SENDING": "התחל שליחה",
     "STOP_SENDING": "עצור שליחה",
     "VALIDATE_NO_CONTACT_SELECTED": "אנא בחר לפחות איש קשר אחד",
