@@ -24,10 +24,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
       await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), messageId } });
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
       successCallback?.();
-    } else if (deliveryStatus.status === MessageStatusEnum.ERROR && messageId) {
-      // Clean up the WhatsAppMessage record
-      await WhatsAppMessage.deleteOne({ messageId });
-
+    } else if (deliveryStatus.status === MessageStatusEnum.ERROR) {
       // Update queue with error details and increment attempt
       await WhatsappQueue.updateOne(
         { _id: doc._id },
