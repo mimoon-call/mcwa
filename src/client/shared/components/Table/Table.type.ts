@@ -17,13 +17,13 @@ export type TableItemAction<T extends object = DefaultTableItem> = {
   hidden?: boolean | ((item: T) => boolean);
 };
 
-export type TableBodyProps = Pick<TableProps, 'headers' | 'items' | 'loading' | 'rowClickable' | 'onRowClick' | 'keyboardDisabled'>;
+export type TableBodyProps = Pick<TableProps, 'headers' | 'items' | 'loading' | 'rowClickable' | 'onRowClick' | 'keyboardDisabled' | 'rowAutoFocus'>;
 
 export type TableBodyItemProps<T extends object = DefaultTableItem> = { item: T; itemIndex: number } & Pick<
   ReturnType<typeof useTableBody>,
   'setRow' | 'setFocus'
 > &
-  Pick<TableBodyProps, 'rowClickable' | 'onRowClick' | 'headers'> &
+  Pick<TableBodyProps, 'rowClickable' | 'onRowClick' | 'headers' | 'rowAutoFocus'> &
   Pick<TableProps, 'keyboardDisabled'>;
 
 export type TableHeaderProps = Pick<TableProps, 'headers' | 'draggable'> & {
@@ -78,4 +78,5 @@ export type TableProps<T extends object = DefaultTableItem> = {
   customActions?: TableItemAction<T>[];
   tableActions?: MenuItem[];
   storageKey?: string;
+  rowAutoFocus?: boolean;
 };

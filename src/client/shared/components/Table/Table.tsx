@@ -114,9 +114,10 @@ const Header = ({ headers, draggable, sort, onSort, actions, storageKey }: Table
   );
 };
 
-const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowClick, setRow, setFocus }: TableBodyItemProps) => {
+const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowClick, setRow, setFocus, rowAutoFocus }: TableBodyItemProps) => {
   const isRowClickable = (typeof rowClickable === 'function' ? rowClickable(item) : rowClickable) && !!onRowClick;
   const notAllowed = !!onRowClick && !isRowClickable;
+  const hoverEnabled = isRowClickable && !rowAutoFocus;
 
   const handleKeyDown = (ev: KeyboardEvent<HTMLTableRowElement>, item: DefaultTableItem) => {
     if (keyboardDisabled) {
@@ -147,16 +148,20 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
   return (
     <tr
       ref={setRow(itemIndex)}
-      className={cn(isRowClickable && styles['data-table--clickable'], notAllowed && styles['data-table--not-allowed'])}
+      className={cn(
+        isRowClickable && styles['data-table--clickable'],
+        notAllowed && styles['data-table--not-allowed'],
+        hoverEnabled && styles['data-table--hover'],
+        styles.dataTableRow,
+        `table-row-${itemIndex}`
+      )}
       tabIndex={isRowClickable ? 0 : -1}
-      onMouseOver={() => setFocus(itemIndex, 0)}
+      onMouseOver={rowAutoFocus ? () => setFocus(itemIndex, 0) : undefined}
       onClick={onClick}
       onKeyDown={(e) => handleKeyDown(e, item)}
     >
       {headers.map((header, headerIndex) => {
-        if (header.hidden) {
-          return null;
-        }
+        if (header.hidden) return null;
 
         const isLastHeader = headerIndex === headers.length - 1;
         const colSpan = header.colSpan || 1 + (isLastHeader ? 1 : 0);
@@ -194,10 +199,8 @@ const Item = ({ item, itemIndex, headers, keyboardDisabled, rowClickable, onRowC
   );
 };
 
-const Body = (props: TableBodyProps) => {
-  if (!props.items?.length) {
-    return null;
-  }
+const Body = ({ rowAutoFocus, ...props }: TableBodyProps) => {
+  if (!props.items?.length) return null;
 
   const tbodyRef = useRef<HTMLTableSectionElement | null>(null);
   const { setRow, setFocus } = useTableBody(props, tbodyRef);
@@ -211,6 +214,7 @@ const Body = (props: TableBodyProps) => {
           itemIndex={itemIndex}
           setRow={setRow}
           setFocus={setFocus}
+          rowAutoFocus={rowAutoFocus}
           headers={props.headers}
           keyboardDisabled={props.keyboardDisabled}
           rowClickable={props.rowClickable}
@@ -320,7 +324,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   ) : null;
 };
 
-export default function Table({ className, pageIndex, storageKey, ...props }: TableProps) {
+export default function Table({ className, pageIndex, storageKey, rowAutoFocus, ...props }: TableProps) {
   const { t } = useTranslation();
   const tableRef = useRef<HTMLDivElement | null>(null);
   const { items, totalPages } = useTableItems(props);
@@ -348,6 +352,7 @@ export default function Table({ className, pageIndex, storageKey, ...props }: Ta
             headers={headers}
             items={items}
             loading={props.loading}
+            rowAutoFocus={rowAutoFocus}
             rowClickable={props.rowClickable || !!props.onRowClick}
             onRowClick={props.onRowClick}
             keyboardDisabled={props.keyboardDisabled}
