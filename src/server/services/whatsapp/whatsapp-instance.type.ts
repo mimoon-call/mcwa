@@ -59,7 +59,7 @@ export type WAAppKey = {
 export type WASendOptions = {
   maxRetries?: number;
   retryDelay?: number;
-  onSuccess?: (...arg: any[]) => void;
+  onSuccess?: WAMessageOutgoingCallback;
   onFailure?: (error: any, attempts: number) => void;
   // Check whatsapp number status before sending
   onWhatsapp?: boolean; // default true

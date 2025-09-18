@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import {
+import type {
   IMessage,
   WAAppAuth,
   WAInstanceConfig,
@@ -21,6 +21,8 @@ import {
   MediaType,
   IMessageKey,
 } from './whatsapp-instance.type';
+import type { Agent as HttpAgent } from 'http';
+import type { Agent as HttpsAgent } from 'https';
 import {
   AnyMessageContent,
   DisconnectReason,
@@ -44,8 +46,6 @@ import { promisify } from 'util';
 import { clearTimeout } from 'node:timers';
 import getLocalTime from '@server/helpers/get-local-time';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
-import type { Agent as HttpAgent } from 'http';
-import type { Agent as HttpsAgent } from 'https';
 import { getPublicIpThroughAgent } from '@server/helpers/get-public-ip-through-agent';
 import { LRUCache } from 'lru-cache';
 
