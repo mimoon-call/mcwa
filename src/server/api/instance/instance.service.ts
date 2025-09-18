@@ -1,9 +1,10 @@
 import type { EntityList, Pagination } from '@models';
-import type { InstanceItem, SearchInstanceReq } from '@server/api/instance/instance.types';
+import { ExportInstancesToExcelReq, InstanceItem, SearchInstanceReq } from '@server/api/instance/instance.types';
 import {
   ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
+  EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
   SEARCH_INSTANCE,
   WARMUP_TOGGLE,
@@ -11,6 +12,9 @@ import {
 import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
+import ExcelService from '@server/services/excel/excel.service';
+import { ExportOptions } from '@server/services/excel/excel.type';
+import getLocalTime from '@server/helpers/get-local-time';
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (payload: Omit<SearchInstanceReq, 'page'>, page: Pagination): Promise<EntityList<InstanceItem>> => {
@@ -120,5 +124,54 @@ export const instanceService = {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     return { isWarmingUp: wa.isWarming };
+  },
+
+  [EXPORT_INSTANCES_TO_EXCEL]: async ({ headers, ...payload }: ExportInstancesToExcelReq) => {
+    const excelService = new ExcelService({});
+
+    const today = getLocalTime().toISOString();
+    const todayDate = today.split('T')[0];
+
+    const pipeline = [];
+
+    if (payload.statusCode) {
+      pipeline.push({ $match: { statusCode: payload.statusCode } });
+    }
+
+    if (payload.isActive !== undefined) {
+      pipeline.push({ $match: { isActive: payload.isActive } });
+    }
+
+    if (payload.hasWarmedUp !== undefined) {
+      pipeline.push({ $match: { hasWarmedUp: payload.hasWarmedUp } });
+    }
+
+    pipeline.push({
+      $project: {
+        phoneNumber: 1,
+        isActive: 1,
+        dailyMessageCount: { $cond: [{ $eq: ['$lastSentMessage', todayDate] }, '$dailyMessageCount', 0] },
+        outgoingErrorCount: { $ifNull: ['$outgoingErrorCount', 0] },
+        outgoingMessageCount: 1,
+        incomingMessageCount: 1,
+        statusCode: 1,
+        errorMessage: 1,
+        lastErrorAt: 1,
+        warmUpDay: 1,
+        dailyWarmUpCount: { $cond: [{ $eq: ['$lastWarmedUpDay', todayDate] }, '$dailyWarmUpCount', 0] },
+        dailyWarmConversationCount: { $cond: [{ $eq: ['$lastWarmedUpDay', todayDate] }, '$dailyWarmConversationCount', 0] },
+        hasWarmedUp: 1,
+        gender: 1,
+        name: 1,
+        createdAt: 1,
+        lastIpAddress: 1,
+      },
+    });
+
+    const data = await WhatsAppAuth.aggregate<InstanceItem>(pipeline);
+
+    const buffer = excelService.export([{ sheetName: today, direction: 'rtl', headers, data }]);
+
+    return { buffer, fileName: `instances.xlsx` };
   },
 };

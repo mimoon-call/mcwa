@@ -1,6 +1,7 @@
 import type { WAAppAuth } from '@server/services/whatsapp/whatsapp-instance.type';
 import type { WAPersona } from '@server/services/whatsapp/whatsapp.type';
 import type { Pagination, EntityList } from '@models';
+import { ExportOptions } from '@server/services/excel/excel.type';
 
 export type InstanceItem = Pick<
   WAAppAuth<WAPersona>,
@@ -20,3 +21,5 @@ export type SearchInstanceReq = Partial<{ phoneNumber: string; statusCode: numbe
 export type SearchInstanceRes = EntityList<InstanceItem>;
 
 export type AddInstanceRes = { image: string };
+
+export type ExportInstancesToExcelReq = Omit<SearchInstanceReq, 'page' | 'phoneNumber'> & { headers: ExportOptions['headers'] };

@@ -1,6 +1,6 @@
 import express from 'express';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
-import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE, WARMUP_TOGGLE } from '@server/api/instance/instance.map';
+import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, EXPORT_INSTANCES_TO_EXCEL, INSTANCE_REFRESH, SEARCH_INSTANCE, WARMUP_TOGGLE } from '@server/api/instance/instance.map';
 import { instanceController } from '@server/api/instance/instance.controller';
 
 const instanceRoute = express.Router();
@@ -13,5 +13,6 @@ instanceRoute.delete(`/${DELETE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAut
 instanceRoute.post(`/${ACTIVE_TOGGLE_INSTANCE}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[ACTIVE_TOGGLE_INSTANCE]));
 instanceRoute.post(`/${INSTANCE_REFRESH}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[INSTANCE_REFRESH]));
 instanceRoute.post(`/${WARMUP_TOGGLE}`, routeMiddleware({ isAuthRequired: true }, instanceController[WARMUP_TOGGLE]));
+instanceRoute.post(`/${EXPORT_INSTANCES_TO_EXCEL}`, routeMiddleware({ isAuthRequired: true }, instanceController[EXPORT_INSTANCES_TO_EXCEL]));
 
 export default instanceRoute;

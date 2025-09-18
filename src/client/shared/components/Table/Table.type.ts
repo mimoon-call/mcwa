@@ -48,7 +48,7 @@ export type TableHeader<T extends object = Record<never, never>> = {
   valueFormatter?: (value?: any) => string | undefined;
   component?: (props: { item: T }) => ReactNode;
   colSpan?: number;
-};
+} & { [key: string]: any };
 
 export type TableHeaders<T extends object = DefaultTableItem, E = Record<never, never>> = (TableHeader<T> & E)[];
 

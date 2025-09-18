@@ -9,6 +9,7 @@ import {
   ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
+  EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_ERROR,
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
@@ -102,6 +103,44 @@ const toggleWarmup = createAsyncThunk(`${WARMUP_TOGGLE}`, async (_, { dispatch }
   return response.isWarmingUp;
 });
 
+const exportInstancesToExcel = createAsyncThunk(
+  `${StoreEnum.instance}/${EXPORT_INSTANCES_TO_EXCEL}`,
+  async (headers: Array<{ title: string; value: string; type?: string }>, { getState, rejectWithValue }) => {
+    try {
+      const state = getState() as RootState;
+      const currentFilter = state[StoreEnum.instance]?.[INSTANCE_SEARCH_FILTER];
+      
+      const payload = {
+        ...currentFilter,
+        headers,
+      };
+
+      const response = await api.post<Blob, typeof payload>(`${EXPORT_INSTANCES_TO_EXCEL}`, payload, {
+        responseType: 'blob',
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(response);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `instances-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      return response;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'CanceledError') return Promise.reject(error);
+
+      const serializableError =
+        error instanceof Error ? { message: error.message, name: error.name } : { message: 'Unknown error', name: 'UnknownError' };
+
+      return rejectWithValue(serializableError);
+    }
+  }
+);
+
 const resetInstance = createAsyncThunk(`reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
   dispatch(instanceSlice.actions.reset());
@@ -178,6 +217,7 @@ export default {
   [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
   [INSTANCE_REFRESH]: refreshInstance,
   [WARMUP_TOGGLE]: toggleWarmup,
+  [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
   [UPDATE_FILTER]: instanceSlice.actions.updateFilter,

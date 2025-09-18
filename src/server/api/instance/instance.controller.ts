@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
-import { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@server/api/instance/instance.types';
+import { AddInstanceRes, ExportInstancesToExcelReq, SearchInstanceReq, SearchInstanceRes } from '@server/api/instance/instance.types';
 import RecordValidator from '@server/services/record-validator';
 import {
   ACTIVE_TOGGLE_INSTANCE,
   ADD_INSTANCE,
   DELETE_INSTANCE,
+  EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
   SEARCH_INSTANCE,
   WARMUP_TOGGLE,
@@ -12,6 +13,7 @@ import {
 import { instanceService } from '@server/api/instance/instance.service';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 import { BaseResponse } from '@server/models';
+import { CellTypeEnum } from '@server/services/excel/cell-type.enum';
 
 export const instanceController = {
   [SEARCH_INSTANCE]: async (req: Request<never, never, SearchInstanceReq>, res: Response<SearchInstanceRes>) => {
@@ -60,5 +62,23 @@ export const instanceController = {
     const result = await instanceService[WARMUP_TOGGLE]();
 
     res.send({ ...result, returnCode: 0 });
+  },
+
+  [EXPORT_INSTANCES_TO_EXCEL]: async (req: Request<never, never, ExportInstancesToExcelReq>, res: Response<Buffer>): Promise<void> => {
+    const data = await new RecordValidator(req.body, [
+      ['isActive', { type: ['Boolean'] }],
+      ['hasWarmedUp', { type: ['Boolean'] }],
+      ['statusCode', { type: ['Number'] }],
+      ['headers.*.title', { type: ['String'], required: [true] }],
+      ['headers.*.value', { type: ['String'], required: [true] }],
+      ['headers.*.type', { type: ['String'], equal: [Object.values(CellTypeEnum)] }],
+    ]).validate();
+
+    const { buffer, fileName } = await instanceService[EXPORT_INSTANCES_TO_EXCEL](data);
+
+    res
+      .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .set('Content-Disposition', `attachment; filename="${fileName}"`)
+      .send(buffer);
   },
 };

@@ -31,6 +31,8 @@
     "MORE_INFORMATION": "More information",
     "ACTIONS": "Actions",
     "EXPORT_FILE": "File export",
+    "EXPORT_SUCCESS": "File exported successfully",
+    "EXPORT_ERROR": "Failed to export file",
     "IMPORT_FILE": "File import",
     "ACTIVE": "Active",
     "DISABLE": "Disable",

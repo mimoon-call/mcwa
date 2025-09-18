@@ -31,6 +31,8 @@
     "MORE_INFORMATION": "מידע נוסף",
     "ACTIONS": "פעולות",
     "EXPORT_FILE": "ייצא לקובץ",
+    "EXPORT_SUCCESS": "הקובץ יוצא בהצלחה",
+    "EXPORT_ERROR": "נכשל בייצוא הקובץ",
     "IMPORT_FILE": "ייבא מקובץ",
     "ACTIVE": "פעיל",
     "DISABLE": "בטל",

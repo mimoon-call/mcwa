@@ -15,6 +15,7 @@ import instanceStore from '@client/pages/Instance/store/instance.slice';
 import {
   ACTIVE_TOGGLE_INSTANCE,
   DELETE_INSTANCE,
+  EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
   INSTANCE_SEARCH_DATA,
@@ -39,6 +40,53 @@ import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceS
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { RouteName } from '@client/router/route-name';
 
+const InstanceItem = ({ item }: { item: InstanceItem }) => {
+  const iconColorClass = (() => {
+    if (item?.isWarmingUp) {
+      return 'text-red-600';
+    }
+
+    return item?.hasWarmedUp ? 'text-green-600' : 'text-gray-400';
+  })();
+
+  return (
+    <div className="flex items-center gap-2">
+      <Avatar
+        size="36px"
+        src={item?.profilePictureUrl}
+        alt={item?.name || 'GENERAL.PROFILE_PICTURE'}
+        iconName={item?.gender === 'female' ? 'svg:avatar-female' : 'svg:avatar-male'}
+      />
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-600">{item?.name}</span>
+        <span dir="ltr" className="whitespace-nowrap">
+          {internationalPhonePrettier(item.phoneNumber, '-', true)}
+        </span>
+      </div>
+      <div className="flex justify-center items-center ps-2 h-full">
+        <Icon className={iconColorClass} name="svg:warm" />
+      </div>
+    </div>
+  );
+};
+
+const ActiveStatus = ({ item }: { item: InstanceItem }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className={cn('inline-block uppercase min-w-16', item?.isActive === false ? 'text-red-700' : 'text-green-900')}>
+      {t(item?.isActive === false ? 'GENERAL.NO' : 'GENERAL.YES')}
+    </div>
+  );
+};
+
+const StatusCode = ({ item }: { item: InstanceItem }) => {
+  const { t } = useTranslation();
+  const ref = useTooltip<HTMLDivElement>({ text: t(item.errorMessage) });
+
+  return <span ref={ref}>{item?.statusCode || '-'}</span>;
+};
+
 const InstanceTable = () => {
   const { t } = useTranslation();
   const modelRef = useRef<ModalRef>(null);
@@ -53,6 +101,7 @@ const InstanceTable = () => {
     [INSTANCE_REFRESH]: refreshInstance,
     [UPDATE_INSTANCE]: updateInstance,
     [WARMUP_TOGGLE]: toggleWarmup,
+    [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,
     actions: instanceActions,
   } = instanceStore;
 
@@ -70,65 +119,32 @@ const InstanceTable = () => {
       value: 'phoneNumber',
       sortable: ['hasWarmedUp', 'phoneNumber'],
       searchable: true,
-      component: ({ item }) => {
-        const iconColorClass = (() => {
-          if (item?.isWarmingUp) {
-            return 'text-red-600';
-          }
-
-          return item?.hasWarmedUp ? 'text-green-600' : 'text-gray-400';
-        })();
-
-        return (
-          <div className="flex items-center gap-2">
-            <Avatar
-              size="36px"
-              src={item?.profilePictureUrl}
-              alt={item?.name || 'GENERAL.PROFILE_PICTURE'}
-              iconName={item?.gender === 'female' ? 'svg:avatar-female' : 'svg:avatar-male'}
-            />
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-600">{item?.name}</span>
-              <span dir="ltr" className="whitespace-nowrap">
-                {internationalPhonePrettier(item.phoneNumber, '-', true)}
-              </span>
-            </div>
-            <div className="flex justify-center items-center ps-2 h-full">
-              <Icon className={iconColorClass} name="svg:warm" />
-            </div>
-          </div>
-        );
-      },
+      component: InstanceItem,
+      type: 'TEXT',
     },
     {
       title: 'GENERAL.ACTIVE',
       value: 'isActive',
       sortable: true,
       class: ['text-center'],
-      component: ({ item }) => (
-        <div className={cn('inline-block uppercase min-w-16', item?.isActive === false ? 'text-red-700' : 'text-green-900')}>
-          {t(item?.isActive === false ? 'GENERAL.NO' : 'GENERAL.YES')}
-        </div>
-      ),
+      component: ActiveStatus,
+      export: false,
     },
     {
       title: 'INSTANCE.STATUS_CODE',
       value: 'statusCode',
       class: ['text-center'],
       sortable: true,
-      component: ({ item }) => {
-        const ref = useTooltip<HTMLDivElement>({ text: t(item.errorMessage) });
-
-        return <span ref={ref}>{item?.statusCode || '-'}</span>;
-      },
+      component: StatusCode,
+      type: 'NUMBER',
     },
-    { title: 'INSTANCE.DAILY_MESSAGE_COUNT', value: 'dailyMessageCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.OUTGOING_FAILURE_COUNT', value: 'outgoingErrorCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.OUTGOING_COUNT', value: 'outgoingMessageCount', class: ['text-center', 'max-w-[100px'], sortable: true },
-    { title: 'INSTANCE.INCOMING_COUNT', value: 'incomingMessageCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.DAILY_WARM_MESSAGES', value: 'dailyWarmUpCount', class: ['text-center'], sortable: true },
-    { title: 'INSTANCE.IP_ADDRESS', value: 'lastIpAddress', class: ['text-center'], sortable: true },
+    { title: 'INSTANCE.DAILY_MESSAGE_COUNT', value: 'dailyMessageCount', class: ['text-center'], sortable: true, type: 'NUMBER' },
+    { title: 'INSTANCE.OUTGOING_FAILURE_COUNT', value: 'outgoingErrorCount', class: ['text-center'], sortable: true, type: 'NUMBER' },
+    { title: 'INSTANCE.OUTGOING_COUNT', value: 'outgoingMessageCount', class: ['text-center', 'max-w-[100px'], sortable: true, type: 'NUMBER' },
+    { title: 'INSTANCE.INCOMING_COUNT', value: 'incomingMessageCount', class: ['text-center'], sortable: true, type: 'NUMBER' },
+    { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true, export: false },
+    { title: 'INSTANCE.DAILY_WARM_MESSAGES', value: 'dailyWarmUpCount', class: ['text-center'], sortable: true, export: false },
+    { title: 'INSTANCE.IP_ADDRESS', value: 'lastIpAddress', class: ['text-center'], sortable: true, type: 'TEXT' },
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
@@ -136,7 +152,9 @@ const InstanceTable = () => {
       class: ['whitespace-nowrap'],
       sortable: true,
       component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
+      type: 'DATETIME',
     },
+    { title: 'INSTANCE.ERROR_MESSAGE', value: 'errorMessage', hidden: true, type: 'TEXT', export: true },
     {
       title: 'INSTANCE.LAST_ERROR_AT',
       value: 'lastErrorAt',
@@ -144,6 +162,8 @@ const InstanceTable = () => {
       class: ['whitespace-nowrap'],
       sortable: true,
       component: ({ item }) => (item.lastErrorAt ? dayjs(item.lastErrorAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT) : null),
+      type: 'DATETIME',
+      export: true,
     },
   ];
 
@@ -168,7 +188,7 @@ const InstanceTable = () => {
   // Initialize global warming status based on any instance warming status
   useEffect(() => {
     if (instanceList && instanceList.length > 0) {
-      const anyInstanceWarming = instanceList.some(instance => instance.isWarmingUp);
+      const anyInstanceWarming = instanceList.some((instance) => instance.isWarmingUp);
       if (anyInstanceWarming !== isGlobalWarmingUp) {
         dispatch(instanceActions.setGlobalWarmingStatus(anyInstanceWarming));
       }
@@ -257,6 +277,22 @@ const InstanceTable = () => {
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
   const onWarmUp = async () => await dispatch(toggleWarmup());
 
+  const onExportToExcel = async () => {
+    try {
+      const excelHeaders = headers
+        .filter((header) => header.export !== false && (!header.hidden || header.export))
+        .map((header) => ({
+          title: t(header.title as string),
+          value: header.value,
+          type: header.type || 'TEXT',
+        }));
+
+      await dispatch(exportInstancesToExcel(excelHeaders));
+    } catch {
+      toast.error(t('GENERAL.EXPORT_ERROR'));
+    }
+  };
+
   const customActions: TableProps<InstanceItem>['customActions'] = [
     {
       label: 'GENERAL.REAUTHENTICATE',
@@ -300,6 +336,7 @@ const InstanceTable = () => {
         headers={headers}
         items={instanceList || []}
         createCallback={() => modelRef.current?.open()}
+        exportCallback={onExportToExcel}
         tableActions={tableActions}
         onPageChange={onPageChange}
         deleteCallback={onDelete}

@@ -1,0 +1,10 @@
+export enum CellTypeEnum {
+  TEXT = 'TEXT',
+  NUMBER = 'NUMBER',
+  DATE = 'DATE',
+  TIME = 'TIME',
+  DATETIME = 'DATETIME',
+  PERCENTAGE = 'PERCENTAGE',
+  DECIMAL = 'DECIMAL',
+  CURRENCY = 'CURRENCY',
+}

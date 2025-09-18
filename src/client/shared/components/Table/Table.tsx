@@ -312,7 +312,7 @@ const TableActions = (props: Pick<TableProps, 'createCallback' | 'exportCallback
   }
 
   if (props.exportCallback) {
-    actions.push({ label: 'GENERAL.EXPORT_FILE', iconName: 'svg:attachment', onClick: props.exportCallback });
+    actions.push({ label: 'GENERAL.EXPORT_FILE', iconName: 'svg:download-file', onClick: props.exportCallback });
   }
 
   return actions.length ? (
