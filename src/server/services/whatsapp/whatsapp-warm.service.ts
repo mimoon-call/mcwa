@@ -629,6 +629,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.creatingConversation.clear(); // Clear conversations being created
   }
 
+  public async addInstanceQR(phoneNumber: string) {
+    const { qrCode, instance } = await super.addInstanceQR(phoneNumber);
+    await instance.update({ warmUpDay: 0, dailyWarmUpCount: 0, dailyWarmConversationCount: 0, hasWarmedUp: false });
+
+    return { qrCode, instance };
+  }
+
   onReady(callback: () => Promise<void> | void) {
     super.onReady(() => {
       clearTimeout(this.warmUpTimeout);

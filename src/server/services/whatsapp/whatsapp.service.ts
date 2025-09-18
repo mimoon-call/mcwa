@@ -277,7 +277,7 @@ export class WhatsappService<T extends object = Record<never, never>> {
     return instance;
   }
 
-  async addInstanceQR(phoneNumber: string): Promise<string> {
+  async addInstanceQR(phoneNumber: string): Promise<{ qrCode: string; instance: WAInstance<T> }> {
     const instance = this.instances.get(phoneNumber);
 
     if (instance?.connected) {
@@ -289,10 +289,11 @@ export class WhatsappService<T extends object = Record<never, never>> {
     // Create new instance
     const newInstance = await this.createInstance(phoneNumber);
     const qrCode = await newInstance.register();
+    await newInstance.update({ lastErrorAt: null, errorMessage: null, lastIpAddress: null } as WAAppAuth<T>);
 
     this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list');
 
-    return qrCode;
+    return { qrCode, instance: newInstance };
   }
 
   listInstanceNumbers(data?: Partial<{ onlyConnectedFlag: boolean; activeFlag: boolean; hasWarmedUp: boolean; shuffleFlag: boolean }>): string[] {

@@ -1,6 +1,13 @@
 import type { EntityList, Pagination } from '@models';
 import type { InstanceItem, SearchInstanceReq } from '@server/api/instance/instance.types';
-import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, INSTANCE_REFRESH, SEARCH_INSTANCE, WARMUP_TOGGLE } from '@server/api/instance/instance.map';
+import {
+  ACTIVE_TOGGLE_INSTANCE,
+  ADD_INSTANCE,
+  DELETE_INSTANCE,
+  INSTANCE_REFRESH,
+  SEARCH_INSTANCE,
+  WARMUP_TOGGLE,
+} from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
@@ -61,7 +68,9 @@ export const instanceService = {
     const instance = wa.getInstance(phoneNumber);
     await instance?.disable();
 
-    return await wa.addInstanceQR(phoneNumber);
+    const { qrCode } = await wa.addInstanceQR(phoneNumber);
+
+    return qrCode;
   },
 
   [DELETE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
