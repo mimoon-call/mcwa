@@ -1,19 +1,20 @@
+import type { FormRef } from '@components/Form/Form.types';
+import type { ClassValue } from 'clsx';
 import Button from '@components/Button/Button';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, Children, isValidElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import Form from '@components/Form/Form';
-import type { FormRef } from '@components/Form/Form.types';
-import type { SizeUnit } from '@models';
+import { cn } from '@client/plugins';
 
 type SearchPanelProps = {
   onSearch: () => Promise<unknown> | unknown;
   onClear: () => Promise<unknown> | unknown;
   children: React.ReactNode;
-  numColumnsInRow?: number;
-  minWidth?: SizeUnit;
+  className?: ClassValue;
+  fieldClass?: ClassValue;
 } & ({ debounce: number; payload: unknown } | { debounce?: never; payload?: unknown });
 
-export const SearchPanel = ({ onSearch, onClear, debounce = 500, numColumnsInRow = 5, minWidth = '240px', children, payload }: SearchPanelProps) => {
+export const SearchPanel = ({ onSearch, onClear, debounce = 500, children, payload, className, fieldClass }: SearchPanelProps) => {
   const { t } = useTranslation();
 
   const timeoutRef = useRef<NodeJS.Timeout>(undefined);
@@ -44,12 +45,21 @@ export const SearchPanel = ({ onSearch, onClear, debounce = 500, numColumnsInRow
     }
   }, [payload]); // Remove debounce from dependencies
 
+  const enhancedChildren = fieldClass
+    ? Children.map(children, (child) => {
+        if (isValidElement(child)) {
+          const existingClassName = (child.props as { className?: ClassValue })?.className;
+
+          return React.cloneElement(child, { className: cn(fieldClass, existingClassName) } as Record<string, unknown>);
+        }
+        return child;
+      })
+    : children;
+
   return (
     <Form ref={formRef} className="p-4 bg-gray-50 m-2 rounded shadow">
       <div className="flex justify-between">
-        <div className="flex-grow grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${minWidth}, ${1 / numColumnsInRow}fr))` }}>
-          {children}
-        </div>
+        <div className={cn('flex-grow flex flex-wrap gap-4', className)}>{enhancedChildren}</div>
 
         <div className="flex gap-2 items-end">
           {payload === undefined && (
