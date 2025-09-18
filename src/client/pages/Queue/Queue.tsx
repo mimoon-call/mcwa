@@ -194,6 +194,7 @@ const Queue = () => {
         items={queueList || []}
         pageIndex={queuePagination.pageIndex}
         pageSize={queuePagination.pageSize}
+        totalPages={queuePagination.totalPages}
         tableActions={tableActions}
         deleteCallback={onDelete}
         updateCallback={onUpdate}
