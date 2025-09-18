@@ -27,7 +27,7 @@ const Avatar: FC<AvatarProps> = ({
   tooltip,
 }) => {
   const { t } = useTranslation();
-  const style = size ? { width: size, height: size } : undefined;
+  const style = size ? { minWidth: size, width: size, minHeight: size, height: size } : undefined;
   const [localSrc, setLocalSrc] = useState(src);
   const [isReady, setIsReady] = useState(false);
 
