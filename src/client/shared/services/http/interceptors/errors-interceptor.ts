@@ -2,7 +2,7 @@
 import axios, { type AxiosError, type AxiosResponse } from 'axios';
 import type { AxiosResponseInterceptor } from '@services/http/http.service';
 import type { ErrorResponse } from '@services/http/types';
-import ServerError from '@services/http/server-error';
+import ServerError from '@services/http/errors/server-error';
 
 export const errorsInterceptor: AxiosResponseInterceptor = {
   onFulfilled: (response: AxiosResponse) => {
