@@ -97,6 +97,7 @@ export const WhatsAppMessage = new MongoService<MessageDocument>(
     createdAt: { type: Date },
     // Delivery status tracking
     status: { type: String, enum: Object.values(MessageStatusEnum) },
+    deletedAt: { type: Date },
     sentAt: { type: Date },
     deliveredAt: { type: Date },
     readAt: { type: Date },
@@ -125,6 +126,8 @@ export const WhatsAppMessage = new MongoService<MessageDocument>(
       { fields: { warmingFlag: 1 }, options: { name: 'warmingFlag_index' } },
       // Delivery status indexes
       { fields: { status: 1 }, options: { name: 'deliveryStatus_status_index' } },
+      { fields: { sentAt: 1 }, options: { name: 'deliveryStatus_sentAt_index' } },
+      { fields: { deletedAt: 1 }, options: { name: 'deliveryStatus_deletedAt_index' } },
       { fields: { deliveredAt: 1 }, options: { name: 'deliveryStatus_deliveredAt_index' } },
       { fields: { readAt: 1 }, options: { name: 'deliveryStatus_readAt_index' } },
       { fields: { playedAt: 1 }, options: { name: 'deliveryStatus_playedAt_index' } },

@@ -6,4 +6,5 @@ export enum MessageStatusEnum {
   READ = 'READ',
   PLAYED = 'PLAYED',
   ERROR = 'ERROR',
+  DELETED = 'DELETED',
 }

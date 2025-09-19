@@ -16,12 +16,16 @@ import {
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
+  REVOKE_MESSAGE,
 } from '@server/api/conversation/conversation.map';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
 import { BaseResponse } from '@server/models';
 import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
+import ServerError from '@services/http/errors/server-error';
+import NotFoundError from '@services/http/errors/not-found-error';
+import { ErrorCodeEnum } from '@services/http/errors/error-code.enum';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -458,6 +462,22 @@ export const conversationService = {
     }
 
     return { returnCode: 0 };
+  },
+
+  [REVOKE_MESSAGE]: async (docIdOrMessageId: string): Promise<BaseResponse> => {
+    try {
+      const message = await WhatsAppMessage.findOne({ $or: [{ _id: docIdOrMessageId }, { messageId: docIdOrMessageId }] });
+      if (!message?.raw?.key) return { returnCode: 1 };
+
+      const instance = wa.getInstance(message.fromNumber);
+      if (!instance) throw new NotFoundError('INSTANCE.NOT_FOUND');
+      if (!instance.connected) throw new ServerError('INSTANCE.NOT_CONNECTED', ErrorCodeEnum.BAD_REQUEST_400);
+
+      await instance.relay(message.toNumber, message.raw.key);
+      return { returnCode: 0 };
+    } catch {
+      throw new ServerError('INSTANCE.REVOKE_FAILED', ErrorCodeEnum.BAD_REQUEST_400);
+    }
   },
 
   [DELETE_CONVERSATION]: async (fromNumber: string, toNumber: string): Promise<DeleteConversationRes> => {

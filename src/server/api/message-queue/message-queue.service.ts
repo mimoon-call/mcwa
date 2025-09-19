@@ -32,6 +32,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import ServerError from '@server/middleware/errors/server-error';
+import { ErrorCodeEnum } from '@services/http/errors/error-code.enum';
 
 // Extend dayjs with timezone plugins
 dayjs.extend(utc);
@@ -111,7 +112,7 @@ export const messageQueueService = {
 
   [START_QUEUE_SEND]: (): BaseResponse<{ message?: string }> => {
     // Check if we're within work hours before starting
-    if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_OUT_WORKTIME', 400);
+    if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_OUT_WORKTIME', ErrorCodeEnum.BAD_REQUEST_400);
 
     messageAttempt = 0;
 

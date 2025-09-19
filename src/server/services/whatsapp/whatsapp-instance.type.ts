@@ -1,11 +1,12 @@
 import { WhatsappInstance } from './whatsapp-instance.service';
-import { proto } from '@whiskeysockets/baileys';
+import { WAProto as proto } from '@whiskeysockets/baileys';
 
+import Message = proto.Message;
 import IMessageKey = proto.IMessageKey;
 import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
 import WebMessageInfo = proto.WebMessageInfo;
-import { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
+import type { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 
@@ -126,11 +127,33 @@ export type WAOnReadyCallback<T extends object> = (instance: WhatsappInstance<T>
 
 export type WAOutgoingContent =
   | string
-  | { type: 'text'; text: string }
-  | { type: 'image'; data: Buffer; caption?: string; mimetype?: string }
-  | { type: 'video'; data: Buffer; caption?: string; mimetype?: string }
-  | { type: 'audio'; data: Buffer; caption?: string; mimetype?: string; ptt?: boolean; seconds?: number; duration?: number; text?: string }
-  | { type: 'document'; data: Buffer; fileName: string; mimetype?: string; caption?: string };
+  | { type?: never; delete: IMessageKey; caption?: never; mimetype?: never; ptt?: never; seconds?: never; duration?: never; text?: never }
+  | { type: 'text'; text: string; delete?: never; caption?: never; mimetype?: never; ptt?: never; seconds?: never; duration?: never }
+  | { type: 'image'; data: Buffer; caption?: string; mimetype?: string; delete?: never; ptt?: never; seconds?: never; duration?: never; text?: never }
+  | { type: 'video'; data: Buffer; caption?: string; mimetype?: string; delete?: never; ptt?: never; seconds?: never; duration?: never; text?: never }
+  | {
+      type: 'audio';
+      data: Buffer;
+      caption?: string;
+      mimetype?: string;
+      ptt?: boolean;
+      seconds?: number;
+      duration?: number;
+      text?: string;
+      delete?: never;
+    }
+  | {
+      type: 'document';
+      data: Buffer;
+      fileName: string;
+      mimetype?: string;
+      caption?: string;
+      delete?: never;
+      ptt?: never;
+      seconds?: never;
+      duration?: never;
+      text?: never;
+    };
 
 export type WAInstanceConfig<T extends object = Record<never, never>> = {
   // Callbacks for auth key management
@@ -160,7 +183,8 @@ export type WAInstanceConfig<T extends object = Record<never, never>> = {
 export type WAMessageDelivery = {
   messageId: string | null;
   status: keyof typeof MessageStatusEnum;
-  sentAt: Date;
+  deletedAt?: Date;
+  sentAt?: Date;
   deliveredAt?: Date;
   readAt?: Date;
   playedAt?: Date;
@@ -175,4 +199,4 @@ type MediaPart =
   | proto.Message.IDocumentMessage
   | proto.Message.IStickerMessage;
 
-export { IMessage, IMessageKey, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };
+export { Message, IMessage, IMessageKey, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };

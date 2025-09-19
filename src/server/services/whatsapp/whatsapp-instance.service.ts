@@ -1,5 +1,5 @@
 // whatsapp-instance.service.ts
-import type {
+import {
   IMessage,
   WAAppAuth,
   WAInstanceConfig,
@@ -20,6 +20,7 @@ import type {
   MediaPart,
   MediaType,
   IMessageKey,
+  Message,
 } from './whatsapp-instance.type';
 import type { Agent as HttpAgent } from 'http';
 import type { Agent as HttpsAgent } from 'https';
@@ -32,7 +33,6 @@ import {
   useMultiFileAuthState,
   WASocket,
   downloadMediaMessage,
-  proto,
 } from '@whiskeysockets/baileys';
 import type { Agent } from 'node:http';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -199,7 +199,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     this.onRegister = () => config.onRegistered?.(this.phoneNumber);
   }
 
-  private unwrapMessage<T extends proto.IMessage | undefined>(msg: T): T {
+  private unwrapMessage<T extends IMessage | undefined>(msg: T): T {
     if (!msg) return msg;
     const m: any = msg;
     if (m.ephemeralMessage?.message) return m.ephemeralMessage.message;
@@ -208,11 +208,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     return msg;
   }
 
-  private pickMediaPart(raw: WAMessageIncomingRaw): { container?: proto.Message; key?: keyof proto.Message; part?: MediaPart } {
-    const msg = raw.message as proto.Message | undefined;
+  private pickMediaPart(raw: WAMessageIncomingRaw): { container?: Message; key?: keyof Message; part?: MediaPart } {
+    const msg = raw.message as Message | undefined;
     if (!msg) return {};
 
-    const tryPick = (container?: proto.Message) => {
+    const tryPick = (container?: Message) => {
       if (!container) return {};
       if (container.imageMessage) return { container, key: 'imageMessage' as const, part: container.imageMessage };
       if (container.videoMessage) return { container, key: 'videoMessage' as const, part: container.videoMessage };
@@ -234,20 +234,20 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       unwrapped?.videoMessage?.contextInfo ??
       unwrapped?.documentMessage?.contextInfo;
 
-    const quoted = this.unwrapMessage(ctx?.quotedMessage as proto.Message | undefined);
+    const quoted = this.unwrapMessage(ctx?.quotedMessage as Message | undefined);
     const q = tryPick(quoted);
     if (q.part) return q;
 
     return {};
   }
 
-  private mapMediaType(key?: keyof proto.Message, part?: MediaPart): { mediaType: MediaType; isPTT: boolean } {
+  private mapMediaType(key?: keyof Message, part?: MediaPart): { mediaType: MediaType; isPTT: boolean } {
     if (!key) return { mediaType: 'none', isPTT: false };
     if (key === 'imageMessage') return { mediaType: 'image', isPTT: false };
     if (key === 'videoMessage') return { mediaType: 'video', isPTT: false };
     if (key === 'documentMessage') return { mediaType: 'document', isPTT: false };
     if (key === 'stickerMessage') return { mediaType: 'sticker', isPTT: false };
-    if (key === 'audioMessage') return { mediaType: (part as proto.Message.IAudioMessage)?.ptt ? 'ptt' : 'audio', isPTT: !!(part as any)?.ptt };
+    if (key === 'audioMessage') return { mediaType: (part as Message.IAudioMessage)?.ptt ? 'ptt' : 'audio', isPTT: !!(part as any)?.ptt };
     return { mediaType: 'none', isPTT: false };
   }
 
@@ -261,7 +261,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       const { mediaType } = this.mapMediaType(key, part);
       const mimeType = (part as any)?.mimetype as string | undefined;
-      const fileName = (part as proto.Message.IDocumentMessage)?.fileName || (part as any)?.fileName || undefined;
+      const fileName = (part as Message.IDocumentMessage)?.fileName || (part as any)?.fileName || undefined;
 
       // Baileys helper handles decrypt & reupload if required
       const buffer = (await downloadMediaMessage(
@@ -275,7 +275,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       raw.mediaType = mediaType;
       raw.mimeType = mimeType;
       raw.fileName = fileName;
-      raw.seconds = (part as proto.Message.IVideoMessage)?.seconds ?? (part as proto.Message.IAudioMessage)?.seconds ?? undefined;
+      raw.seconds = (part as Message.IVideoMessage)?.seconds ?? (part as Message.IAudioMessage)?.seconds ?? undefined;
 
       // size guard
       if (buffer && buffer.length <= sizeLimitBytes) {
@@ -329,7 +329,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   private handleOutgoingMessage(fromNumber: string, toNumber: string, payload: WAOutgoingContent): HandleOutgoingMessage {
     const jid = this.numberToJid(toNumber);
-    let content: AnyMessageContent;
+    let content: AnyMessageContent = {} as AnyMessageContent;
     let textForRecord = '';
 
     if (typeof payload === 'string') {
@@ -363,6 +363,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         textForRecord = payload.caption ?? payload.fileName;
         content = { document: payload.data, fileName: payload.fileName, mimetype: payload.mimetype, caption: payload.caption } as AnyMessageContent;
         break;
+    }
+
+    if (payload.delete && !payload.type) {
+      content = { delete: payload.delete } as AnyMessageContent;
     }
 
     const record: WAMessageOutgoing = { fromNumber, toNumber, text: textForRecord, ...content };
@@ -923,8 +927,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const { key, update: updateData } = update;
         this.log('debug', `📱 Message update received: ID=${key.id}, Status=${updateData.status}, RemoteJid=${key.remoteJid}`);
 
-        // Update delivery tracking if message ID exists
+        const pm = update.update?.message?.protocolMessage;
+
+        if (updateData.key?.id && pm && pm.type === Message.ProtocolMessage.Type.REVOKE) {
+          await this.onMessageUpdate(key.id, { messageId: key.id, status: MessageStatusEnum.DELETED, deletedAt: getLocalTime() });
+
+          continue;
+        }
+
         if (key.id && updateData.status !== undefined) {
+          // Update delivery tracking if message ID exists
           const statusMap: { [key: number]: keyof typeof MessageStatusEnum } = {
             1: MessageStatusEnum.PENDING,
             2: MessageStatusEnum.SENT,
@@ -935,7 +947,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
           const numericStatus = Number(updateData.status);
           const status = statusMap[numericStatus] || MessageStatusEnum.ERROR;
-          const timestamp = new Date();
+          const timestamp = getLocalTime();
 
           switch (status) {
             case MessageStatusEnum.SENT: {
@@ -1184,17 +1196,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const currentCount = this.appState?.outgoingMessageCount || 0;
         const newCount = currentCount + 1;
         this.update({ outgoingMessageCount: newCount } as WAAppAuth<T>);
-        delivery.deliveredAt = timestamp || new Date();
+        delivery.deliveredAt = timestamp || getLocalTime();
         break;
       }
       case MessageStatusEnum.READ: {
         this.update({ outgoingReadCount: (this.appState?.outgoingReadCount || 0) + 1 } as WAAppAuth<T>);
-        delivery.readAt = timestamp || new Date();
+        delivery.readAt = timestamp || getLocalTime();
         break;
       }
       case MessageStatusEnum.PLAYED: {
         this.update({ outgoingPlayCount: (this.appState?.outgoingPlayCount || 0) + 1 } as WAAppAuth<T>);
-        delivery.playedAt = timestamp || new Date();
+        delivery.playedAt = timestamp || getLocalTime();
         break;
       }
       case MessageStatusEnum.ERROR: {
@@ -1581,6 +1593,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
+  public async relay(phoneNumber: string, messageKey: IMessageKey): Promise<void> {
+    if (!this.connected || !this.socket) return;
+
+    try {
+      await this.send(phoneNumber, { delete: messageKey });
+      this.log('debug', `🗑️ Delete request sent for message ${messageKey.id} to ${phoneNumber}`);
+    } catch (error) {
+      this.log('warn', `⚠️ Failed to send delete request for message ${messageKey.id} to ${phoneNumber}:`, error);
+    }
+  }
+
   public async register(): Promise<string> {
     if (this.connected) throw new Error(`Number [${this.phoneNumber}] is already registered and connected.`);
 
@@ -1857,11 +1880,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           await this.socket.presenceSubscribe(jid);
 
           if (isAudio) {
-            const seconds = (payload as any).duration || 0;
+            const seconds = payload?.duration || 0;
             const ms = seconds * 1000; // Convert seconds to milliseconds
             await this.emulateHuman(jid, 'recording', ms);
           } else {
-            const text = typeof payload === 'string' ? payload : (payload as any)?.text || '';
+            const text = typeof payload === 'string' ? payload : payload?.text || '';
             const ms = this.humanDelayFor(text);
             await this.emulateHuman(jid, 'composing', ms);
           }

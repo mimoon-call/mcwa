@@ -19,6 +19,7 @@ import {
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
+  REVOKE_MESSAGE,
 } from '@server/api/conversation/conversation.map';
 import { conversationService } from '@server/api/conversation/conversation.service';
 import { BaseResponse } from '@server/models';
@@ -74,6 +75,14 @@ export const conversationController = {
     ]).validate();
 
     res.send(await conversationService[SEND_MESSAGE](fromNumber, toNumber, textMessage));
+  },
+
+  [REVOKE_MESSAGE]: async (req: Request<{ docIdOrMessageId: string }>, res: Response<BaseResponse>) => {
+    const { docIdOrMessageId } = await new RecordValidator({ ...req.params, ...req.body }, [
+      ['docIdOrMessageId', { required: [true], type: ['String'], regex: [RegexPattern.PHONE_IL] }],
+    ]).validate();
+
+    res.send(await conversationService[REVOKE_MESSAGE](docIdOrMessageId));
   },
 
   [DELETE_CONVERSATION]: async (

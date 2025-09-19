@@ -8,6 +8,7 @@ import {
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
+  REVOKE_MESSAGE,
 } from '@server/api/conversation/conversation.map';
 
 const conversationRoute = express.Router();
@@ -34,5 +35,7 @@ conversationRoute.post(
   `/${AI_REASONING_CONVERSATION}/:phoneNumber/:withPhoneNumber`,
   routeMiddleware({ isAuthRequired: true }, conversationController[AI_REASONING_CONVERSATION])
 );
+
+conversationRoute.post(`/${REVOKE_MESSAGE}/:docIdOrMessageId`, routeMiddleware({ isAuthRequired: true }, conversationController[REVOKE_MESSAGE]));
 
 export default conversationRoute;
