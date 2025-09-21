@@ -89,7 +89,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
       onSuccess,
       onUpdate,
     });
-  } catch {
-    await WhatsappQueue.updateOne({ _id: doc._id }, { $inc: { attempt: 1 } });
+  } catch (error) {
+    await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { lastError: String(error) }, $unset: { sentAt: 1 }, $inc: { attempt: 1 } });
   }
 };
