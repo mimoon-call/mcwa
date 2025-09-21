@@ -60,33 +60,36 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
     }
   }
 
-  if (doc.tts) {
-    const openAi = new OpenAiService();
-    const audioSvc = new AudioService();
-    const ttsBuf = await openAi.textToSpeech(doc.textMessage, 'ogg');
-    if (!ttsBuf) throw new Error('TTS failed: empty buffer');
+  try {
+    await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime() }, $unset: { lastError: 1 } });
 
-    const ogg = await audioSvc.ensureOpusOgg(ttsBuf);
-    const seconds = await audioSvc.getDurationSeconds(ogg, 'audio/ogg');
+    if (doc.tts) {
+      const openAi = new OpenAiService();
+      const audioSvc = new AudioService();
+      const ttsBuf = await openAi.textToSpeech(doc.textMessage, 'ogg');
+      if (!ttsBuf) throw new Error('TTS failed: empty buffer');
 
-    const { sentAt } = await wa.sendMessage(
-      null,
-      doc.phoneNumber,
-      { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds, text: doc.textMessage },
-      { waitForDelivery: false, onWhatsapp: true, maxRetries: 1, onSuccess, onUpdate }
-    );
+      const ogg = await audioSvc.ensureOpusOgg(ttsBuf);
+      const seconds = await audioSvc.getDurationSeconds(ogg, 'audio/ogg');
 
-    await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt }, $unset: { lastError: 1 } });
-    return;
+      await wa.sendMessage(
+        null,
+        doc.phoneNumber,
+        { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds, text: doc.textMessage },
+        { waitForDelivery: false, onWhatsapp: true, maxRetries: 1, onSuccess, onUpdate }
+      );
+
+      return;
+    }
+
+    await wa.sendMessage(null, doc.phoneNumber, doc.textMessage, {
+      waitForDelivery: false,
+      onWhatsapp: true,
+      maxRetries: 1,
+      onSuccess,
+      onUpdate,
+    });
+  } catch {
+    await WhatsappQueue.updateOne({ _id: doc._id }, { $inc: { attempt: 1 } });
   }
-
-  const { sentAt } = await wa.sendMessage(null, doc.phoneNumber, doc.textMessage, {
-    waitForDelivery: false,
-    onWhatsapp: true,
-    maxRetries: 1,
-    onSuccess,
-    onUpdate,
-  });
-
-  await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt }, $unset: { lastError: 1 } });
 };
