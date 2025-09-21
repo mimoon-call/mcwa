@@ -121,6 +121,11 @@ const Comment = ({ item }: { item: InstanceItem }) => {
   const [isEditMode, setEditMode] = React.useState(false);
   const [value, setValue] = React.useState(item?.comment || '');
 
+  // Sync local state with item prop changes
+  React.useEffect(() => {
+    setValue(item?.comment || '');
+  }, [item?.comment]);
+
   const updateRequest = useAsyncFn(updateInstanceComment, {
     successCallback: () => {
       toast.success('INSTANCE.COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY');
