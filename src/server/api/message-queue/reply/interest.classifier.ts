@@ -95,7 +95,8 @@ AUTO-REPLY DETECTION PATTERNS (Hebrew):
 - Note: These numeric responses are optional - leads may respond with natural language instead
 
 // NEW: AUTO-REPLY DETECTION
-- If the LEAD's message appears to be an auto-reply or automated response (e.g., "אנחנו לא זמינים כרגע", "תודה שיצרת קשר", "איך אפשר לעזור?"), treat this as out-of-scope.
+- If the LAST message from LEAD appears to be an auto-reply or automated response (e.g., "אנחנו לא זמינים כרגע", "תודה שיצרת קשר", "איך אפשר לעזור?"), treat this as out-of-scope.
+- Only apply this rule if the most recent message in the conversation is from LEAD and is an auto-reply.
 - In such cases: interested=false; intent="OUT_OF_SCOPE".
 - The suggestedReply should remain polite and neutral-corporate (third-person), e.g.:
   "התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע."
@@ -285,14 +286,15 @@ export async function classifyInterest(
   // This ensures department never changes based on conversation flow
   const safeDept = inferDepartmentFromOutreach(outreachText);
   
-  // Hard-guard auto-reply detection - check the latest lead reply
-  const latestLeadReply = leadReplies.filter(reply => reply.from === 'LEAD').pop();
-  if (latestLeadReply && isAutoReply(latestLeadReply.text)) {
+  // Hard-guard auto-reply detection - only check if the LAST message from lead was auto-reply
+  const leadRepliesOnly = leadReplies.filter(reply => reply.from === 'LEAD');
+  const lastLeadReply = leadRepliesOnly[leadRepliesOnly.length - 1];
+  if (lastLeadReply && isAutoReply(lastLeadReply.text)) {
     return {
       ...ai,
       interested: false,
       intent: 'OUT_OF_SCOPE' as keyof typeof LeadIntentEnum,
-      reason: 'Auto-reply detected',
+      reason: 'Last message from lead was auto-reply',
       confidence: 1.0,
       suggestedReply: 'התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע.',
       action: 'DO_NOT_CONTACT' as keyof typeof LeadActionEnum,
