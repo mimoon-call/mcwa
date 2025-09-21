@@ -153,6 +153,8 @@ const Comment = ({ item }: { item: InstanceItem }) => {
 
   const onSave = () => {
     setEditMode(false);
+    if (value === (item.comment || '')) return;
+
     updateRequest.call(item.phoneNumber, value.trim());
   };
 
