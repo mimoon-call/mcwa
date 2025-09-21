@@ -77,13 +77,28 @@ DECISION RULES:
 - interested=true for clear positive signals (requests for info/demo/callback).
 - interested=true for NOT_NOW responses (leads saying "not now" but not declining).
 - interested=false for declines, unsubscribe, abuse, or out-of-scope.
+- interested=false for auto-replies and automated responses (intent="OUT_OF_SCOPE").
 - If unclear, intent="AMBIGUOUS" with a brief clarifying suggestedReply.
+
+AUTO-REPLY DETECTION PATTERNS (Hebrew):
+- "אנחנו לא זמינים כרגע" / "לא זמינים כרגע"
+- "תודה שיצרת קשר" / "תודה על פנייתך"
+- "איך אפשר לעזור?" / "איך נוכל לעזור?"
+- "נענה לך בהקדם" / "נחזור אליך"
+- "שעות הפעילות" / "שעות עבודה"
+- Generic business responses without specific context
 
 // NUMERIC RESPONSE HANDLING (OPTIONAL):
 - If LEAD replies with just "1" (or "1."): interested=true; intent="POSITIVE_INTEREST"; action="REPLY"
 - If LEAD replies with just "2" (or "2."): interested=false; intent="DECLINE"; action="DO_NOT_CONTACT"
 - If LEAD replies with just "3" (or "3."): interested=false; intent="UNSUBSCRIBE"; action="ADD_TO_DNC"
 - Note: These numeric responses are optional - leads may respond with natural language instead
+
+// NEW: AUTO-REPLY DETECTION
+- If the LEAD's message appears to be an auto-reply or automated response (e.g., "אנחנו לא זמינים כרגע", "תודה שיצרת קשר", "איך אפשר לעזור?"), treat this as out-of-scope.
+- In such cases: interested=false; intent="OUT_OF_SCOPE".
+- The suggestedReply should remain polite and neutral-corporate (third-person), e.g.:
+  "התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע."
 
 // NEW: SARCASM & ROLE-REVERSAL
 - If the LEAD's message is a role-reversal offering YOU the same product/service you offered (e.g., "אני יכולה לתת לך הלוואה"), treat this as sarcasm/irony indicating lack of interest.
@@ -164,6 +179,25 @@ function isCarMessage(text: string): boolean {
 
 function isNoGuaranteesMessage(text: string): boolean {
   return NO_GUARANTEES_PATTERN.test(text);
+}
+
+// Auto-reply detection patterns
+const AUTO_REPLY_PATTERNS = [
+  /אנחנו\s*לא\s*זמינים\s*כרגע/i,
+  /לא\s*זמינים\s*כרגע/i,
+  /תודה\s*שיצרת\s*קשר/i,
+  /תודה\s*על\s*פנייתך/i,
+  /איך\s*אפשר\s*לעזור/i,
+  /איך\s*נוכל\s*לעזור/i,
+  /נענה\s*לך\s*בהקדם/i,
+  /נחזור\s*אליך/i,
+  /שעות\s*הפעילות/i,
+  /שעות\s*עבודה/i,
+  /תודה\s*שיצרת\s*קשר\s*עם\s*[^!]*!?\s*איך\s*אפשר\s*לעזור/i, // Pattern for "Thank you for contacting [Business Name]! How can we help?"
+];
+
+function isAutoReply(text: string): boolean {
+  return AUTO_REPLY_PATTERNS.some(pattern => pattern.test(text));
 }
 
 function inferDepartmentFromOutreach(outreachText: string): LeadDepartmentEnum {
@@ -250,5 +284,21 @@ export async function classifyInterest(
   // Hard-guard department using ONLY the outreach message (not lead replies or your replies)
   // This ensures department never changes based on conversation flow
   const safeDept = inferDepartmentFromOutreach(outreachText);
+  
+  // Hard-guard auto-reply detection - check the latest lead reply
+  const latestLeadReply = leadReplies.filter(reply => reply.from === 'LEAD').pop();
+  if (latestLeadReply && isAutoReply(latestLeadReply.text)) {
+    return {
+      ...ai,
+      interested: false,
+      intent: 'OUT_OF_SCOPE' as keyof typeof LeadIntentEnum,
+      reason: 'Auto-reply detected',
+      confidence: 1.0,
+      suggestedReply: 'התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע.',
+      action: 'DO_NOT_CONTACT' as keyof typeof LeadActionEnum,
+      department: safeDept
+    };
+  }
+  
   return { ...ai, department: safeDept };
 }
