@@ -162,14 +162,15 @@ export const useTableHeaders = ({ headers, sort, onSort, storageKey }: TableHead
     (value: TableHeader['value'], sortable?: TableHeader['sortable']) => {
       if (edgeIndex !== null || !sortable || didDrag.current) return;
 
-      const newSort = { ...(sort || {}) };
+      let newSort = { ...(sort || {}) };
       const toggle = (k: string) => {
-        if (newSort[k] === 1) {
-          delete newSort[k];
-        } else if (newSort[k] === -1) {
-          newSort[k] = 1;
-        } else {
-          newSort[k] = -1;
+        const currentValue = newSort[k];
+        delete newSort[k];
+
+        if (currentValue === -1) {
+          newSort = { [k]: 1, ...newSort };
+        } else if (currentValue !== 1) {
+          newSort = { [k]: -1, ...newSort };
         }
       };
 
