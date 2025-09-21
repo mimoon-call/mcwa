@@ -18,6 +18,7 @@
     "SEARCH": "חפש",
     "RESET": "איפוס",
     "CONFIRM": "אישור",
+    "REVERT": "בטל שינויים",
     "YES": "כן",
     "NO": "לא",
     "BACK": "חזור",
@@ -39,6 +40,7 @@
     "ENABLE": "הפעל",
     "REFRESH": "רענן",
     "WARNING": "אזהרה",
+    "COMMENT": "הערה",
     "CLEAR": "נקה",
     "CREATED_AT": "נוצר בתאריך",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "האם אתה בטוח שברצונך למחוק {{value}}?",
@@ -161,7 +163,9 @@
       "BLOCKED": "חסום",
       "REGISTRATION_INCOMPLETED": "הרשמה לא הושלמה",
       "SESSION_EXPIRED": "פג תוקף"
-    }
+    },
+    "COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY": "ההערה עודכנה בהצלחה",
+    "COMMENT_UPDATE_FAILED": "עדכון ההערה נכשל"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",

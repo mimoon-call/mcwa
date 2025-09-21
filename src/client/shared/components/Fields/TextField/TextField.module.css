@@ -18,7 +18,7 @@
 }
 
 .text-field-clear {
-    @apply absolute top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer z-10;
+    @apply absolute top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer z-10 ltr:right-2 rtl:left-2;
     @apply ltr:right-2 rtl:left-2;
     display: flex;
     align-items: center;

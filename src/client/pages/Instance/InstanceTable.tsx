@@ -4,7 +4,7 @@ import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
 import type { ModalRef } from '@components/Modal/Modal.types';
 import type { MenuItem } from '@components/Menu/Menu.type';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { DateFormat } from '@client-constants';
@@ -24,6 +24,7 @@ import {
   IS_GLOBAL_WARMING_UP,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE,
+  UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
 } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
@@ -33,12 +34,13 @@ import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
 import { liveUpdateHandler } from '@helpers/live-update-handler';
-import { useToast, useTooltip } from '@hooks';
+import { useAsyncFn, useToast, useTooltip } from '@hooks';
 import Icon from '@components/Icon/Icon';
 import Avatar from '@components/Avatar/Avatar';
 import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceSearchPanel';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { RouteName } from '@client/router/route-name';
+import { TextField } from '@components/Fields';
 
 const InstanceItem = ({ item }: { item: InstanceItem }) => {
   const iconColorClass = (() => {
@@ -85,6 +87,98 @@ const StatusCode = ({ item }: { item: InstanceItem }) => {
   const ref = useTooltip<HTMLDivElement>({ text: t(item.errorMessage) });
 
   return <span ref={ref}>{item?.statusCode || '-'}</span>;
+};
+
+type EditToggleProps = {
+  isEditMode: boolean;
+  hasChanges: boolean;
+  onEdit: (ev: MouseEvent) => void;
+  onCancel: () => void;
+  isHover: boolean;
+};
+
+const CommentEditToggle = ({ isHover, isEditMode, hasChanges, onEdit, onCancel }: EditToggleProps) => {
+  const { t } = useTranslation();
+  const divRef = useTooltip<HTMLDivElement>({ text: t(isEditMode ? 'GENERAL.REVERT' : 'GENERAL.EDIT') });
+
+  return (
+    <div ref={divRef}>
+      {isEditMode ? (
+        <Icon name="svg:refresh" size="1rem" className={cn('text-gray-400 me-2', !hasChanges && 'opacity-0')} onClick={onCancel} />
+      ) : (
+        <Icon name="svg:edit" size="1rem" className={cn('text-gray-400 me-2', !isHover && 'opacity-0')} onClick={onEdit} />
+      )}
+    </div>
+  );
+};
+
+const Comment = ({ item }: { item: InstanceItem }) => {
+  const toast = useToast();
+  const { [UPDATE_INSTANCE_COMMENT]: updateInstanceComment } = instanceStore;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const [clickCount, setClickCount] = React.useState(0);
+  const [isEditMode, setEditMode] = React.useState(false);
+  const [value, setValue] = React.useState(item?.comment || '');
+
+  const updateRequest = useAsyncFn(updateInstanceComment, {
+    successCallback: () => {
+      toast.success('INSTANCE.COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY');
+    },
+    errorCallback: () => {
+      toast.error('INSTANCE.COMMENT_UPDATE_FAILED');
+      setValue(item?.comment || '');
+    },
+  });
+
+  const onClick = (ev: MouseEvent) => {
+    ev.stopPropagation();
+    setClickCount((prev) => prev + 1);
+    clearTimeout(timeoutRef.current);
+    if (clickCount === 1) setEditMode(true);
+
+    timeoutRef.current = setTimeout(() => setClickCount(0), 300);
+  };
+
+  const onEdit = (ev: MouseEvent) => {
+    ev.stopPropagation();
+    setEditMode(true);
+    inputRef.current?.focus();
+  };
+
+  const onCancel = () => {
+    setValue(item?.comment || '');
+    setEditMode(false);
+  };
+
+  const onSave = () => {
+    setEditMode(false);
+    updateRequest.call(item.phoneNumber, value.trim());
+  };
+
+  return (
+    <TextField
+      ref={inputRef}
+      containerClass={'border-none'}
+      hideDetails
+      loading={updateRequest.loading}
+      readOnly={!isEditMode || updateRequest.loading}
+      name="comment"
+      value={value}
+      AppendComponent={({ isHover }) => (
+        <CommentEditToggle
+          isEditMode={isEditMode}
+          hasChanges={value !== (item.comment || '')}
+          onEdit={onEdit}
+          onCancel={onCancel}
+          isHover={isHover}
+        />
+      )}
+      onChange={setValue}
+      onClick={!isEditMode ? onClick : (ev) => ev.stopPropagation()}
+      onBlur={onSave}
+    />
+  );
 };
 
 const InstanceTable = () => {
@@ -145,6 +239,7 @@ const InstanceTable = () => {
     { title: 'INSTANCE.WARM_DAY', value: 'warmUpDay', class: ['text-center'], sortable: true, export: false },
     { title: 'INSTANCE.DAILY_WARM_MESSAGES', value: 'dailyWarmUpCount', class: ['text-center'], sortable: true, export: false },
     { title: 'INSTANCE.IP_ADDRESS', value: 'lastIpAddress', class: ['text-center'], sortable: true, type: 'TEXT' },
+    { title: 'GENERAL.COMMENT', value: 'comment', class: ['min-w-[160px]'], sortable: true, component: Comment, type: 'TEXT' },
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',

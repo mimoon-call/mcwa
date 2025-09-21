@@ -15,6 +15,7 @@ type TextFieldProps = InputWrapperProps & {
   containerClass?: ClassValue;
   clearable?: boolean;
   beforeChange?: (value: string) => string;
+  AppendComponent?: ({ isHover, isFocus }: { isHover: boolean; isFocus: boolean }) => React.ReactNode;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'pattern'>;
 
 type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
@@ -22,62 +23,77 @@ type InputProps = Pick<InputWrapperProps, 'onChange' | 'pattern'> &
     clearable?: boolean;
     beforeChange?: (value: string) => string;
     className?: ClassValue;
+    AppendComponent?: ({ isHover, isFocus }: { isHover: boolean; isFocus: boolean }) => React.ReactNode;
   };
 
-const Input = forwardRef<HTMLInputElement, InputProps>(({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, ...rest }, ref) => {
-  const localValue = useRef<string>(value?.toString() || '');
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ onChange, className, pattern, value, disabled, clearable = false, beforeChange, AppendComponent, ...rest }, ref) => {
+    const localValue = useRef<string>(value?.toString() || '');
+    const [isHover, setIsHover] = React.useState(false);
+    const [isFocus, setIsFocus] = React.useState(false);
 
-  useEffect(() => {
-    if (typeof value === 'string') {
-      localValue.current = value;
-    }
-  }, [value]);
+    useEffect(() => {
+      if (typeof value === 'string') {
+        localValue.current = value;
+      }
+    }, [value]);
 
-  // Handle clear selection
-  const handleClear = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onChange?.('');
-    },
-    [onChange]
-  );
+    // Handle clear selection
+    const handleClear = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onChange?.('');
+      },
+      [onChange]
+    );
 
-  return (
-    <div className={styles['text-field-container']}>
-      <input
-        ref={ref}
-        className={cn(global['field'], styles['text-field'], className, disabled && '!bg-gray-200 !text-gray-600')}
-        value={value}
-        disabled={disabled}
-        onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern, beforeChange) : undefined}
-        {...rest}
-      />
-
-      {clearable && value !== undefined && value !== '' && !disabled && (
-        <Icon
-          name="svg:x-mark"
-          size="0.875rem"
-          className={styles['text-field-clear']}
-          onClick={handleClear}
-          role="button"
-          tabIndex={-1}
-          aria-label="Clear input"
+    return (
+      <div
+        className={styles['text-field-container']}
+        onMouseOver={() => setIsHover(true)}
+        onMouseLeave={() => setIsHover(false)}
+        onFocus={() => setIsFocus(true)}
+        onBlur={() => setIsFocus(false)}
+      >
+        <input
+          ref={ref}
+          className={cn(global['field'], styles['text-field'], className, disabled && '!bg-gray-200 !text-gray-600')}
+          value={value}
+          disabled={disabled}
+          onChange={onChange ? onFieldChangeEvent(onChange, localValue.current, pattern, beforeChange) : undefined}
+          {...rest}
         />
-      )}
-    </div>
-  );
-});
+
+        <div className="flex gap-1 absolute top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer z-10 ltr:right-0.5 rtl:left-0.5">
+          {clearable && value !== undefined && value !== '' && !disabled && (
+            <Icon
+              name="svg:x-mark"
+              size="0.875rem"
+              className={styles['text-field-clear']}
+              onClick={handleClear}
+              role="button"
+              tabIndex={-1}
+              aria-label="Clear input"
+            />
+          )}
+
+          {AppendComponent && <AppendComponent isFocus={isFocus} isHover={isHover} />}
+        </div>
+      </div>
+    );
+  }
+);
 
 Input.displayName = 'Input';
 
 const TextField = forwardRef<HTMLInputElement, TextFieldProps>((props, ref) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, containerClass, ...rest } = props;
+  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, containerClass, loading, ...rest } = props;
 
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
+    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange} loading={loading}>
       <Input
         ref={ref}
         {...rest}

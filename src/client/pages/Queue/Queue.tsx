@@ -75,7 +75,7 @@ const Queue = () => {
       },
     },
     { title: 'QUEUE.LAST_ERROR_MESSAGE', value: 'lastError', class: ['whitespace-pre-line-clamp-3', 'min-w-[240px]'] },
-    { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center', 'w-[80px]'] },
+    { title: 'QUEUE.ATTEMPT', value: 'attempt', class: ['text-center'] },
   ];
 
   const onPageChange = (pageIndex: number) => {

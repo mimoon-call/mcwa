@@ -23,6 +23,7 @@ export type WAProxyConfig = {
 export type WAAppAuth<T extends object> = T & {
   phoneNumber: string;
   creds: any;
+  comment?: string;
   statusCode?: number;
   errorMessage?: string;
   lastErrorAt?: Date | null;

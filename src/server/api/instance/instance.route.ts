@@ -1,6 +1,15 @@
 import express from 'express';
 import { routeMiddleware } from '@server/middleware/route-wrapper.middleware';
-import { ACTIVE_TOGGLE_INSTANCE, ADD_INSTANCE, DELETE_INSTANCE, EXPORT_INSTANCES_TO_EXCEL, INSTANCE_REFRESH, SEARCH_INSTANCE, WARMUP_TOGGLE } from '@server/api/instance/instance.map';
+import {
+  ACTIVE_TOGGLE_INSTANCE,
+  ADD_INSTANCE,
+  DELETE_INSTANCE,
+  EXPORT_INSTANCES_TO_EXCEL,
+  INSTANCE_REFRESH,
+  SEARCH_INSTANCE,
+  UPDATE_INSTANCE_COMMENT,
+  WARMUP_TOGGLE,
+} from '@server/api/instance/instance.map';
 import { instanceController } from '@server/api/instance/instance.controller';
 
 const instanceRoute = express.Router();
@@ -14,5 +23,9 @@ instanceRoute.post(`/${ACTIVE_TOGGLE_INSTANCE}/:phoneNumber`, routeMiddleware({ 
 instanceRoute.post(`/${INSTANCE_REFRESH}/:phoneNumber`, routeMiddleware({ isAuthRequired: true }, instanceController[INSTANCE_REFRESH]));
 instanceRoute.post(`/${WARMUP_TOGGLE}`, routeMiddleware({ isAuthRequired: true }, instanceController[WARMUP_TOGGLE]));
 instanceRoute.post(`/${EXPORT_INSTANCES_TO_EXCEL}`, routeMiddleware({ isAuthRequired: true }, instanceController[EXPORT_INSTANCES_TO_EXCEL]));
+instanceRoute.post(
+  `/${UPDATE_INSTANCE_COMMENT}/:phoneNumber`,
+  routeMiddleware({ isAuthRequired: true }, instanceController[UPDATE_INSTANCE_COMMENT])
+);
 
 export default instanceRoute;

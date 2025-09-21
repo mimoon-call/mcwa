@@ -18,6 +18,7 @@
     "SEARCH": "Search",
     "RESET": "Reset",
     "CONFIRM": "Confirm",
+    "REVERT": "Revert changes",
     "YES": "Yes",
     "NO": "No",
     "BACK": "Back",
@@ -39,6 +40,7 @@
     "ENABLE": "Enable",
     "REFRESH": "Refresh",
     "WARNING": "Warning",
+    "COMMENT": "Comment",
     "CLEAR": "Clear",
     "CREATED_AT": "Created at",
     "ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM": "Are you sure you want to delete {{value}}?",
@@ -161,7 +163,9 @@
       "BLOCKED": "Blocked",
       "REGISTRATION_INCOMPLETED": "Registration incomplete",
       "SESSION_EXPIRED": "Session expired"
-    }
+    },
+    "COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY": "Comment has been updated successfully",
+    "COMMENT_UPDATE_FAILED": "Failed to update comment"
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

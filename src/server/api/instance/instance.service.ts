@@ -7,13 +7,13 @@ import {
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
   SEARCH_INSTANCE,
+  UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
 } from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
 import ExcelService from '@server/services/excel/excel.service';
-import { ExportOptions } from '@server/services/excel/excel.type';
 import getLocalTime from '@server/helpers/get-local-time';
 
 export const instanceService = {
@@ -57,6 +57,7 @@ export const instanceService = {
         name: 1,
         createdAt: 1,
         lastIpAddress: 1,
+        comment: 1,
       },
     });
 
@@ -165,6 +166,7 @@ export const instanceService = {
         name: 1,
         createdAt: 1,
         lastIpAddress: 1,
+        comment: 1,
       },
     });
 
@@ -173,5 +175,9 @@ export const instanceService = {
     const buffer = excelService.export([{ sheetName: today, direction: 'rtl', headers, data }]);
 
     return { buffer, fileName: `instances.xlsx` };
+  },
+
+  [UPDATE_INSTANCE_COMMENT]: async (phoneNumber: string, comment: string): Promise<void> => {
+    await WhatsAppAuth.updateOne({ phoneNumber }, { $set: { comment } });
   },
 };

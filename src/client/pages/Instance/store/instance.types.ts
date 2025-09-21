@@ -21,6 +21,7 @@ export type InstanceItem = {
   isWarmingUp: boolean;
   isConnected: boolean;
   lastErrorAt: string;
+  comment?: string;
 };
 
 export type SearchInstanceRes = EntityList<InstanceItem>;

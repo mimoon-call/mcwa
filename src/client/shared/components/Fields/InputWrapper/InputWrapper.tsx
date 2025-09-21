@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next';
 import FieldValidator from '@services/field-validator/field-validator.service';
 import { cn } from '@client/plugins';
 import { useTooltip } from '@hooks/useTooltip';
+import styles from '@components/Fields/InputWrapper/InputWrapper.module.css';
 
 const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
   const { t } = useTranslation();
-  const { className, children, label, debounce, hideDetails } = props;
+  const { className, children, label, debounce, hideDetails, loading } = props;
 
   const isInit = useRef(true);
   const typingTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -127,7 +128,7 @@ const InputWrapper: FC<PropsWithChildren<InputWrapperProps>> = (props) => {
 
   return (
     <div className={cn('flex flex-col', className)} data-input-wrapper={props.name} data-has-error={Boolean(error)}>
-      {content}
+      <div className={cn('w-full', loading && styles['input-wrapper--loading'])}>{content}</div>
 
       <div
         ref={errorRef}

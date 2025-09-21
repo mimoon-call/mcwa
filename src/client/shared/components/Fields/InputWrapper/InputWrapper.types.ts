@@ -14,4 +14,5 @@ export type InputWrapperProps = {
   debounce?: number;
   onChange?: (v: Value) => void;
   hideDetails?: boolean;
+  loading?: boolean;
 };

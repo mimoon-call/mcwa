@@ -8,6 +8,7 @@ import {
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
   SEARCH_INSTANCE,
+  UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
 } from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
@@ -80,5 +81,14 @@ export const instanceController = {
       .type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       .set('Content-Disposition', `attachment; filename="${fileName}"`)
       .send(buffer);
+  },
+
+  [UPDATE_INSTANCE_COMMENT]: async (req: Request<{ phoneNumber: string }, never, { comment: string }>, res: Response<BaseResponse>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
+    const { comment } = await new RecordValidator(req.body, [['comment', { type: ['String'] }]]).validate();
+
+    await instanceService[UPDATE_INSTANCE_COMMENT](phoneNumber, comment);
+
+    res.send({ returnCode: 0 });
   },
 };

@@ -1,7 +1,4 @@
 // src/client/store/instance/instance.slice.ts
-// This slice includes auto-save/auto-load functionality for filter data
-// Filter changes are automatically saved to localStorage
-// On mount, saved filter data is loaded from localStorage into the initial state
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { StoreEnum } from '@client/store/store.enum';
 import type { RootState } from '@client/store';
@@ -21,6 +18,7 @@ import {
   SEARCH_INSTANCE,
   UPDATE_FILTER,
   UPDATE_INSTANCE,
+  UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
@@ -78,6 +76,10 @@ const instanceQr = async (phoneNumber: string) => {
   return image;
 };
 
+const updateInstanceComment = async (phoneNumber: string, comment: string) => {
+  await api.post<void, { comment: string }>(`${UPDATE_INSTANCE_COMMENT}/${phoneNumber}`, { comment });
+};
+
 const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE}`, async (phoneNumber: string, { dispatch }) => {
   await api.delete<void>(`${DELETE_INSTANCE}/${phoneNumber}`);
   await dispatch(searchInstance({}));
@@ -109,7 +111,7 @@ const exportInstancesToExcel = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const currentFilter = state[StoreEnum.instance]?.[INSTANCE_SEARCH_FILTER];
-      
+
       const payload = {
         ...currentFilter,
         headers,
@@ -218,6 +220,7 @@ export default {
   [INSTANCE_REFRESH]: refreshInstance,
   [WARMUP_TOGGLE]: toggleWarmup,
   [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,
+  [UPDATE_INSTANCE_COMMENT]: updateInstanceComment,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
   [UPDATE_FILTER]: instanceSlice.actions.updateFilter,

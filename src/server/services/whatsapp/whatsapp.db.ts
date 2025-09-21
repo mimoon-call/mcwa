@@ -26,6 +26,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     phoneNumber: { type: String, required: true },
     isActive: { type: Boolean, required: true, default: true },
     creds: { type: Schema.Types.Mixed, required: false },
+    comment: { type: String },
     statusCode: { type: Number, required: false },
     errorMessage: { type: String, required: false },
     lastErrorAt: { type: Date },

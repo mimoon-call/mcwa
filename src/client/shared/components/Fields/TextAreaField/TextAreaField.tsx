@@ -87,7 +87,7 @@ const setCursorAfterElement = (element: HTMLElement) => {
 
 const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, ref) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, rows = 4, fieldMaps, ...rest } = props;
+  const { className, onChange, name, label, rules, value, rows = 4, fieldMaps, loading, ...rest } = props;
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -285,7 +285,7 @@ const TextAreaField = forwardRef<TextAreaFieldRef, TextAreaFieldProps>((props, r
   const maxHeight = rows * 1.5; // Set max height to same as min height to prevent expansion
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange}>
+    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} value={value} onChange={onChange} loading={loading}>
       <div
         ref={divRef}
         contentEditable

@@ -37,7 +37,7 @@ const extractTextFromReactNode = (node: ReactNode): string => {
 
 const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, hideDetails, options, placeholder, clearable, searchable, disabled = false } = props;
+  const { className, onChange, name, label, rules, value, hideDetails, options, placeholder, clearable, searchable, disabled = false, loading } = props;
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,7 +160,7 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
   const placeholderText = placeholder ? t(placeholder) : '';
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange}>
+    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange} loading={loading}>
       <div ref={containerRef} className={cn(styles['select-container'])}>
         <div
           className={cn(global['field'], styles['select-field'], className, disabled && '!bg-gray-200 !text-gray-600 !cursor-not-allowed')}
