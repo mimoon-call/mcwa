@@ -27,11 +27,11 @@ const ReadIndicator = ({ status, visible }: Pick<ChatMessage, 'status'> & { visi
 
   const [className1, className2] = ((): [string, string | null] => {
     if (status === MessageStatusEnum.PENDING) return ['text-gray-500', null];
-    if (status === MessageStatusEnum.ERROR) return ['text-gray-500', null];
+    if (status === MessageStatusEnum.ERROR) return ['text-gray-200', null];
     if (status === MessageStatusEnum.DELIVERED) return ['text-gray-500', 'text-gray-500'];
     if (status === MessageStatusEnum.READ || status === MessageStatusEnum.PLAYED) return ['text-green-500', 'text-green-500'];
 
-    return ['text-green-500', 'text-green-500'];
+    return ['text-gray-500', null];
   })();
 
   return (
