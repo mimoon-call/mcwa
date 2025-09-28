@@ -55,7 +55,7 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     globalRoot?.render(<Toast ref={refHandler} {...props} y={props.y || toastY} />);
   }, []);
 
-  const error = (message: string | ReactNode, { duration = 7000, link, ...options }: ToastOptions = {}) => {
+  const error = (message: string | ReactNode, { duration = 7000, onClick, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
 
@@ -70,11 +70,11 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-red-50 text-red-700', duration, link, ...options }
+      { className: 'bg-red-50 text-red-700', duration, onClick, ...options }
     );
   };
 
-  const warning = (message: string | ReactNode, { duration = 7000, link, ...options }: ToastOptions = {}) => {
+  const warning = (message: string | ReactNode, { duration = 7000, onClick, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
 
@@ -89,13 +89,14 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-yellow-50 text-yellow-700', duration, link, ...options }
+      { className: 'bg-yellow-50 text-yellow-700', duration, onClick, ...options }
     );
   };
 
-  const success = (message: string | ReactNode, { link, ...options }: ToastOptions = {}) => {
+  const success = (message: string | ReactNode, { onClick, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
-    const contentString = typeof content === 'string' ? content : content?.toString() || '';
+    // For deduplication, we need a string representation. If it's a ReactNode, we'll use a hash or timestamp
+    const contentString = typeof content === 'string' ? content : `react-node-${Date.now()}`;
 
     // Deduplication: prevent showing the same toast content within 1 second
     if (!shouldShowToast(contentString)) {
@@ -108,7 +109,7 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-green-50 text-green-700', link, ...options }
+      { className: 'bg-green-50 text-green-700', onClick, ...options }
     );
   };
 

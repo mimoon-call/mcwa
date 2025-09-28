@@ -10,11 +10,13 @@ import getClientSocket from '@helpers/get-client-socket.helper';
 import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@hooks';
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 
 const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const toast = useToast();
 
@@ -36,7 +38,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
       toast.success(t('QUEUE.NEW_OPPORTUNITY', { instanceNumber: internationalPhonePrettier(instanceNumber), department }), {
         duration: 7000,
         closeable: true,
-        link,
+        onClick: () => navigate(link),
       });
     };
 
