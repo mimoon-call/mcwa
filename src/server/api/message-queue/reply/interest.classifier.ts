@@ -112,6 +112,13 @@ AUTO-REPLY DETECTION PATTERNS (Hebrew):
 - In such cases: interested=true; intent="POSITIVE_INTEREST"; action="REPLY".
 - The suggestedReply should be formal and indicate that representatives will follow up if relevant, e.g.:
   "פנייתך התקבלה. נציגינו יחזרו אליך במידה והתנאים יהיו רלוונטיים עבורך."
+
+// ASSET MISMATCH DETECTION (CRITICAL)
+- If the outreach message is about car loans (department="CAR") and LEAD says they don't have a car (e.g., "אין לי רכב", "אין לי מכונית"), treat as not interested.
+- If the outreach message is about mortgages (department="MORTGAGE") and LEAD says they don't have a house/property (e.g., "אין לי בית", "אין לי דירה"), treat as not interested.
+- In such cases: interested=false; intent="DECLINE"; reason should explain the asset mismatch.
+- The suggestedReply should remain polite and neutral-corporate (third-person), e.g.:
+  "התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע."
 `.trim();
 
 /* -------------------- DETERMINISTIC DEPARTMENT POST-GUARD -------------------- */
@@ -128,17 +135,7 @@ const SHIYABUD_PATTERN = /שעבוד/i;
 const NO_GUARANTEES_PATTERN = /ללא\s*צורך\s*בערבויות\s*ובטחונות/i;
 
 // Property/real estate context patterns
-const PROPERTY_CONTEXT_PATTERNS = [
-  /נכס/i,
-  /בית/i,
-  /דירה/i,
-  /מקרקעין/i,
-  /נדל"ן/i,
-  /property/i,
-  /real\s*estate/i,
-  /home/i,
-  /house/i
-];
+const PROPERTY_CONTEXT_PATTERNS = [/נכס/i, /בית/i, /דירה/i, /מקרקעין/i, /נדל"ן/i, /property/i, /real\s*estate/i, /home/i, /house/i];
 
 // Car/vehicle context patterns
 const CAR_CONTEXT_PATTERNS = [
@@ -151,30 +148,30 @@ const CAR_CONTEXT_PATTERNS = [
   /car/i,
   /vehicle/i,
   /auto/i,
-  /automobile/i
+  /automobile/i,
 ];
 
 function isMortgageMessage(text: string): boolean {
   // Direct mortgage pattern
   if (MORTGAGE_PATTERN.test(text)) return true;
-  
+
   // Shiyabud with property context
   if (SHIYABUD_PATTERN.test(text)) {
-    return PROPERTY_CONTEXT_PATTERNS.some(pattern => pattern.test(text));
+    return PROPERTY_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
   }
-  
+
   return false;
 }
 
 function isCarMessage(text: string): boolean {
   // Direct car pattern
   if (CAR_PATTERN.test(text)) return true;
-  
+
   // Shiyabud with car context
   if (SHIYABUD_PATTERN.test(text)) {
-    return CAR_CONTEXT_PATTERNS.some(pattern => pattern.test(text));
+    return CAR_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
   }
-  
+
   return false;
 }
 
@@ -197,23 +194,52 @@ const AUTO_REPLY_PATTERNS = [
   /תודה\s*שיצרת\s*קשר\s*עם\s*[^!]*!?\s*איך\s*אפשר\s*לעזור/i, // Pattern for "Thank you for contacting [Business Name]! How can we help?"
 ];
 
+// Asset mismatch detection patterns - when client says they don't have required assets
+const NO_CAR_PATTERNS = [
+  /אין\s*לי\s*רכב/i,
+  /אין\s*לי\s*מכונית/i,
+  /אין\s*לי\s*אוטו/i,
+  /אין\s*ברשותי\s*רכב/i,
+  /אין\s*ברשותי\s*מכונית/i,
+  /אין\s*ברשותי\s*אוטו/i,
+];
+
+const NO_HOUSE_PATTERNS = [
+  /אין\s*לי\s*בית/i,
+  /אין\s*לי\s*דירה/i,
+  /אין\s*לי\s*נכס/i,
+  /אין\s*לי\s*מקרקעין/i,
+  /אין\s*ברשותי\s*בית/i,
+  /אין\s*ברשותי\s*דירה/i,
+  /אין\s*ברשותי\s*נכס/i,
+  /אין\s*ברשותי\s*מקרקעין/i,
+];
+
 function isAutoReply(text: string): boolean {
-  return AUTO_REPLY_PATTERNS.some(pattern => pattern.test(text));
+  return AUTO_REPLY_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function hasNoCarResponse(text: string): boolean {
+  return NO_CAR_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function hasNoHouseResponse(text: string): boolean {
+  return NO_HOUSE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function inferDepartmentFromOutreach(outreachText: string): LeadDepartmentEnum {
   // Check for specific loan types first (these take priority over general patterns)
   if (isMortgageMessage(outreachText)) return LeadDepartmentEnum.MORTGAGE;
   if (isCarMessage(outreachText)) return LeadDepartmentEnum.CAR;
-  
+
   // Check for no-guarantees pattern - this should be GENERAL only if not already classified
   if (isNoGuaranteesMessage(outreachText)) return LeadDepartmentEnum.GENERAL;
-  
+
   // If message contains "שיעבוד" but no clear context, default to MORTGAGE
   if (SHIYABUD_PATTERN.test(outreachText)) {
     return LeadDepartmentEnum.MORTGAGE;
   }
-  
+
   return LeadDepartmentEnum.GENERAL;
 }
 
@@ -285,22 +311,55 @@ export async function classifyInterest(
   // Hard-guard department using ONLY the outreach message (not lead replies or your replies)
   // This ensures department never changes based on conversation flow
   const safeDept = inferDepartmentFromOutreach(outreachText);
-  
+
   // Hard-guard auto-reply detection - only check if the LAST message from lead was auto-reply
-  const leadRepliesOnly = leadReplies.filter(reply => reply.from === 'LEAD');
+  const leadRepliesOnly = leadReplies.filter((reply) => reply.from === 'LEAD');
   const lastLeadReply = leadRepliesOnly[leadRepliesOnly.length - 1];
   if (lastLeadReply && isAutoReply(lastLeadReply.text)) {
     return {
       ...ai,
       interested: false,
-      intent: 'OUT_OF_SCOPE' as keyof typeof LeadIntentEnum,
-      reason: 'Last message from lead was auto-reply',
+      intent: LeadIntentEnum.OUT_OF_SCOPE,
+      reason: 'הודעה אחרונה מהלקוח נראית כהודעת תגובה אוטומטית (Auto-Reply)',
       confidence: 1.0,
       suggestedReply: 'התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע.',
-      action: 'DO_NOT_CONTACT' as keyof typeof LeadActionEnum,
-      department: safeDept
+      action: LeadActionEnum.DO_NOT_CONTACT,
+      department: safeDept,
     };
   }
-  
+
+  // Hard-guard asset mismatch detection - check if lead says they don't have required assets
+  if (lastLeadReply) {
+    const leadText = lastLeadReply.text;
+
+    // Check for car loan mismatch
+    if (safeDept === LeadDepartmentEnum.CAR && hasNoCarResponse(leadText)) {
+      return {
+        ...ai,
+        interested: false,
+        intent: LeadIntentEnum.DECLINE,
+        reason: 'הלקוח ציין שאין ברשותו רכב עבור הלוואת רכב',
+        confidence: 1.0,
+        suggestedReply: 'התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע.',
+        action: LeadActionEnum.DO_NOT_CONTACT,
+        department: safeDept,
+      };
+    }
+
+    // Check for mortgage mismatch
+    if (safeDept === LeadDepartmentEnum.MORTGAGE && hasNoHouseResponse(leadText)) {
+      return {
+        ...ai,
+        interested: false,
+        intent: LeadIntentEnum.DECLINE,
+        reason: 'הלקוח ציין שאין ברשותו בית/דירה עבור משכנתא',
+        confidence: 1.0,
+        suggestedReply: 'התקבלה תשובתך. במידה ותהיה מעוניין/ת בעתיד, נשמח לסייע.',
+        action: LeadActionEnum.DO_NOT_CONTACT,
+        department: safeDept,
+      };
+    }
+  }
+
   return { ...ai, department: safeDept };
 }
