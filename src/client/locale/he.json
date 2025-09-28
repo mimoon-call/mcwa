@@ -124,7 +124,8 @@
     "DEPARTMENT": "מחלקה",
     "REASONING": "נימוק",
     "ANALYSIS": "ניתוח",
-    "CONFIDENCE": "אמון"
+    "CONFIDENCE": "אמון",
+    "NEW_OPPORTUNITY": "הזדמנות חדשה עבור {{department}} נכנסה למספר {{instanceNumber}}"
   },
   "INSTANCE": {
     "TITLE": "קווים",

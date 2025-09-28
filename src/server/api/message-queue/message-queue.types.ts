@@ -1,6 +1,7 @@
 import type { EntityList, Pagination } from '@models';
 import type { BaseResponse } from '@server/models';
 import { ObjectId } from 'mongodb';
+import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 
 export type MessageQueueItem = {
   _id: ObjectId;
@@ -27,3 +28,4 @@ export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' |
 
 export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string; maxAttempts?: number };
+export type NewOpportunityEvent = { phoneNumber: string; instanceNumber: string; text: string } & InterestResult;

@@ -124,7 +124,8 @@
     "DEPARTMENT": "Department",
     "REASONING": "Reasoning",
     "ANALYSIS": "Analysis",
-    "CONFIDENCE": "Confidence"
+    "CONFIDENCE": "Confidence",
+    "NEW_OPPORTUNITY": "New opportunity for {{department}} came to number {{instanceNumber}}"
   },
   "INSTANCE": {
     "TITLE": "Instances",

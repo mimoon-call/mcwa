@@ -9,13 +9,15 @@ import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
+import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
+import { NewOpportunityEvent } from '@server/api/message-queue/message-queue.types';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean; instanceNumber: string }>;
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
 
-const handleWebhook = async (phoneNumber: string, text: string, ai: InterestResult) => {
+const handleWebhook = async (phoneNumber: string, text: string, ai: InterestResult, instanceNumber: string) => {
   switch (ai.department) {
     case LeadDepartmentEnum.CAR:
       console.log('CAR LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
@@ -27,9 +29,11 @@ const handleWebhook = async (phoneNumber: string, text: string, ai: InterestResu
       console.log('GENERAL LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
       break;
   }
+
+  app.socket.broadcast<NewOpportunityEvent>(MessageQueueEventEnum.NEW_OPPORTUNITY, { phoneNumber, instanceNumber, text, ...ai });
 };
 
-const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestResult | null) => {
+const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestResult | null, instanceNumber: string) => {
   if (!ai) return;
 
   switch (ai?.intent) {
@@ -49,7 +53,7 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
     case LeadIntentEnum.REQUEST_INFO:
     case LeadIntentEnum.POSITIVE_INTEREST:
     case LeadIntentEnum.NOT_NOW:
-      await handleWebhook(phoneNumber, text, ai);
+      await handleWebhook(phoneNumber, text, ai, instanceNumber);
       break;
   }
 };
@@ -195,7 +199,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
         // persist classification on the outreach message
         await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
-        if (callWebhookFlag) await handleAiInterest(phoneNumber1, text, ai);
+        if (callWebhookFlag) await handleAiInterest(phoneNumber1, text, ai, phoneNumber2);
 
         if (ai.suggestedReply && sendAutoReplyFlag) {
           // Check if there are active members in the conversation room

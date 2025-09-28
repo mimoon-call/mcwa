@@ -1,6 +1,7 @@
 // src/client/shared/components/Toast/Toast.tsx
 import React, { forwardRef, type ReactNode, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import styles from '@components/Toast/Toast.module.css';
 import { cn } from '@client/plugins';
 import { getLastZIndex } from '@helpers/get-last-z-index';
@@ -17,6 +18,7 @@ type ToastEntry = {
   bottom?: number;
   className?: ClassValue;
   closeable?: boolean;
+  link?: string;
 };
 
 type ToastItemProps = ToastEntry & {
@@ -25,22 +27,29 @@ type ToastItemProps = ToastEntry & {
   onClose: (id: ToastEntry['id']) => void;
 };
 
-export type ToastProps = { duration?: number; y: 'top' | 'bottom' };
+export type ToastProps = { duration?: number; y: 'top' | 'bottom'; link?: string };
 export type ToastRef = { open: (content: string | ReactNode, options: ToastOptions) => void };
-export type ToastOptions = Pick<ToastEntry, 'duration' | 'className' | 'closeable'>;
+export type ToastOptions = Pick<ToastEntry, 'duration' | 'className' | 'closeable' | 'link'>;
 
 const MAX_VISIBLE = 3;
 const TRANSITION_DURATION = 500;
 
 const Item: React.FC<ToastItemProps> = (props) => {
-  const { id, content, y, top, bottom, duration = 5000, closeable = true, className, onRef } = props;
+  const { id, content, y, top, bottom, duration = 5000, closeable = true, className, link, onRef } = props;
   const [visible, setVisible] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const navigate = useNavigate();
 
   const onClose = () => {
     props.onClose(id);
     esc.remove(id);
     clearTimeout(timeoutRef.current);
+  };
+
+  const handleClick = () => {
+    if (link) {
+      navigate(link);
+    }
   };
 
   useEffect(() => {
@@ -73,12 +82,21 @@ const Item: React.FC<ToastItemProps> = (props) => {
           'shadow-2xl border-2 border-current pb-2 px-4 h-full w-full rounded font-medium',
           closeable ? 'pt-2' : 'pt-1',
           className,
-          'overflow-hidden'
+          'overflow-hidden',
+          link && 'cursor-pointer hover:opacity-90 transition-opacity'
         )}
+        onClick={handleClick}
       >
         {closeable && (
           <div className={cn(styles['toast-close'], 'absolute top-1 rtl:right-1 ltr:left-1')}>
-            <Icon name="svg:x-mark" size="1rem" onClick={onClose} />
+            <Icon 
+              name="svg:x-mark" 
+              size="1rem" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }} 
+            />
           </div>
         )}
 
@@ -104,7 +122,11 @@ const Toast = forwardRef<ToastRef, Partial<ToastProps>>(({ duration = 5000, y = 
 
   const addToastQueue = useCallback((content: string | ReactNode, options: ToastOptions) => {
     const key = Date.now() + Math.random().toString(36).substring(2, 15);
-    queueRef.current.push({ id: uniqueKey(key), content: typeof content === 'string' ? <span>{content}</span> : content, ...options });
+    queueRef.current.push({ 
+      id: uniqueKey(key), 
+      content: typeof content === 'string' ? <span>{content}</span> : content, 
+      ...options 
+    });
 
     setActiveToast((prev) => {
       if (prev.length < MAX_VISIBLE) {

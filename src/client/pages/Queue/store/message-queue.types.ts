@@ -1,5 +1,16 @@
 import type { EntityList, Pagination } from '@models';
 
+export type InterestResult = {
+  interested: boolean;
+  intent: string;
+  reason: string;
+  confidence: number; // 0..1
+  suggestedReply: string;
+  action?: string;
+  followUpAt?: string; // ISO date-time with numeric offset
+  department: string;
+};
+
 export type MessageQueueItem = {
   _id: string;
   phoneNumber: string;
@@ -27,3 +38,4 @@ export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' |
 
 export type MessageQueueActiveEvent = { messageCount: number; messagePass: number; isSending: boolean };
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string };
+export type NewOpportunityEvent = { phoneNumber: string; instanceNumber: string; text: string } & InterestResult;

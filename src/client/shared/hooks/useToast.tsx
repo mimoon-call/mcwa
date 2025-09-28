@@ -12,17 +12,18 @@ let globalContainer: HTMLDivElement | null = null;
 let globalRoot: ReturnType<typeof createRoot> | null = null;
 let lastToastContent: string | null = null;
 let lastToastTime: number = 0;
+let toastY: ToastProps['y'] = 'top';
 
 // Helper function to check if toast should be shown (deduplication)
 const shouldShowToast = (content: string): boolean => {
   const now = Date.now();
   const contentString = content;
-  
+
   // Prevent showing the same toast content within 1 second (regardless of type)
   if (contentString === lastToastContent && now - lastToastTime < 1000) {
     return false;
   }
-  
+
   lastToastContent = contentString;
   lastToastTime = now;
   return true;
@@ -30,6 +31,7 @@ const shouldShowToast = (content: string): boolean => {
 
 export const useToast = (props: Partial<ToastProps> = {}) => {
   const { t } = useTranslation();
+  if (props.y) toastY = props.y;
 
   useEffect(() => {
     if (mounted) {
@@ -50,13 +52,13 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
       }
     };
 
-    globalRoot?.render(<Toast ref={refHandler} {...props} />);
+    globalRoot?.render(<Toast ref={refHandler} {...props} y={props.y || toastY} />);
   }, []);
 
-  const error = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
+  const error = (message: string | ReactNode, { duration = 7000, link, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
-    
+
     // Deduplication: prevent showing the same toast content within 1 second
     if (!shouldShowToast(contentString)) {
       return;
@@ -68,14 +70,14 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-red-50 text-red-700', duration, ...options }
+      { className: 'bg-red-50 text-red-700', duration, link, ...options }
     );
   };
 
-  const warning = (message: string | ReactNode, { duration = 7000, ...options }: ToastOptions = {}) => {
+  const warning = (message: string | ReactNode, { duration = 7000, link, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
-    
+
     // Deduplication: prevent showing the same toast content within 1 second
     if (!shouldShowToast(contentString)) {
       return;
@@ -87,14 +89,14 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-yellow-50 text-yellow-700', duration, ...options }
+      { className: 'bg-yellow-50 text-yellow-700', duration, link, ...options }
     );
   };
 
-  const success = (message: string | ReactNode, options: ToastOptions = {}) => {
+  const success = (message: string | ReactNode, { link, ...options }: ToastOptions = {}) => {
     const content = typeof message === 'string' ? t(message) : message;
     const contentString = typeof content === 'string' ? content : content?.toString() || '';
-    
+
     // Deduplication: prevent showing the same toast content within 1 second
     if (!shouldShowToast(contentString)) {
       return;
@@ -106,7 +108,7 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
 
         <span className="self-center">{content}</span>
       </div>,
-      { className: 'bg-green-50 text-green-700', ...options }
+      { className: 'bg-green-50 text-green-700', link, ...options }
     );
   };
 
