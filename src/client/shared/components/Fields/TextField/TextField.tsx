@@ -68,7 +68,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {clearable && value !== undefined && value !== '' && !disabled && (
             <Icon
               name="svg:x-mark"
-              size="0.875rem"
+              size="0.75rem"
               className={styles['text-field-clear']}
               onClick={handleClear}
               role="button"
@@ -88,12 +88,34 @@ Input.displayName = 'Input';
 
 const TextField = forwardRef<HTMLInputElement, TextFieldProps>((props, ref) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value = '', hideDetails, clearable = false, beforeChange, containerClass, loading, ...rest } = props;
+  const {
+    className,
+    onChange,
+    name,
+    label,
+    rules,
+    value = '',
+    hideDetails,
+    clearable = false,
+    beforeChange,
+    containerClass,
+    loading,
+    ...rest
+  } = props;
 
   const placeholder = rest.placeholder ? t(rest.placeholder) : undefined;
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange} loading={loading}>
+    <InputWrapper
+      className={cn(className)}
+      name={name}
+      label={label}
+      rules={rules}
+      hideDetails={hideDetails}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+    >
       <Input
         ref={ref}
         {...rest}

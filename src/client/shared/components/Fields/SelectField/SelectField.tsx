@@ -37,7 +37,21 @@ const extractTextFromReactNode = (node: ReactNode): string => {
 
 const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
   const { t } = useTranslation();
-  const { className, onChange, name, label, rules, value, hideDetails, options, placeholder, clearable, searchable, disabled = false, loading } = props;
+  const {
+    className,
+    onChange,
+    name,
+    label,
+    rules,
+    value,
+    hideDetails,
+    options,
+    placeholder,
+    clearable,
+    searchable,
+    disabled = false,
+    loading,
+  } = props;
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,7 +174,16 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
   const placeholderText = placeholder ? t(placeholder) : '';
 
   return (
-    <InputWrapper className={cn(className)} name={name} label={label} rules={rules} hideDetails={hideDetails} value={value} onChange={onChange} loading={loading}>
+    <InputWrapper
+      className={cn(className)}
+      name={name}
+      label={label}
+      rules={rules}
+      hideDetails={hideDetails}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+    >
       <div ref={containerRef} className={cn(styles['select-container'])}>
         <div
           className={cn(global['field'], styles['select-field'], className, disabled && '!bg-gray-200 !text-gray-600 !cursor-not-allowed')}
@@ -179,7 +202,7 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
           {clearable && value !== undefined && !disabled && (
             <Icon
               name="svg:x-mark"
-              size="0.875rem"
+              size="0.75rem"
               className="ms-2 text-slate-400 hover:text-slate-600 cursor-pointer flex-shrink-0"
               onClick={handleClear}
               role="button"
@@ -188,7 +211,7 @@ const SelectField = <T = unknown,>(props: SelectFieldProps<T>) => {
             />
           )}
 
-          <Icon clickable name="svg:chevron-down" size="0.875rem" className={cn('ms-2 text-slate-400 flex-shrink-0', isOpen && 'rotate-180')} />
+          <Icon clickable name="svg:chevron-down" size="0.75rem" className={cn('ms-2 text-slate-400 flex-shrink-0', isOpen && 'rotate-180')} />
         </div>
 
         {isOpen && (
