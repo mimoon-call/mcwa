@@ -89,7 +89,7 @@ const WarmStatus = ({ item }: { item: InstanceItem }) => {
   const dispatch = useDispatch<AppDispatch>();
   const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceWarmUp(phoneNumber));
 
-  return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.isActive} onUpdateModelValue={() => onActiveToggle(item)} />;
+  return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.hasWarmedUp} onUpdateModelValue={() => onActiveToggle(item)} />;
 };
 
 const StatusCode = ({ item }: { item: InstanceItem }) => {
