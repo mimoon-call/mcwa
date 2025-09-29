@@ -2,22 +2,22 @@
 import * as util from 'util';
 
 const logger = {
-  log: (text: string, data?: unknown) => {
-    console.log(`${text}\n`, util.inspect(data, false, null, true));
+  log: (text: string | Date, ...arg: any[]) => {
+    console.log(`${text}\n`, util.inspect(arg, false, null, true));
   },
-  error: (text: string, data?: unknown) => {
-    console.error(`${text}\n`, util.inspect(data, false, null, true));
+  error: (text: string | Date, ...arg: any[]) => {
+    console.error(`${text}\n`, util.inspect(arg, false, null, true));
   },
-  info: (text: string, data?: unknown) => {
-    console.info(`${text}\n`, util.inspect(data, false, null, true));
+  info: (text: string | Date, ...arg: any[]) => {
+    console.info(`${text}\n`, util.inspect(arg, false, null, true));
   },
-  debug: (text: string, data?: unknown, forceDevFlag: boolean = process.env.NODE_ENV === 'development') => {
-    if (forceDevFlag) {
-      console.debug(`${text}\n`, util.inspect(data, false, null, true));
+  debug: (text: string | Date, ...arg: any[]) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`${text}\n`, util.inspect(arg, false, null, true));
     }
   },
-  warn: (text: string, data?: unknown) => {
-    console.warn(`${text}\n`, util.inspect(data, false, null, true));
+  warn: (text: string, ...arg: any[]) => {
+    console.warn(`${text}\n`, util.inspect(arg, false, null, true));
   },
 };
 

@@ -45,6 +45,7 @@ import {
   CHAT_CLEAR_RETRY_COOLDOWN,
   AI_REASONING_CONVERSATION,
   UPDATE_GLOBAL_SELECTED_CONTACT,
+  ADD_TO_CRM,
 } from './chat.constants';
 import {
   type ChatMessage,
@@ -302,6 +303,10 @@ const aiReasoningConversation = async (phoneNumber: string, withPhoneNumber: str
   await api.post<void>(`${AI_REASONING_CONVERSATION}/${phoneNumber}/${withPhoneNumber}`);
 };
 
+const addToCrm = async (phoneNumber: string, withPhoneNumber: string) => {
+  await api.post<void>(`${ADD_TO_CRM}/${phoneNumber}/${withPhoneNumber}`);
+};
+
 // Chat Slice
 const chatSliceReducer = createSlice({
   name: 'chat',
@@ -372,7 +377,6 @@ const chatSliceReducer = createSlice({
       if (!state[GLOBAL_SELECTED_CONTACT]) return;
 
       state[GLOBAL_SELECTED_CONTACT] = { ...state[GLOBAL_SELECTED_CONTACT], ...action.payload };
-      console.log('updated global selected contact:', state[GLOBAL_SELECTED_CONTACT]);
     },
   },
   extraReducers: (builder) => {
@@ -600,6 +604,7 @@ export const chatSlice = {
   [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreGlobalConversations,
   [CHAT_DELETE_CONVERSATION]: deleteConversation,
   [AI_REASONING_CONVERSATION]: aiReasoningConversation,
+  [ADD_TO_CRM]: addToCrm,
 
   // Instance chat async actions using constants
   [CHAT_SEARCH_CONVERSATIONS]: searchConversations,

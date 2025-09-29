@@ -125,7 +125,10 @@
     "REASONING": "Reasoning",
     "ANALYSIS": "Analysis",
     "CONFIDENCE": "Confidence",
-    "NEW_OPPORTUNITY": "New opportunity for {{department}} came to number {{instanceNumber}}"
+    "NEW_OPPORTUNITY": "New opportunity for {{department}} came to number {{instanceNumber}}",
+    "ADD_TO_CRM": "Add to Fireberry",
+    "LEAD_ADDED_TO_CRM_SUCCESSFULLY": "Lead successfully added to CRM",
+    "FAILED_TO_ADD_LEAD_TO_CRM": "Failed to add lead to CRM"
   },
   "INSTANCE": {
     "TITLE": "Instances",

@@ -9,6 +9,7 @@ import {
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
   REVOKE_MESSAGE,
+  ADD_TO_CRM,
 } from '@server/api/conversation/conversation.map';
 
 const conversationRoute = express.Router();
@@ -35,6 +36,8 @@ conversationRoute.post(
   `/${AI_REASONING_CONVERSATION}/:phoneNumber/:withPhoneNumber`,
   routeMiddleware({ isAuthRequired: true }, conversationController[AI_REASONING_CONVERSATION])
 );
+
+conversationRoute.post(`/${ADD_TO_CRM}/:phoneNumber/:withPhoneNumber`, routeMiddleware({ isAuthRequired: true }, conversationController[ADD_TO_CRM]));
 
 conversationRoute.post(`/${REVOKE_MESSAGE}/:docIdOrMessageId`, routeMiddleware({ isAuthRequired: true }, conversationController[REVOKE_MESSAGE]));
 

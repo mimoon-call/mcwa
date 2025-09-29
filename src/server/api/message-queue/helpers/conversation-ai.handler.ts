@@ -1,46 +1,73 @@
 // message-reply.handler.ts
+import type { MessageDocument } from '@server/services/whatsapp/whatsapp.type';
 import { ObjectId } from 'mongodb';
 import { WhatsAppMessage, WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
-import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
+import { classifyInterest } from '@server/api/message-queue/reply/interest.classifier';
 import { wa, app } from '@server/index';
-import { LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
+import { LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-room.helper';
 import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
-import { NewOpportunityEvent } from '@server/api/message-queue/message-queue.types';
+import { MessageQueueItem, NewOpportunityEvent } from '@server/api/message-queue/message-queue.types';
+import { HttpService } from '@services/http/http.service';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean; instanceNumber: string }>;
+export type LeadWebhookPayload = Omit<MessageDocument, 'raw'> & Partial<Pick<MessageQueueItem, 'initiatorMessageId' | 'metaTemplateId'>>;
 
 const replyTimeout = new Map<string, NodeJS.Timeout>();
 
-const handleWebhook = async (phoneNumber: string, text: string, ai: InterestResult, instanceNumber: string) => {
-  switch (ai.department) {
-    case LeadDepartmentEnum.CAR:
-      console.log('CAR LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
-      break;
-    case LeadDepartmentEnum.MORTGAGE:
-      console.log('MORTGAGE LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
-      break;
-    case LeadDepartmentEnum.GENERAL:
-      console.log('GENERAL LEAD WEBHOOK', { phoneNumber, text, comment: ai.reason, followUpAt: ai.followUpAt });
-      break;
-  }
+const handleWebhook = async (doc: MessageDocument) => {
+  const webhookRequest = (() => {
+    const url = process.env.LEAD_WEBHOOK_URL as undefined | `https://${string}`;
 
-  app.socket.broadcast<NewOpportunityEvent>(MessageQueueEventEnum.NEW_OPPORTUNITY, { phoneNumber, instanceNumber, text, ...ai });
+    if (!url) {
+      console.error('WEBHOOK', 'No webhook URL configured');
+
+      return null;
+    }
+
+    const api = new HttpService({ baseURL: url, timeout: 30 * 1000, headers: { 'Content-type': 'application/json; charset=UTF-8' } });
+
+    return (payload: LeadWebhookPayload) => api.post<void, LeadWebhookPayload>('', payload, { signatureKey: process.env.WEBHOOK_SECRET });
+  })();
+
+  const additionalData = (
+    await WhatsappQueue.aggregate([
+      { $match: { $and: [{ instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId }, { sentAt: { $exists: true } }] } },
+      { $sort: { sentAt: 1 } },
+      { $limit: 1 },
+      { $project: { _id: 0, metaTemplateId: 1, initiatorMessageId: 1, department: 1 } },
+    ])
+  )[0];
+
+  const phoneNumber = doc.toNumber;
+  const instanceNumber = doc.fromNumber;
+  const text = doc.text || '';
+  const webhookPayload = { ...doc, ...(additionalData || {}) };
+
+  app.socket.broadcast<NewOpportunityEvent>(MessageQueueEventEnum.NEW_OPPORTUNITY, {
+    phoneNumber,
+    instanceNumber,
+    text,
+    department: doc.department,
+    ...(additionalData || {}),
+  });
+
+  webhookRequest?.(webhookPayload).catch((error) => {
+    console.error('WEBHOOK', process.env.WEBHOOK_SECRET, error);
+  });
 };
 
-const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestResult | null, instanceNumber: string) => {
-  if (!ai) return;
-
-  switch (ai?.intent) {
+const handleAiInterest = async (doc: MessageDocument) => {
+  switch (doc?.intent) {
     case LeadIntentEnum.UNSUBSCRIBE: {
       await WhatsAppUnsubscribe.findOneAndUpdate(
-        { phoneNumber },
-        { $set: { text, intent: ai.intent, reason: ai.reason, confidence: ai.confidence }, $setOnInsert: { createdAt: new Date() } },
+        { phoneNumber: doc.toNumber },
+        { $set: { text: doc.text, intent: doc.intent, reason: doc.reason, confidence: doc.confidence }, $setOnInsert: { createdAt: new Date() } },
         { upsert: true }
       );
 
@@ -48,14 +75,9 @@ const handleAiInterest = async (phoneNumber: string, text: string, ai: InterestR
 
       break;
     }
-
-    case LeadIntentEnum.NEUTRAL:
-    case LeadIntentEnum.REQUEST_INFO:
-    case LeadIntentEnum.POSITIVE_INTEREST:
-    case LeadIntentEnum.NOT_NOW:
-      await handleWebhook(phoneNumber, text, ai, instanceNumber);
-      break;
   }
+
+  await handleWebhook(doc);
 };
 
 export const conversationAiHandler = async (id: ObjectId, options?: Options): Promise<void> => {
@@ -198,8 +220,16 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
         if (!ai) return;
 
         // persist classification on the outreach message
-        await WhatsAppMessage.updateOne({ _id: originalMessage._id }, { $set: ai });
-        if (callWebhookFlag) await handleAiInterest(phoneNumber1, text, ai, phoneNumber2);
+        const doc = await WhatsAppMessage.findOneAndUpdate(
+          { _id: originalMessage._id },
+          { $set: ai },
+          {
+            returnDocument: 'after',
+            projection: { __v: 0, internalFlag: 0, warmingFlag: 0, raw: 0 },
+          }
+        );
+
+        if (callWebhookFlag && doc) await handleAiInterest(doc.toObject());
 
         if (ai.suggestedReply && sendAutoReplyFlag) {
           // Check if there are active members in the conversation room

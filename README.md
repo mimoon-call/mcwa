@@ -76,6 +76,7 @@ MONGODB_URI=your_mongodb_connection_string
 OPENAI_API_KEY=your_openai_api_key
 ACCESS_TOKEN_KEY=your_jwt_secret
 WEBHOOK_SECRET=your_webhook_secret
+LEAD_WEBHOOK_URL=https://your-webhook-endpoint.com/webhook
 ```
 
 4. **Database Setup**

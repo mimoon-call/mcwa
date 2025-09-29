@@ -14,6 +14,9 @@ export type MessageQueueItem = {
   lastError?: string;
   sentAt?: Date;
   createdAt: Date;
+  initiatorMessageId: string | null;
+  metaTemplateId: string | null;
+  department?: InterestResult['department'];
 };
 
 export type SearchMessageQueueRes = EntityList<MessageQueueItem>;
@@ -28,4 +31,4 @@ export type EditMessageQueueReq = Pick<MessageQueueItem, '_id' | 'phoneNumber' |
 
 export type MessageQueueActiveEvent = Partial<{ messageCount: number; messagePass: number; isSending: boolean }>;
 export type MessageQueueSendEvent = MessageQueueItem & { error?: string; maxAttempts?: number };
-export type NewOpportunityEvent = { phoneNumber: string; instanceNumber: string; text: string } & InterestResult;
+export type NewOpportunityEvent = { phoneNumber: string; instanceNumber: string; text: string; department?: InterestResult['department'] };

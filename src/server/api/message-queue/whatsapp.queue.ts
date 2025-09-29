@@ -1,5 +1,6 @@
 import type { MessageQueueItem } from '@server/api/message-queue/message-queue.types';
 import { MongoService } from '@server/services/database/mongo.service';
+import { LeadDepartmentEnum } from '@server/api/message-queue/reply/interest.enum';
 
 export const WhatsappQueue = new MongoService<MessageQueueItem>(
   'WhatsappQueue',
@@ -13,6 +14,9 @@ export const WhatsappQueue = new MongoService<MessageQueueItem>(
     attempt: { type: Number, default: 0 },
     sentAt: { type: Date },
     createdAt: { type: Date, required: true },
+    initiatorMessageId: { type: String, default: null },
+    metaTemplateId: { type: String, default: null },
+    department: { type: String, enum: Object.values(LeadDepartmentEnum) },
   },
   { timestamps: false },
   {

@@ -4,7 +4,7 @@ import { errorsInterceptor } from '@services/http/interceptors/errors-intercepto
 import { removeReturnCodeInterceptor } from '@services/http/interceptors/remove-return-code-interceptor';
 
 export class ApiService extends HttpService {
-  constructor(baseUrl?: `/${string}`) {
+  constructor(baseUrl?: `/${string}` | `http://${string}` | `https://${string}`) {
     super({
       baseURL: '/api' + (baseUrl || '') + '/',
       timeout: 30 * 1000, // 30 seconds

@@ -39,6 +39,7 @@ import {
   CHAT_LOAD_MORE_CONVERSATIONS,
   AI_REASONING_CONVERSATION,
   UPDATE_GLOBAL_SELECTED_CONTACT,
+  ADD_TO_CRM,
 } from './store/chat.constants';
 import { ChatLeftPanel, ChatRightPanel } from './components';
 import ChatListItem from './components/ChatListItem';
@@ -134,6 +135,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
     [CHAT_RESET_SEARCH_VALUE]: resetSearchValue,
     [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreConversations,
     [AI_REASONING_CONVERSATION]: aiReasoningConversation,
+    [ADD_TO_CRM]: addToCrm,
     [UPDATE_GLOBAL_SELECTED_CONTACT]: updateGlobalSelectedContact,
   } = chatSlice;
 
@@ -156,6 +158,12 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       toast.success('QUEUE.NUMBER_RESUBSCRIBED_SUCCESSFULLY');
       dispatch(updateGlobalSelectedContact({ unsubscribedAt: null }));
     },
+    throwError: true,
+  });
+
+  const { call: addToCrmRequest } = useAsyncFn(() => addToCrm(selectedContact!.instanceNumber, selectedContact!.phoneNumber), {
+    successCallback: () => toast.success('QUEUE.LEAD_ADDED_TO_CRM_SUCCESSFULLY'),
+    errorCallback: () => toast.error('QUEUE.FAILED_TO_ADD_LEAD_TO_CRM'),
     throwError: true,
   });
 
@@ -220,11 +228,6 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       dispatch(setSelectedContact(selectedContactFromUrl));
     }
   }, [selectedContactFromUrl, selectedContact, dispatch]);
-
-  // Debug selectedContact changes
-  useEffect(() => {
-    console.log('selectedContact changed:', selectedContact);
-  }, [selectedContact]);
 
   // Load messages when a chat is selected and join conversation room
   useEffect(() => {
@@ -514,6 +517,13 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
       disabled: !selectedContact?.phoneNumber || !selectedContact?.instanceNumber,
       hidden: !selectedContact?.hasStartMessage,
       onClick: handleCalculateAiReasoning,
+    },
+    {
+      label: 'QUEUE.ADD_TO_CRM',
+      iconName: 'svg:db-add',
+      disabled: !selectedContact?.phoneNumber || !selectedContact?.instanceNumber,
+      hidden: selectedContact?.interested === undefined,
+      onClick: addToCrmRequest,
     },
     {
       label: !selectedContact?.unsubscribedAt ? 'QUEUE.UNSUBSCRIBE_NUMBER' : 'QUEUE.RESUBSCRIBE_NUMBER',

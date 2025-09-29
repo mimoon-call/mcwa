@@ -17,15 +17,17 @@ import {
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
   REVOKE_MESSAGE,
+  ADD_TO_CRM,
 } from '@server/api/conversation/conversation.map';
 import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 import { wa, app } from '@server/index';
 import type { PipelineStage } from 'mongoose';
 import { BaseResponse } from '@server/models';
-import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
+import { conversationAiHandler, LeadWebhookPayload } from '@server/api/message-queue/helpers/conversation-ai.handler';
 import ServerError from '@services/http/errors/server-error';
 import NotFoundError from '@services/http/errors/not-found-error';
 import { ErrorCodeEnum } from '@services/http/errors/error-code.enum';
+import { HttpService } from '@services/http/http.service';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -526,5 +528,58 @@ export const conversationService = {
     await conversationAiHandler(lastMessage._id, { debounceTime: 0, sendAutoReplyFlag: false, callWebhookFlag: false, instanceNumber: phoneNumber });
 
     return { returnCode: 0 };
+  },
+
+  [ADD_TO_CRM]: async (phoneNumber: string, withPhoneNumber: string): Promise<BaseResponse<LeadWebhookPayload>> => {
+    const webhookRequest = (() => {
+      const url = process.env.LEAD_WEBHOOK_URL as undefined | `https://${string}`;
+      if (!url) throw new ServerError('No webhook URL configured');
+
+      const api = new HttpService({ baseURL: url, timeout: 30 * 1000, headers: { 'Content-type': 'application/json; charset=UTF-8' } });
+
+      return (payload: LeadWebhookPayload) => api.post<void, LeadWebhookPayload>('', payload, { signatureKey: process.env.WEBHOOK_SECRET });
+    })();
+
+    const message = await WhatsappQueue.aggregate<LeadWebhookPayload>([
+      { $match: { $and: [{ instanceNumber: phoneNumber, phoneNumber: withPhoneNumber }, { sentAt: { $exists: true } }] } },
+      { $sort: { sentAt: 1 } },
+      { $limit: 1 },
+      {
+        $project: {
+          messageId: 1,
+          metaTemplateId: { $ifNull: ['$metaTemplateId', null] },
+          initiatorMessageId: { $ifNull: ['$initiatorMessageId', null] },
+          department: 1,
+        },
+      },
+      {
+        $lookup: {
+          let: { msgId: '$messageId' },
+          from: 'whatsappmessages',
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ['$messageId', '$$msgId'] }, { $eq: ['$fromNumber', phoneNumber] }, { $eq: ['$toNumber', withPhoneNumber] }],
+                },
+              },
+            },
+            { $project: { _id: 0, internalFlag: 0, warmingFlag: 0, raw: 0 } },
+          ],
+          as: 'replayMessage',
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: { $mergeObjects: [{ $arrayElemAt: ['$replayMessage', 0] }, { $unsetField: { field: 'replayMessage', input: '$$ROOT' } }] },
+        },
+      },
+      { $project: { __v: 0 } },
+    ]);
+
+    if (message[0]?.interested === undefined || !webhookRequest) throw new ServerError('No message found or webhook not configured');
+    await webhookRequest(message[0]);
+
+    return { returnCode: 0, ...message[0] };
   },
 };

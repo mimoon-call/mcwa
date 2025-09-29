@@ -35,7 +35,7 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
       const department = t(`CHAT.DEPARTMENT.${data.department}`);
       const link = `/chat/${instanceNumber}/${data.phoneNumber}`;
 
-      toast.success(t('QUEUE.NEW_OPPORTUNITY', { instanceNumber: internationalPhonePrettier(instanceNumber), department }), {
+      toast.info(t('QUEUE.NEW_OPPORTUNITY', { instanceNumber: internationalPhonePrettier(instanceNumber), department }), {
         duration: 7000,
         closeable: true,
         onClick: () => navigate(link),

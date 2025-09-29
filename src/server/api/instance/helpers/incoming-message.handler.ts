@@ -4,6 +4,7 @@ import { OpenAiService } from '@server/services/open-ai/open-ai.service';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
+import logger from '@server/helpers/logger';
 
 const speechToText = async (raw: WAMessageIncomingRaw) => {
   // Check if raw message contains audio and has buffer
@@ -17,14 +18,14 @@ const speechToText = async (raw: WAMessageIncomingRaw) => {
         });
 
         if (transcribedText) {
-          console.log(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcribed:`, transcribedText);
+          logger.debug(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcribed:`, transcribedText);
           return transcribedText;
         }
       } catch (error) {
-        console.error(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcription failed:`, error);
+        logger.error(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcription failed:`, error);
       }
     } else {
-      console.log(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio message without buffer or mimeType`);
+      logger.debug(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio message without buffer or mimeType`);
     }
   }
 
@@ -34,13 +35,13 @@ const speechToText = async (raw: WAMessageIncomingRaw) => {
 export const incomingMessageHandler: WAMessageIncomingCallback = async (msg, raw, messageId) => {
   // Internal message
   if (msg.internalFlag) {
-    console.log(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}]`, msg.text);
+    logger.debug(getLocalTime(), `[${msg.fromNumber}:${msg.toNumber}]`, msg.text);
 
     return;
   }
 
   if (msg.fromNumber.includes('@')) {
-    console.log(getLocalTime(), `[${msg.fromNumber}]`, '[NON-PM]', msg.text);
+    logger.debug(getLocalTime(), `[${msg.fromNumber}]`, '[NON-PM]', msg.text);
 
     return;
   }

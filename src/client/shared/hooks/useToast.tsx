@@ -113,5 +113,25 @@ export const useToast = (props: Partial<ToastProps> = {}) => {
     );
   };
 
-  return { error, success, warning };
+  const info = (message: string | ReactNode, { onClick, ...options }: ToastOptions = {}) => {
+    const content = typeof message === 'string' ? t(message) : message;
+    // For deduplication, we need a string representation. If it's a ReactNode, we'll use a hash or timestamp
+    const contentString = typeof content === 'string' ? content : `react-node-${Date.now()}`;
+
+    // Deduplication: prevent showing the same toast content within 1 second
+    if (!shouldShowToast(contentString)) {
+      return;
+    }
+
+    openToast?.(
+      <div className="flex gap-1 align-middle">
+        <Icon name="svg:info" size="1.5rem" />
+
+        <span className="self-center">{content}</span>
+      </div>,
+      { className: 'bg-blue-50 text-blue-900', onClick, ...options }
+    );
+  };
+
+  return { error, success, warning, info };
 };

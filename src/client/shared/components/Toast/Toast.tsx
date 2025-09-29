@@ -45,9 +45,10 @@ const Item: React.FC<ToastItemProps> = (props) => {
   };
 
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-    }
+    if (!onClick) return;
+
+    onClick();
+    onClose();
   };
 
   useEffect(() => {

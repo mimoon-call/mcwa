@@ -125,7 +125,10 @@
     "REASONING": "נימוק",
     "ANALYSIS": "ניתוח",
     "CONFIDENCE": "אמון",
-    "NEW_OPPORTUNITY": "הזדמנות חדשה עבור {{department}} נכנסה למספר {{instanceNumber}}"
+    "NEW_OPPORTUNITY": "הזדמנות חדשה עבור {{department}} נכנסה למספר {{instanceNumber}}",
+    "ADD_TO_CRM": "להוסיף לפיירברי",
+    "LEAD_ADDED_TO_CRM_SUCCESSFULLY": "הליד נוסף בהצלחה ל-CRM",
+    "FAILED_TO_ADD_LEAD_TO_CRM": "הוספת הליד ל-CRM נכשלה"
   },
   "INSTANCE": {
     "TITLE": "קווים",
