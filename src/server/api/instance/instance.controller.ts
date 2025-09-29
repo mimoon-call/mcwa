@@ -55,7 +55,7 @@ export const instanceController = {
 
   [WARMUP_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
     const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
-    await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
+    await instanceService[WARMUP_TOGGLE_INSTANCE](phoneNumber);
 
     res.send();
   },
