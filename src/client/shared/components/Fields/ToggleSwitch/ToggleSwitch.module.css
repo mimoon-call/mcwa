@@ -1,0 +1,40 @@
+/* src/client/shared/components/Fields/ToggleSwitch/ToggleSwitch.module.css */
+.toggle-switch {
+  @apply rounded-md;
+}
+
+.toggle-switch__label {
+  @apply transition-opacity duration-300 opacity-70;
+}
+
+.toggle-switch__switch {
+  @apply w-9 h-5 bg-gray-400 rounded-full relative transition-colors duration-300;
+}
+
+.toggle-switch__switch::before {
+  @apply content-[''] w-4 h-4 bg-gray-100 rounded-full absolute top-0.5 left-0.5 transition-transform duration-300;
+}
+
+.toggle-switch--checked .toggle-switch__label {
+  @apply opacity-100;
+}
+
+.toggle-switch--checked .toggle-switch__switch {
+  @apply bg-slate-800;
+}
+
+.toggle-switch--checked .toggle-switch__switch::before {
+  @apply translate-x-4;
+}
+
+.toggle-switch--disabled .toggle-switch__label {
+  @apply text-gray-500 opacity-100;
+}
+
+.toggle-switch--disabled {
+  @apply cursor-not-allowed;
+}
+
+.skeleton {
+  @apply animate-pulse;
+}

@@ -20,6 +20,7 @@ import {
   UPDATE_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
+  WARMUP_TOGGLE_INSTANCE,
 } from '@client/pages/Instance/store/instance.constants';
 import type { AddInstanceRes, SearchInstanceReq, SearchInstanceRes } from '@client/pages/Instance/store/instance.types';
 import type { ErrorResponse } from '@services/http/types';
@@ -85,13 +86,12 @@ const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE
   await dispatch(searchInstance({}));
 });
 
-const toggleInstanceActivate = createAsyncThunk(`${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string, { dispatch, getState }) => {
-  const state = getState() as RootState;
-  const currentInstance = state[StoreEnum.instance]?.[INSTANCE_SEARCH_DATA]?.find((instance) => instance.phoneNumber === phoneNumber);
-  const isActive = !!currentInstance?.isActive;
+const toggleInstanceActivate = createAsyncThunk(`${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string) => {
   await api.post<void>(`${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
+});
 
-  dispatch(instanceSlice.actions.updateInstance({ phoneNumber, isActive: !isActive }));
+const toggleInstanceWarmUp = createAsyncThunk(`${WARMUP_TOGGLE_INSTANCE}`, async (phoneNumber: string) => {
+  await api.post<void>(`${WARMUP_TOGGLE_INSTANCE}/${phoneNumber}`);
 });
 
 const refreshInstance = createAsyncThunk(`${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
@@ -217,6 +217,7 @@ export default {
   [SEARCH_INSTANCE]: searchInstance,
   [DELETE_INSTANCE]: deleteInstance,
   [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
+  [WARMUP_TOGGLE_INSTANCE]: toggleInstanceWarmUp,
   [INSTANCE_REFRESH]: refreshInstance,
   [WARMUP_TOGGLE]: toggleWarmup,
   [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,

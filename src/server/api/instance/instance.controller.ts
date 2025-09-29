@@ -10,6 +10,7 @@ import {
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
+  WARMUP_TOGGLE_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { instanceService } from '@server/api/instance/instance.service';
 import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
@@ -46,6 +47,13 @@ export const instanceController = {
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
+    await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
+
+    res.send();
+  },
+
+  [WARMUP_TOGGLE_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<void>) => {
     const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     await instanceService[ACTIVE_TOGGLE_INSTANCE](phoneNumber);
 

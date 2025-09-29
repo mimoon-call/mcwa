@@ -26,6 +26,7 @@ import {
   UPDATE_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
+  WARMUP_TOGGLE_INSTANCE,
 } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
@@ -41,6 +42,7 @@ import { InstanceSearchPanel } from '@client/pages/Instance/components/InstanceS
 import { internationalPhonePrettier } from '@helpers/international-phone-prettier';
 import { RouteName } from '@client/router/route-name';
 import { TextField } from '@components/Fields';
+import ToggleSwitch from '@components/Fields/ToggleSwitch/ToggleSwitch';
 
 const InstanceItem = ({ item }: { item: InstanceItem }) => {
   const iconColorClass = (() => {
@@ -73,13 +75,21 @@ const InstanceItem = ({ item }: { item: InstanceItem }) => {
 };
 
 const ActiveStatus = ({ item }: { item: InstanceItem }) => {
-  const { t } = useTranslation();
+  const { [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate } = instanceStore;
 
-  return (
-    <div className={cn('inline-block uppercase min-w-16', item?.isActive === false ? 'text-red-700' : 'text-green-900')}>
-      {t(item?.isActive === false ? 'GENERAL.NO' : 'GENERAL.YES')}
-    </div>
-  );
+  const dispatch = useDispatch<AppDispatch>();
+  const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
+
+  return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.isActive} onUpdateModelValue={() => onActiveToggle(item)} />;
+};
+
+const WarmStatus = ({ item }: { item: InstanceItem }) => {
+  const { [WARMUP_TOGGLE_INSTANCE]: toggleInstanceWarmUp } = instanceStore;
+
+  const dispatch = useDispatch<AppDispatch>();
+  const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceWarmUp(phoneNumber));
+
+  return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.isActive} onUpdateModelValue={() => onActiveToggle(item)} />;
 };
 
 const StatusCode = ({ item }: { item: InstanceItem }) => {
@@ -227,9 +237,17 @@ const InstanceTable = () => {
       title: 'GENERAL.ACTIVE',
       value: 'isActive',
       sortable: true,
-      class: ['text-center'],
       component: ActiveStatus,
       export: false,
+      hidden: instanceFilter.statusCode === 200,
+    },
+    {
+      title: 'INSTANCE.WARMED_UP',
+      value: 'hasWarmedUp',
+      sortable: true,
+      component: WarmStatus,
+      export: false,
+      hidden: instanceFilter.statusCode !== 200,
     },
     {
       title: 'INSTANCE.STATUS_CODE',

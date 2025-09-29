@@ -9,6 +9,7 @@ import {
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
+  WARMUP_TOGGLE_INSTANCE,
 } from '@server/api/instance/instance.map';
 import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
 import { wa } from '@server/index';
@@ -103,6 +104,17 @@ export const instanceService = {
     } else {
       await instance.enable();
     }
+  },
+
+  [WARMUP_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
+    const instance = wa.getInstance(phoneNumber);
+
+    if (!instance) {
+      throw new ServerError('INSTANCE.NOT_FOUND');
+    }
+
+    const hasWarmedUp = !!instance.get('hasWarmedUp');
+    await instance.update({ hasWarmedUp: !hasWarmedUp, ...(!hasWarmedUp ? { isActive: true } : {}) });
   },
 
   [INSTANCE_REFRESH]: async (phoneNumber: string): Promise<void> => {
