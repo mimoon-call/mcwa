@@ -27,6 +27,15 @@
   @apply translate-x-4;
 }
 
+/* RTL styles - using CSS dir attribute detection */
+[dir="rtl"] .toggle-switch__switch::before {
+  @apply left-auto right-0.5;
+}
+
+[dir="rtl"] .toggle-switch--checked .toggle-switch__switch::before {
+  @apply -translate-x-4;
+}
+
 .toggle-switch--disabled .toggle-switch__label {
   @apply text-gray-500 opacity-100;
 }
