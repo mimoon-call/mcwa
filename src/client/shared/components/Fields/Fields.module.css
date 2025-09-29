@@ -1,5 +1,5 @@
 .field {
-    @apply bg-white text-lg py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-slate-900;
+    @apply bg-white py-1 px-2 rounded border-slate-500 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-slate-900;
 }
 
 .field[data-has-error="true"] {

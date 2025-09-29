@@ -125,7 +125,7 @@ const CommentEditToggle = ({ isHover, isEditMode, hasChanges, onEdit, onCancel }
 const Comment = ({ item }: { item: InstanceItem }) => {
   const toast = useToast();
   const { [UPDATE_INSTANCE_COMMENT]: updateInstanceComment } = instanceStore;
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useTooltip<HTMLInputElement>({ text: item?.comment });
   const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const [clickCount, setClickCount] = React.useState(0);
   const [isEditMode, setEditMode] = React.useState(false);
@@ -158,7 +158,7 @@ const Comment = ({ item }: { item: InstanceItem }) => {
   const onEdit = (ev: MouseEvent) => {
     ev.stopPropagation();
     setEditMode(true);
-    inputRef.current?.focus();
+    inputRef?.current?.focus();
   };
 
   const onCancel = () => {
