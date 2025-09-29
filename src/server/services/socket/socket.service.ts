@@ -1,6 +1,7 @@
 // src/server/services/socket/socket-manager-service.ts
 import { Socket } from 'socket.io';
 import SocketServer, { SocketManage } from '@server/services/socket/socket-server';
+import logger from '@server/helpers/logger';
 
 export class SocketService<Token extends object> extends SocketServer<Token> {
   private readonly idKey: keyof Token;
@@ -65,12 +66,12 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
   }
 
   private track(socket: Socket, userId: string) {
-    console.log(`socket:${socket.id}`, `track:${userId}`);
+    logger.debug(`socket:${socket.id}`, `track:${userId}`);
     socket.join(this.userRoom(userId));
   }
 
   private untrack(socket: Socket, userId: string) {
-    console.log(`socket:${socket.id}`, `untrack:${userId}`);
+    logger.debug(`socket:${socket.id}`, `untrack:${userId}`);
     socket.leave(this.userRoom(userId));
   }
 
@@ -173,7 +174,7 @@ export class SocketService<Token extends object> extends SocketServer<Token> {
     this.io.on('connection', (socket: SocketManage<Token>) => {
       socket.on(event, (...args) => handler(socket, ...args));
     });
-    
+
     // Also register for existing connections
     this.io.sockets.sockets.forEach((socket: SocketManage<Token>) => {
       socket.on(event, (...args) => handler(socket, ...args));

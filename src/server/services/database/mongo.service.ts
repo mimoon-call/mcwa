@@ -17,6 +17,7 @@ import mongoose, {
 import crypto from 'crypto';
 import type { EntityList, Pagination } from '@models';
 import { LRUCache } from 'lru-cache';
+import logger from '@server/helpers/logger';
 
 // URI will be evaluated when connect() is called, after environment variables are loaded
 const DEFAULT_PAGE_SIZE = 20;
@@ -176,7 +177,7 @@ export class MongoService<TDoc extends object> {
             }
             await this.model.createIndexes();
           } catch (e: any) {
-            console.warn(`[MongoService:${name}] createIndexes() failed:`, e?.message || e);
+            logger.warn(`[MongoService:${name}] createIndexes() failed:`, e?.message || e);
           }
         };
 
@@ -406,7 +407,7 @@ export class MongoService<TDoc extends object> {
    */
   static async connect(): Promise<void> {
     if (mongoose.connection.readyState === 1) {
-      console.log('MongoDB already connected');
+      logger.debug('MongoDB already connected');
       return;
     }
 
@@ -423,23 +424,23 @@ export class MongoService<TDoc extends object> {
         bufferCommands: false,
       });
 
-      console.log('✅ MongoDB connected successfully via MongoService');
+      logger.info('✅ MongoDB connected successfully via MongoService');
 
       mongoose.connection.on('error', (error) => {
-        console.error('MongoDB connection error:', error);
+        logger.error('MongoDB connection error:', error);
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.log('MongoDB disconnected - attempting to reconnect...');
+        logger.debug('MongoDB disconnected - attempting to reconnect...');
         // Auto-reconnect on disconnect with exponential backoff
         MongoService.attemptReconnect();
       });
 
       mongoose.connection.on('reconnected', () => {
-        console.log('MongoDB reconnected');
+        logger.debug('MongoDB reconnected');
       });
     } catch (error) {
-      console.error('Failed to connect to MongoDB:', error);
+      logger.debug('Failed to connect to MongoDB:', error);
       throw error;
     }
   }
@@ -449,15 +450,15 @@ export class MongoService<TDoc extends object> {
    */
   static async disconnect(): Promise<void> {
     if (mongoose.connection.readyState === 0) {
-      console.log('MongoDB already disconnected');
+      logger.debug('MongoDB already disconnected');
       return;
     }
 
     try {
       await mongoose.disconnect();
-      console.log('MongoDB disconnected via MongoService');
+      logger.debug('MongoDB disconnected via MongoService');
     } catch (error) {
-      console.error('Error disconnecting from MongoDB:', error);
+      logger.error('Error disconnecting from MongoDB:', error);
       throw error;
     }
   }
@@ -481,7 +482,7 @@ export class MongoService<TDoc extends object> {
     }
 
     if (MongoService.reconnectAttempts >= RECONNECT_CONFIG.maxRetries) {
-      console.error(`❌ Max reconnection attempts (${RECONNECT_CONFIG.maxRetries}) reached. Giving up.`);
+      logger.error(`❌ Max reconnection attempts (${RECONNECT_CONFIG.maxRetries}) reached. Giving up.`);
       return;
     }
 
@@ -494,7 +495,7 @@ export class MongoService<TDoc extends object> {
       RECONNECT_CONFIG.maxDelay
     );
 
-    console.log(`🔄 Attempting to reconnect (${MongoService.reconnectAttempts}/${RECONNECT_CONFIG.maxRetries}) in ${delay}ms...`);
+    logger.debug(`🔄 Attempting to reconnect (${MongoService.reconnectAttempts}/${RECONNECT_CONFIG.maxRetries}) in ${delay}ms...`);
 
     setTimeout(async () => {
       try {
@@ -502,10 +503,10 @@ export class MongoService<TDoc extends object> {
           await MongoService.connect();
           // Reset counters on successful reconnection
           MongoService.reconnectAttempts = 0;
-          console.log('✅ Reconnection successful!');
+          logger.debug('✅ Reconnection successful!');
         }
       } catch (reconnectError) {
-        console.error(`❌ Reconnection attempt ${MongoService.reconnectAttempts} failed:`, reconnectError);
+        logger.error(`❌ Reconnection attempt ${MongoService.reconnectAttempts} failed:`, reconnectError);
         // Try again if we haven't reached max retries
         if (MongoService.reconnectAttempts < RECONNECT_CONFIG.maxRetries) {
           MongoService.attemptReconnect();

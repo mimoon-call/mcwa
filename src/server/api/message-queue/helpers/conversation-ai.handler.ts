@@ -13,6 +13,7 @@ import { sendMessageToSocketRoom } from '@server/helpers/send-message-to-socket-
 import { MessageQueueEventEnum } from '@server/api/message-queue/message-queue-event.enum';
 import { MessageQueueItem, NewOpportunityEvent } from '@server/api/message-queue/message-queue.types';
 import { HttpService } from '@services/http/http.service';
+import logger from '@server/helpers/logger';
 
 type TranscriptItem = { from: 'LEAD' | 'YOU'; text: string; at?: string };
 type Options = Partial<{ debounceTime: number; sendAutoReplyFlag: boolean; callWebhookFlag: boolean; instanceNumber: string }>;
@@ -163,7 +164,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
 
   const handle = setTimeout(async () => {
     try {
-      console.log('conversationAiHandler', 'started for', conversationKey);
+      logger.debug('conversationAiHandler', 'started for', conversationKey);
       const phoneNumber1 = fromNumber;
       const phoneNumber2 = toNumber;
 
@@ -215,7 +216,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           referenceTimeIso: new Date().toISOString(),
         });
 
-        console.log('INCOMING', `[${fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
+        logger.debug('INCOMING', `[${fromNumber}]\n`, leadReplies.map((v, i) => `${i + 1}. [${v.from}] ${v.text}`).join('\n'), '\n', ai);
 
         if (!ai) return;
 
@@ -237,11 +238,11 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           const hasActiveMembers = app.socket.hasRoomMembers(conversationKey);
 
           if (hasActiveMembers) {
-            console.log(`[Auto-reply skipped] Conversation room has active members: ${conversationKey} - Human is actively viewing the chat`);
+            logger.debug(`[Auto-reply skipped] Conversation room has active members: ${conversationKey} - Human is actively viewing the chat`);
             return; // Skip auto-reply if someone is actively viewing the chat
           }
 
-          console.log(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
+          logger.debug(`[Auto-reply proceeding] No active members in conversation room: ${conversationKey} - Sending AI reply`);
 
           try {
             const sendResult = await wa.sendMessage(phoneNumber2, phoneNumber1, ai.suggestedReply, {
@@ -265,11 +266,11 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
             // Send message to specific conversation room instead of broadcasting
             app.socket.sendToRoom(conversationKey, ConversationEventEnum.NEW_MESSAGE, sentMessageData);
           } catch (error) {
-            console.error('sendMessage:error', error);
+            logger.error('sendMessage:error', error);
           }
         }
       } catch (e) {
-        console.error('classifyInterest:error', e);
+        logger.error('classifyInterest:error', e);
       }
     } finally {
       replyTimeout.delete(conversationKey);
