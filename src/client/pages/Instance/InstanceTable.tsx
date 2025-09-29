@@ -208,7 +208,6 @@ const InstanceTable = () => {
   const {
     [SEARCH_INSTANCE]: searchInstance,
     [DELETE_INSTANCE]: deleteInstance,
-    [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
     [INSTANCE_REFRESH]: refreshInstance,
     [UPDATE_INSTANCE]: updateInstance,
     [WARMUP_TOGGLE]: toggleWarmup,
@@ -393,7 +392,6 @@ const InstanceTable = () => {
       callback: async () => await dispatch(deleteInstance(item.phoneNumber)),
       description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: `'${item.phoneNumber}'` }],
     });
-  const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
   const onWarmUp = async () => await dispatch(toggleWarmup());
 
@@ -419,11 +417,6 @@ const InstanceTable = () => {
       iconName: 'svg:scan-qr',
       onClick: ({ phoneNumber }) => modelRef.current?.open(phoneNumber),
       hidden: ({ statusCode }) => statusCode === 200,
-    },
-    {
-      label: ({ isActive }) => (isActive ? 'GENERAL.DISABLE' : 'GENERAL.ENABLE'),
-      iconName: ({ isActive }) => (isActive ? 'svg:wifi-disconnected' : 'svg:wifi'),
-      onClick: onActiveToggle,
     },
     {
       label: 'GENERAL.REFRESH',
