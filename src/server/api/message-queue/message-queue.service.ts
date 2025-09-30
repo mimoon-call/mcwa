@@ -124,7 +124,6 @@ export const messageQueueService = {
       messagePass = 0;
       messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
-      wa.stopWarmingUp();
 
       for (messageAttempt = 0; messageAttempt < MAX_SEND_ATTEMPT; messageAttempt++) {
         // Process all documents with current attempt number (randomly)
@@ -156,7 +155,6 @@ export const messageQueueService = {
         }
       }
 
-      wa.stopWarmingUp();
       isSending = false;
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
