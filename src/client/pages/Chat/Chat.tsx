@@ -575,7 +575,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
         selectedContact={selectedContact}
         messages={messages}
         disabled={!isInstanceConnected}
-        loading={chatLoading}
+        loading={chatLoading || (!selectedContact && searchLoading && !!phoneNumber)}
         error={error}
         phoneNumber={selectedContact?.instanceNumber}
         withPhoneNumber={selectedContact?.phoneNumber}

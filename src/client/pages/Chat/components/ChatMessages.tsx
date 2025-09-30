@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
 import ChatMessageItem from './ChatMessageItem';
 import ChatStickyDate from './ChatStickyDate';
+import Spinner from '@components/Spinner/Spinner';
 
 type ChatMessagesProps = {
   messages: ChatMessage[];
@@ -53,9 +54,15 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({
   }, [messages.length]);
 
   const renderContent = (() => {
-    if (loading) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.LOADING')}</div>;
-    if (error) return <div className="flex items-center justify-center h-32 text-red-500">{t('GENERAL.ERROR')}</div>;
-    if (messages.length === 0) return <div className="flex items-center justify-center h-32 text-gray-500">{t('GENERAL.EMPTY')}</div>;
+    if (loading)
+      return (
+        <div className="flex flex-col items-center justify-center h-full">
+          <Spinner size="6rem" />
+        </div>
+      );
+
+    if (error) return <div className="flex items-center justify-center h-full text-red-500">{t('GENERAL.ERROR')}</div>;
+    if (messages.length === 0) return <div className="flex items-center justify-center h-full text-gray-500">{t('GENERAL.EMPTY')}</div>;
 
     const items = messages.map((message, index) => {
       const isFromUser = isMessageFromUser(message);

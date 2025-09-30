@@ -67,7 +67,7 @@ const ChatRightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className={cn('flex-1 flex flex-col h-full max-h-full relative', className)}>
-      {selectedContact ? (
+      {selectedContact || loading ? (
         <>
           {/* Chat Header */}
           {headerComponent}
