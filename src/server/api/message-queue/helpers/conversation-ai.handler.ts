@@ -50,7 +50,7 @@ const handleWebhook = async (doc: MessageDocument) => {
   const text = doc.text || '';
   const webhookPayload = { ...doc, ...(additionalData || {}) };
 
-  if (!doc.interested) {
+  if (doc.interested) {
     app.socket.broadcast<NewOpportunityEvent>(MessageQueueEventEnum.NEW_OPPORTUNITY, {
       phoneNumber,
       instanceNumber,
