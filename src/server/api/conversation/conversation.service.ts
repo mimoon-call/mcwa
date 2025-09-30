@@ -578,7 +578,7 @@ export const conversationService = {
     ]);
 
     if (message[0]?.interested === undefined || !webhookRequest) throw new ServerError('No message found or webhook not configured');
-    await webhookRequest(message[0]);
+    await webhookRequest({ ...message[0], interested: true });
 
     return { returnCode: 0, ...message[0] };
   },
