@@ -110,7 +110,7 @@ export const messageQueueService = {
     return { returnCode: 0 };
   },
 
-  [START_QUEUE_SEND]: (): BaseResponse<{ totalInstances: number; totalMessages: number }> => {
+  [START_QUEUE_SEND]: async (): Promise<BaseResponse<{ totalInstances: number; totalMessages: number }>> => {
     // Check if we're within work hours before starting
     if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_SENDING_OUTSIDE_WORKTIME', ErrorCodeEnum.BAD_REQUEST_400);
 
@@ -118,11 +118,11 @@ export const messageQueueService = {
     if (totalInstances === 0) throw new ServerError('QUEUE.ERROR_NO_ACTIVE_INSTANCES', ErrorCodeEnum.BAD_REQUEST_400);
 
     messageAttempt = 0;
+    messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
 
     (async () => {
       isSending = true;
       messagePass = 0;
-      messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
       app.socket.onConnected<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, () => ({ messageCount, messagePass, isSending }));
 
       for (messageAttempt = 0; messageAttempt < MAX_SEND_ATTEMPT; messageAttempt++) {

@@ -63,7 +63,7 @@ export const messageQueueController = {
   },
 
   [START_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
-    res.send(messageQueueService[START_QUEUE_SEND]());
+    res.send(await messageQueueService[START_QUEUE_SEND]());
   },
 
   [STOP_QUEUE_SEND]: async (_req: Request, res: Response<BaseResponse>) => {
