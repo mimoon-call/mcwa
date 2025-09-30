@@ -60,8 +60,8 @@ const handleWebhook = async (doc: MessageDocument) => {
     });
   }
 
-  webhookRequest?.(webhookPayload).catch((error) => {
-    console.error('WEBHOOK', process.env.WEBHOOK_SECRET, error);
+  webhookRequest?.(webhookPayload).catch(() => {
+    console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL);
   });
 };
 
