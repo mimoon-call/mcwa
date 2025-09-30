@@ -107,7 +107,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
 
   private humanDelayFor(text: string): number {
-    if (!text) return 0;
+    if (!text) return 1500; // Minimum delay for empty text (1.5s)
 
     const words = Math.max(1, text.split(/\s+/).length);
     const base = 800 + words * 220; // base typing time
@@ -1426,15 +1426,39 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
+    let keepAlive: NodeJS.Timeout | undefined;
+
     try {
       await this.socket.presenceSubscribe(jid);
-      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
+      keepAlive = setInterval(() => {
+        try {
+          this.socket?.sendPresenceUpdate(type, jid);
+        } catch (error) {
+          this.log('error', 'Failed to send presence update:', error);
+        }
+      }, 4500);
+
       await this.delay(ms);
-      clearInterval(keepAlive);
+
+      if (keepAlive) {
+        clearInterval(keepAlive);
+        keepAlive = undefined;
+      }
+
       await this.socket.sendPresenceUpdate('paused', jid);
       await this.delay(250);
+    } catch (error) {
+      this.log('error', 'Error during human emulation:', error);
     } finally {
-      await this.socket.sendPresenceUpdate('available');
+      if (keepAlive) {
+        clearInterval(keepAlive);
+      }
+
+      try {
+        await this.socket?.sendPresenceUpdate('available', jid);
+      } catch (error) {
+        this.log('error', 'Failed to set available status:', error);
+      }
     }
   }
 
@@ -1883,8 +1907,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             const seconds = payload?.duration || 0;
             const ms = seconds * 1000; // Convert seconds to milliseconds
             await this.emulateHuman(jid, 'recording', ms);
-          } else {
-            const text = typeof payload === 'string' ? payload : payload?.text || '';
+          } else if (typeof payload === 'string' || payload?.text) {
+            const text = (typeof payload === 'string' ? payload : payload?.text)!;
             const ms = this.humanDelayFor(text);
             await this.emulateHuman(jid, 'composing', ms);
           }
