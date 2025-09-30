@@ -18,8 +18,17 @@ export const errorsInterceptor: AxiosResponseInterceptor = {
     }
 
     const err: AxiosError<ErrorResponse> = error as AxiosError<ErrorResponse>;
-    const serverError = new ServerError(err);
 
-    throw serverError;
+    // Extract error data from the response - server has already serialized the error
+    const errorResponse = err.response?.data;
+    if (errorResponse && errorResponse.errorMessage) {
+      // Server returned structured error response - just pass it through
+      // The server already called serializeErrors() and sent the proper format
+      throw errorResponse;
+    } else {
+      // Fallback for other types of errors (network errors, etc.)
+      const message = err.response?.statusText || err.message || 'An error occurred';
+      throw new ServerError(message, err.response?.status);
+    }
   },
 };

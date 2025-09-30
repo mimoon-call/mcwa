@@ -119,7 +119,6 @@
     "NUMBER_RESUBSCRIBED_SUCCESSFULLY": "המספר נוסף בהצלחה לדיוור",
     "DYNAMIC_FIELDS": "שדות דינמיים",
     "LAST_ERROR_MESSAGE": "הודעת שגיאה אחרונה",
-    "ERROR_OUT_WORKTIME": "מחוץ לשעות עבודה",
     "ATTEMPT": "ניסיון",
     "DEPARTMENT": "מחלקה",
     "REASONING": "נימוק",
@@ -128,7 +127,11 @@
     "NEW_OPPORTUNITY": "הזדמנות חדשה עבור {{department}} נכנסה למספר {{instanceNumber}}",
     "ADD_TO_CRM": "להוסיף לפיירברי",
     "LEAD_ADDED_TO_CRM_SUCCESSFULLY": "הליד נוסף בהצלחה ל-CRM",
-    "FAILED_TO_ADD_LEAD_TO_CRM": "הוספת הליד ל-CRM נכשלה"
+    "FAILED_TO_ADD_LEAD_TO_CRM": "הוספת הליד ל-CRM נכשלה",
+    "MESSAGE_SENDING_STARTED": "שליחת ההודעות החלה, {{totalMessages}} הודעות דרך {{totalInstances}} קווים",
+    "FAILED_TO_START_SENDING_MESSAGES": "נכשל בהפעלת שליחת ההודעות",
+    "ERROR_NO_ACTIVE_INSTANCES": "לא ניתן להתחיל לשלוח הודעות - אין קווים פעילים",
+    "ERROR_SENDING_OUTSIDE_WORKTIME": "לא ניתן להתחיל לשלוח הודעות - מחוץ לשעות עבודה"
   },
   "INSTANCE": {
     "TITLE": "קווים",

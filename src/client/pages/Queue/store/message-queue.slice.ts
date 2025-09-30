@@ -81,7 +81,7 @@ const removeMessageQueue = async (queueId: string) => {
 };
 
 const startQueueSend = async () => {
-  await api.post<void>(START_QUEUE_SEND);
+  return await api.post<{ totalInstances: number }>(START_QUEUE_SEND);
 };
 
 const stopQueueSend = async () => {

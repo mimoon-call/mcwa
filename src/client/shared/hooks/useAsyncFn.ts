@@ -5,7 +5,7 @@ import type { ErrorResponse } from '@services/http/types';
 export type UseAsyncOptions<T> = Partial<{
   throwError: boolean;
   successCallback: (result?: T) => Promise<void> | void;
-  errorCallback: (error: ErrorResponse) => Promise<void> | void;
+  errorCallback: (error: ErrorResponse, text?: string) => Promise<void> | void;
   resultState: ReturnType<typeof useState<T | null>>;
   loadingState: ReturnType<typeof useState<boolean>>;
   errorState: ReturnType<typeof useState<ErrorResponse | null>>;
@@ -46,7 +46,22 @@ export function useAsyncFn<T>(fn?: (...args: any[]) => Promise<T> | T, options: 
       } catch (e) {
         const err = e as ErrorResponse;
         setError(err);
-        await errorCallback?.(err);
+        
+        // Extract error message properly from ErrorResponse or other errors
+        let errorMessage: string | undefined;
+        if (err?.errorMessage?.[0]?.message) {
+          // Server error response (already serialized by server)
+          errorMessage = err.errorMessage[0].message;
+        } else if ('serializeErrors' in err && typeof err.serializeErrors === 'function') {
+          // Fallback for ServerError instances (shouldn't happen with new interceptor)
+          const serialized = err.serializeErrors();
+          errorMessage = serialized.errorMessage?.[0]?.message;
+        } else if ('message' in err && typeof err.message === 'string') {
+          // Fallback to basic error message
+          errorMessage = err.message;
+        }
+        
+        await errorCallback?.(err, errorMessage);
 
         if (throwError) {
           throw err;

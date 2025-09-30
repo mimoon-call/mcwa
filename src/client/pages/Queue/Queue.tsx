@@ -21,7 +21,7 @@ import {
 import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
 import AddEditQueueModal, { type AddQueueModalRef } from '@client/pages/Queue/modal/AddEditQueueModal';
 import { openDeletePopup } from '@helpers/open-delete-popup';
-import { useToast, useTooltip } from '@hooks';
+import { useAsyncFn, useToast, useTooltip } from '@hooks';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { useTranslation } from 'react-i18next';
 import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
@@ -52,6 +52,15 @@ const Queue = () => {
     [STOP_QUEUE_SEND]: stopSend,
     [CLEAR_MESSAGE_QUEUE]: clearQueue,
   } = messageQueueSlice;
+
+  const { call: startSendRequest } = useAsyncFn(() => startSend(), {
+    successCallback: (data) => {
+      toast.success(t('QUEUE.MESSAGE_SENDING_STARTED', data));
+    },
+    errorCallback: (_, text) => {
+      toast.error(t(text || 'QUEUE.FAILED_TO_START_SENDING_MESSAGES'));
+    },
+  });
 
   const headers: TableHeaders<MessageQueueItem> = [
     {
@@ -177,7 +186,7 @@ const Queue = () => {
       : {
           label: 'QUEUE.START_SENDING',
           iconName: 'svg:missile',
-          onClick: startSend,
+          onClick: startSendRequest,
           disabled: () => !!(queuePagination.totalItems === 0 || queueLoading),
         },
     { type: 'divider' },

@@ -110,9 +110,12 @@ export const messageQueueService = {
     return { returnCode: 0 };
   },
 
-  [START_QUEUE_SEND]: (): BaseResponse<{ message?: string }> => {
+  [START_QUEUE_SEND]: (): BaseResponse<{ totalInstances: number; totalMessages: number }> => {
     // Check if we're within work hours before starting
-    if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_OUT_WORKTIME', ErrorCodeEnum.BAD_REQUEST_400);
+    if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_SENDING_OUTSIDE_WORKTIME', ErrorCodeEnum.BAD_REQUEST_400);
+
+    const totalInstances = wa.listInstanceNumbers({ hasWarmedUp: true, onlyConnectedFlag: true }).length;
+    if (totalInstances === 0) throw new ServerError('QUEUE.ERROR_NO_ACTIVE_INSTANCES', ErrorCodeEnum.BAD_REQUEST_400);
 
     messageAttempt = 0;
 
@@ -158,7 +161,11 @@ export const messageQueueService = {
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
 
-    return { returnCode: 0 };
+    return {
+      returnCode: 0,
+      totalInstances,
+      totalMessages: messageCount,
+    };
   },
 
   [STOP_QUEUE_SEND]: (): BaseResponse => {
