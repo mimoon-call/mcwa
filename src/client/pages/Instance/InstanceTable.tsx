@@ -227,7 +227,7 @@ const InstanceTable = () => {
     {
       title: 'INSTANCE.PHONE_NUMBER',
       value: 'phoneNumber',
-      sortable: ['hasWarmedUp', 'phoneNumber'],
+      sortable: true,
       searchable: true,
       component: InstanceItem,
       type: 'TEXT',
