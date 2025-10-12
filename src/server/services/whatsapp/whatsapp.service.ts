@@ -289,7 +289,15 @@ export class WhatsappService<T extends object = Record<never, never>> {
     // Create new instance
     const newInstance = await this.createInstance(phoneNumber);
     const qrCode = await newInstance.register();
-    await newInstance.update({ lastErrorAt: null, errorMessage: null, lastIpAddress: null, outgoingErrorCount: 0 } as WAAppAuth<T>);
+    await newInstance.update({
+      lastErrorAt: null,
+      errorMessage: null,
+      lastIpAddress: null,
+      dailyMessageCount: 0,
+      incomingMessageCount: 0,
+      outgoingMessageCount: 0,
+      outgoingErrorCount: 0,
+    } as WAAppAuth<T>);
 
     this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list');
 
