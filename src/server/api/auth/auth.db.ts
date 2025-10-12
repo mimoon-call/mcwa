@@ -1,6 +1,7 @@
 import { MongoService } from '@server/services/database/mongo.service';
 import { AuthUser } from '@server/api/auth/auth.type';
 import getLocalTime from '@server/helpers/get-local-time';
+import { UserRole } from '@server/api/auth/auth.enum';
 
 const setModifiedAndCreationDate = function (doc: any) {
   const now = getLocalTime();
@@ -24,6 +25,7 @@ export const Auth = new MongoService<AuthUser>(
     email: { type: String, required: true },
     createdAt: { type: Date, required: true },
     updatedAt: { type: Date },
+    role: { type: String, default: UserRole.USER, enum: Object.values(UserRole) },
   },
   { timestamps: false },
   {
