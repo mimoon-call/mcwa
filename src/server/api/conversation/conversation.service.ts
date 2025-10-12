@@ -28,6 +28,7 @@ import ServerError from '@services/http/errors/server-error';
 import NotFoundError from '@services/http/errors/not-found-error';
 import { ErrorCodeEnum } from '@services/http/errors/error-code.enum';
 import { HttpService } from '@services/http/http.service';
+import logger from '@server/helpers/logger';
 
 export const conversationService = {
   [GET_CONVERSATION]: async (phoneNumber: string, withPhoneNumber: string, page: Pagination): Promise<GetConversationRes> => {
@@ -578,6 +579,9 @@ export const conversationService = {
     ]);
 
     if (message[0]?.interested === undefined || !webhookRequest) throw new ServerError('No message found or webhook not configured');
+
+    logger.debug('addToCrm:payload', { ...message[0], interested: true });
+
     await webhookRequest({ ...message[0], interested: true });
 
     return { returnCode: 0, ...message[0] };
