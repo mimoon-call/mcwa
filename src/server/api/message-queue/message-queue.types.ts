@@ -6,6 +6,7 @@ import { InterestResult } from '@server/api/message-queue/reply/interest.classif
 export type MessageQueueItem = {
   _id: ObjectId;
   phoneNumber: string;
+  fullName?: string;
   textMessage: string;
   tts?: boolean;
   attempt: number;
