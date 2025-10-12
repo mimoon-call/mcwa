@@ -196,19 +196,6 @@ export const instanceService = {
 
   [RESET_INSTANCE]: async (phoneNumber: string): Promise<void> => {
     const instance = await getInstance(phoneNumber);
-
-    await instance.update({
-      incomingMessageCount: 0,
-      outgoingMessageCount: 0,
-      warmUpDay: 0,
-      dailyWarmUpCount: 0,
-      dailyWarmConversationCount: 0,
-      dailyMessageCount: 0,
-      outgoingErrorCount: 0,
-      lastSentMessage: '',
-      lastWarmedUpDay: '',
-      errorMessage: '',
-      hasWarmedUp: false,
-    });
+    await instance.update({ incomingMessageCount: 0, outgoingMessageCount: 0, outgoingErrorCount: 0 });
   },
 };
