@@ -173,7 +173,9 @@
       "SESSION_EXPIRED": "Session expired"
     },
     "COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY": "Comment has been updated successfully",
-    "COMMENT_UPDATE_FAILED": "Failed to update comment"
+    "COMMENT_UPDATE_FAILED": "Failed to update comment",
+    "NOT_FOUND": "Instance not found",
+    "NOT_READY": "Instance not ready"
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

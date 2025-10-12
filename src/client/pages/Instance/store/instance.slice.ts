@@ -15,6 +15,7 @@ import {
   INSTANCE_SEARCH_PAGINATION,
   IS_GLOBAL_WARMING_UP,
   RESET_INSTANCE,
+  RESET_INSTANCE_SEARCH,
   SEARCH_INSTANCE,
   UPDATE_FILTER,
   UPDATE_INSTANCE,
@@ -105,21 +106,18 @@ const toggleWarmup = createAsyncThunk(`${WARMUP_TOGGLE}`, async (_, { dispatch }
   return response.isWarmingUp;
 });
 
+const resetInstance = async (phoneNumber: string) => {
+  await api.post<void>(`${RESET_INSTANCE}/${phoneNumber}`);
+};
+
 const exportInstancesToExcel = createAsyncThunk(
   `${StoreEnum.instance}/${EXPORT_INSTANCES_TO_EXCEL}`,
   async (headers: Array<{ title: string; value: string; type?: string }>, { getState, rejectWithValue }) => {
     try {
       const state = getState() as RootState;
       const currentFilter = state[StoreEnum.instance]?.[INSTANCE_SEARCH_FILTER];
-
-      const payload = {
-        ...currentFilter,
-        headers,
-      };
-
-      const response = await api.post<Blob, typeof payload>(`${EXPORT_INSTANCES_TO_EXCEL}`, payload, {
-        responseType: 'blob',
-      });
+      const payload = { ...currentFilter, headers };
+      const response = await api.post<Blob, typeof payload>(`${EXPORT_INSTANCES_TO_EXCEL}`, payload, { responseType: 'blob' });
 
       // Create download link
       const url = window.URL.createObjectURL(response);
@@ -143,7 +141,7 @@ const exportInstancesToExcel = createAsyncThunk(
   }
 );
 
-const resetInstance = createAsyncThunk(`reset`, async (_, { dispatch }) => {
+const resetInstanceSearch = createAsyncThunk(`reset`, async (_, { dispatch }) => {
   // Reset filter and pagination to defaults and trigger search
   dispatch(instanceSlice.actions.reset());
   await dispatch(searchInstance({}));
@@ -170,9 +168,7 @@ const instanceSlice = createSlice({
     updateFilter: (state, action) => {
       const newFilter = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
 
-      if (isEqual(newFilter, state[INSTANCE_SEARCH_FILTER])) {
-        return;
-      }
+      if (isEqual(newFilter, state[INSTANCE_SEARCH_FILTER])) return;
 
       state[INSTANCE_SEARCH_FILTER] = { ...state[INSTANCE_SEARCH_FILTER], ...action.payload };
       state[INSTANCE_SEARCH_PAGINATION] = { ...state[INSTANCE_SEARCH_PAGINATION], pageIndex: 0 };
@@ -189,9 +185,6 @@ const instanceSlice = createSlice({
       .addCase(searchInstance.pending, (state, _action) => {
         state[INSTANCE_LOADING] = true;
         state[INSTANCE_ERROR] = null;
-
-        // Don't update filter here to prevent feedback loops
-        // The filter should only be updated when explicitly set by the user
       })
       .addCase(searchInstance.fulfilled, (state, action) => {
         state[INSTANCE_SEARCH_DATA] = action.payload.data;
@@ -219,12 +212,13 @@ export default {
   [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
   [WARMUP_TOGGLE_INSTANCE]: toggleInstanceWarmUp,
   [INSTANCE_REFRESH]: refreshInstance,
+  [RESET_INSTANCE]: resetInstance,
   [WARMUP_TOGGLE]: toggleWarmup,
   [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,
   [UPDATE_INSTANCE_COMMENT]: updateInstanceComment,
   [ADD_INSTANCE]: instanceQr,
   [UPDATE_INSTANCE]: instanceSlice.actions.updateInstance,
   [UPDATE_FILTER]: instanceSlice.actions.updateFilter,
-  [RESET_INSTANCE]: resetInstance,
+  [RESET_INSTANCE_SEARCH]: resetInstanceSearch,
   actions: instanceSlice.actions,
 };

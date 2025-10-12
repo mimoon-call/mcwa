@@ -22,6 +22,7 @@ import {
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
   IS_GLOBAL_WARMING_UP,
+  RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
@@ -209,6 +210,7 @@ const InstanceTable = () => {
     [SEARCH_INSTANCE]: searchInstance,
     [DELETE_INSTANCE]: deleteInstance,
     [INSTANCE_REFRESH]: refreshInstance,
+    [RESET_INSTANCE]: resetInstance,
     [UPDATE_INSTANCE]: updateInstance,
     [WARMUP_TOGGLE]: toggleWarmup,
     [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,
@@ -222,6 +224,11 @@ const InstanceTable = () => {
     [INSTANCE_LOADING]: instanceLoading,
     [IS_GLOBAL_WARMING_UP]: isGlobalWarmingUp,
   } = useSelector((state: RootState) => state[StoreEnum.instance]);
+
+  const { call: resetInstanceRequest } = useAsyncFn(resetInstance, {
+    successCallback: () => dispatch(searchInstance({})),
+    errorCallback: (_, text) => toast.error(t(text!)),
+  });
 
   const headers: TableHeaders<InstanceItem> = [
     {
@@ -393,6 +400,7 @@ const InstanceTable = () => {
       description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: `'${item.phoneNumber}'` }],
     });
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
+  const onReset = async ({ phoneNumber }: InstanceItem) => await resetInstanceRequest(phoneNumber);
   const onWarmUp = async () => await dispatch(toggleWarmup());
 
   const onExportToExcel = async () => {
@@ -422,6 +430,11 @@ const InstanceTable = () => {
       label: 'GENERAL.REFRESH',
       iconName: 'svg:refresh',
       onClick: onRefresh,
+    },
+    {
+      label: 'GENERAL.RESET',
+      iconName: 'svg:reset',
+      onClick: onReset,
     },
   ];
 

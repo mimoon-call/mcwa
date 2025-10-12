@@ -4,8 +4,8 @@ import type { ErrorResponse } from '@services/http/types';
 
 export type UseAsyncOptions<T> = Partial<{
   throwError: boolean;
-  successCallback: (result?: T) => Promise<void> | void;
-  errorCallback: (error: ErrorResponse, text?: string) => Promise<void> | void;
+  successCallback: (result?: T) => Promise<unknown> | unknown;
+  errorCallback: (error: ErrorResponse, text?: string) => Promise<unknown> | unknown;
   resultState: ReturnType<typeof useState<T | null>>;
   loadingState: ReturnType<typeof useState<boolean>>;
   errorState: ReturnType<typeof useState<ErrorResponse | null>>;
@@ -46,7 +46,7 @@ export function useAsyncFn<T>(fn?: (...args: any[]) => Promise<T> | T, options: 
       } catch (e) {
         const err = e as ErrorResponse;
         setError(err);
-        
+
         // Extract error message properly from ErrorResponse or other errors
         let errorMessage: string | undefined;
         if (err?.errorMessage?.[0]?.message) {
@@ -60,7 +60,7 @@ export function useAsyncFn<T>(fn?: (...args: any[]) => Promise<T> | T, options: 
           // Fallback to basic error message
           errorMessage = err.message;
         }
-        
+
         await errorCallback?.(err, errorMessage);
 
         if (throwError) {

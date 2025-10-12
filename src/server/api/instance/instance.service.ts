@@ -6,6 +6,7 @@ import {
   DELETE_INSTANCE,
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
+  RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
@@ -16,6 +17,20 @@ import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
 import ExcelService from '@server/services/excel/excel.service';
 import getLocalTime from '@server/helpers/get-local-time';
+
+const getInstance = async (phoneNumber: string) => {
+  const instance = wa.getInstance(phoneNumber);
+
+  if (!instance) {
+    if (!(await WhatsAppAuth.findOne({ phoneNumber }))) {
+      throw new ServerError('INSTANCE.NOT_FOUND');
+    } else {
+      throw new ServerError('INSTANCE.NOT_READY');
+    }
+  }
+
+  return instance;
+};
 
 export const instanceService = {
   [SEARCH_INSTANCE]: async (payload: Omit<SearchInstanceReq, 'page'>, page: Pagination): Promise<EntityList<InstanceItem>> => {
@@ -92,11 +107,7 @@ export const instanceService = {
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
-    const instance = wa.getInstance(phoneNumber);
-
-    if (!instance) {
-      throw new ServerError('INSTANCE.NOT_FOUND');
-    }
+    const instance = await getInstance(phoneNumber);
 
     const isActive = !!instance.get('isActive');
     if (isActive) {
@@ -107,23 +118,13 @@ export const instanceService = {
   },
 
   [WARMUP_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
-    const instance = wa.getInstance(phoneNumber);
-
-    if (!instance) {
-      throw new ServerError('INSTANCE.NOT_FOUND');
-    }
-
+    const instance = await getInstance(phoneNumber);
     const hasWarmedUp = !!instance.get('hasWarmedUp');
     await instance.update({ hasWarmedUp: !hasWarmedUp, ...(!hasWarmedUp ? { isActive: true } : {}) });
   },
 
   [INSTANCE_REFRESH]: async (phoneNumber: string): Promise<void> => {
-    const instance = wa.getInstance(phoneNumber);
-
-    if (!instance) {
-      throw new ServerError('INSTANCE.NOT_FOUND');
-    }
-
+    const instance = await getInstance(phoneNumber);
     await instance.connect(true);
   },
 
@@ -191,5 +192,23 @@ export const instanceService = {
 
   [UPDATE_INSTANCE_COMMENT]: async (phoneNumber: string, comment: string): Promise<void> => {
     await WhatsAppAuth.updateOne({ phoneNumber }, { $set: { comment } });
+  },
+
+  [RESET_INSTANCE]: async (phoneNumber: string): Promise<void> => {
+    const instance = await getInstance(phoneNumber);
+
+    await instance.update({
+      incomingMessageCount: 0,
+      outgoingMessageCount: 0,
+      warmUpDay: 0,
+      dailyWarmUpCount: 0,
+      dailyWarmConversationCount: 0,
+      dailyMessageCount: 0,
+      outgoingErrorCount: 0,
+      lastSentMessage: '',
+      lastWarmedUpDay: '',
+      errorMessage: '',
+      hasWarmedUp: false,
+    });
   },
 };

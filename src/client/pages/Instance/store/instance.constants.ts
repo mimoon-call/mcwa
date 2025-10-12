@@ -7,10 +7,11 @@ export const WARMUP_TOGGLE_INSTANCE = 'warmup-toggle-instance';
 export const WARMUP_TOGGLE = 'warmup-toggle';
 export const EXPORT_INSTANCES_TO_EXCEL = 'export-instances-to-excel';
 export const UPDATE_INSTANCE_COMMENT = 'update-instance-comment';
+export const RESET_INSTANCE = 'reset-instance';
 
 export const UPDATE_INSTANCE = 'update-instance';
 export const UPDATE_FILTER = 'update-filter';
-export const RESET_INSTANCE = 'reset-instance';
+export const RESET_INSTANCE_SEARCH = 'reset-instance-search';
 
 export const INSTANCE_SEARCH_DATA = 'instance-data';
 export const INSTANCE_SEARCH_PAGINATION = 'instance-pagination';

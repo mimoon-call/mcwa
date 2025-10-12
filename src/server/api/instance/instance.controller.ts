@@ -7,6 +7,7 @@ import {
   DELETE_INSTANCE,
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
+  RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
   WARMUP_TOGGLE,
@@ -96,6 +97,13 @@ export const instanceController = {
     const { comment } = await new RecordValidator(req.body, [['comment', { type: ['String'] }]]).validate();
 
     await instanceService[UPDATE_INSTANCE_COMMENT](phoneNumber, comment);
+
+    res.send({ returnCode: 0 });
+  },
+
+  [RESET_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<BaseResponse>) => {
+    const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
+    await instanceService[RESET_INSTANCE](phoneNumber);
 
     res.send({ returnCode: 0 });
   },

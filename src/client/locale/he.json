@@ -173,7 +173,9 @@
       "SESSION_EXPIRED": "פג תוקף"
     },
     "COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY": "ההערה עודכנה בהצלחה",
-    "COMMENT_UPDATE_FAILED": "עדכון ההערה נכשל"
+    "COMMENT_UPDATE_FAILED": "עדכון ההערה נכשל",
+    "NOT_FOUND": "הקו לא נמצא",
+    "NOT_READY": "הקו לא מוכן"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",
