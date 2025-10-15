@@ -349,7 +349,7 @@ const InstanceTable = () => {
       activeWarm(data, false);
 
       if (data.sentMessages === 0) {
-        toast.error(text);
+        toast.error(text, { duration: 10000 });
       } else if (data.sentMessages !== data.totalMessages) {
         toast.warning(text);
       } else {
