@@ -424,7 +424,7 @@ export class MongoService<TDoc extends object> {
         bufferCommands: false,
       });
 
-      logger.info('✅ MongoDB connected successfully via MongoService');
+      logger.info('✅ MongoDB connected successfully', uri.replace(/:\/\/(.*?):.*?@/, '://$1@').replace(/\?.*/, ''));
 
       mongoose.connection.on('error', (error) => {
         logger.error('MongoDB connection error:', error);
