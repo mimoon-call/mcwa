@@ -150,8 +150,10 @@ export const messageQueueService = {
 
           const doc = docs[0];
 
-          await sendQueueMessage(doc, () => messagePass++);
-          app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+          await sendQueueMessage(doc, () => {
+            messagePass++;
+            app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
+          });
         }
       }
 
@@ -159,17 +161,11 @@ export const messageQueueService = {
       app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending });
     })();
 
-    return {
-      returnCode: 0,
-      totalInstances,
-      totalMessages: messageCount,
-    };
+    return { returnCode: 0, totalInstances, totalMessages: messageCount };
   },
 
   [STOP_QUEUE_SEND]: (): BaseResponse => {
-    if (!messageCount) {
-      return { returnCode: 1 };
-    }
+    if (!messageCount) return { returnCode: 1 };
 
     app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount: 0, messagePass: 0, isSending });
     isSending = false;

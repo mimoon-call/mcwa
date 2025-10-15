@@ -31,7 +31,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
     if (SENT_STATUSES.includes(deliveryStatus.status as MessageStatusEnum)) {
       await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime(), messageId } });
       app.socket.broadcast<MessageQueueSendEvent>(MessageQueueEventEnum.QUEUE_MESSAGE_SENT, doc);
-      successCallback?.();
+      // successCallback?.(); // No longer needed here
     } else if (deliveryStatus.status === MessageStatusEnum.ERROR) {
       // Update queue with error details and increment attempt
       await WhatsappQueue.updateOne(
@@ -79,6 +79,7 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
         { waitForDelivery: false, onWhatsapp: true, maxRetries: 1, onSuccess, onUpdate }
       );
 
+      successCallback?.();
       return;
     }
 
@@ -89,6 +90,8 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
       onSuccess,
       onUpdate,
     });
+
+    successCallback?.();
   } catch (error) {
     await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { lastError: String(error) }, $unset: { sentAt: 1 }, $inc: { attempt: 1 } });
   }
