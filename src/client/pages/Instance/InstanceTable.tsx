@@ -393,11 +393,13 @@ const InstanceTable = () => {
     };
   }, [dispatch]);
 
-  const onDelete = async (item: InstanceItem) =>
+  const onDelete = async (item: InstanceItem) => {
     await openDeletePopup({
       callback: async () => await dispatch(deleteInstance(item.phoneNumber)),
-      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: `'${item.phoneNumber}'` }],
+      description: ['GENERAL.ARE_YOU_SURE_YOU_WANT_TO_DELETE_ITEM', { value: `'${internationalPhonePrettier(item.phoneNumber, '-', true)}'` }],
     });
+  };
+
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
   const onReset = async ({ phoneNumber }: InstanceItem) => await resetInstanceRequest(phoneNumber);
   const onWarmUp = async () => await dispatch(toggleWarmup());
