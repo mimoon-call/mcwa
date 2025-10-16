@@ -3,7 +3,7 @@ import { MongoService } from '@server/services/database/mongo.service';
 import { LeadActionEnum, LeadDepartmentEnum, LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 import { InterestResult } from '@client/pages/Queue/store/message-queue.types';
 
-export const WhatsappQueue = new MongoService<MessageQueueItem & Partial<InterestResult>>(
+export const WhatsappQueue = new MongoService<MessageQueueItem & Partial<Omit<InterestResult, 'suggestedReply'>>>(
   'WhatsappQueue',
   {
     phoneNumber: { type: String, required: true },
@@ -25,7 +25,6 @@ export const WhatsappQueue = new MongoService<MessageQueueItem & Partial<Interes
     intent: { type: String, enum: Object.values(LeadIntentEnum) },
     reason: { type: String },
     confidence: { type: Number }, // 0..1
-    suggestedReply: { type: String },
     action: { type: String, enum: Object.values(LeadActionEnum) },
     department: { type: String, enum: Object.values(LeadDepartmentEnum) },
     followUpAt: { type: String },

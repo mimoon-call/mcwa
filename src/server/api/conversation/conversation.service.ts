@@ -582,17 +582,19 @@ export const conversationService = {
 
     logger.debug('addToCrm:payload', { ...message[0], interested: true });
 
+    const messageId = message[0].messageId;
+
     try {
       await webhookRequest({ ...message[0], interested: true });
       WhatsappQueue.updateOne(
-        { instanceNumber: phoneNumber, phoneNumber: withPhoneNumber, sentAt: { $exists: true } },
+        { messageId },
         { $set: { webhookSuccessFlag: true, webhookErrorMessage: null } }
-      );
+      ).catch((err) => logger.error('Failed to update webhook success flag', err));
     } catch (error: any) {
       WhatsappQueue.updateOne(
-        { instanceNumber: phoneNumber, phoneNumber: withPhoneNumber, sentAt: { $exists: true } },
-        { $set: { webhookSuccessFlag: true, webhookErrorMessage: String(error) } }
-      );
+        { messageId },
+        { $set: { webhookSuccessFlag: false, webhookErrorMessage: String(error) } }
+      ).catch((err) => logger.error('Failed to update webhook error flag', err));
 
       throw error;
     }

@@ -65,7 +65,6 @@ const handleWebhook = async (doc: MessageDocument) => {
     intent: doc.intent,
     reason: doc.reason,
     confidence: doc.confidence,
-    suggestedReply: doc.suggestedReply,
     action: doc.action,
     department: doc.department,
     followUpAt: doc.followUpAt,
