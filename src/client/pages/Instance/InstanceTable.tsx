@@ -368,7 +368,7 @@ const InstanceTable = () => {
     };
 
     const registerToast = ({ phoneNumber }: InstanceItem) => {
-      const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber: internationalPhonePrettier(phoneNumber, '-') }).toString();
+      const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber: internationalPhonePrettier(phoneNumber, '-', true) }).toString();
       modelRef.current?.close();
       toast.success(text);
     };
