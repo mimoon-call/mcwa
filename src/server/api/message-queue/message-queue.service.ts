@@ -118,7 +118,6 @@ export const messageQueueService = {
     if (totalInstances === 0) throw new ServerError('QUEUE.ERROR_NO_ACTIVE_INSTANCES', ErrorCodeEnum.BAD_REQUEST_400);
 
     messageAttempt = 0;
-    messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
 
     (async () => {
       isSending = true;
@@ -130,6 +129,8 @@ export const messageQueueService = {
         let hasMoreDocs = true;
 
         while (hasMoreDocs && isSending) {
+          messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
+
           // Check work hours before each message
           if (!isWithinWorkHours()) {
             isSending = false;
