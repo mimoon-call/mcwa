@@ -10,7 +10,10 @@ import { RegexPattern } from '@client-constants';
 import instanceSlice from '@client/pages/Instance/store/instance.slice';
 import { ADD_INSTANCE, SEARCH_INSTANCE } from '@client/pages/Instance/store/instance.constants';
 
-type AddInstanceModalRef = Omit<ModalRef, 'open'> & { open: (phoneNumber?: string) => void };
+export type AddInstanceModalRef = Omit<ModalRef, 'open' | 'close'> & {
+  open: (phoneNumber?: string) => void;
+  close: (completeNumber: string) => void;
+};
 
 const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -64,7 +67,11 @@ const AddInstanceModal = forwardRef<AddInstanceModalRef>((_props, ref) => {
 
       await modalRef.current?.open();
     },
-    close: (...args: unknown[]) => modalRef.current?.close(...args),
+    close: (completeNumber: string) => {
+      if (completeNumber === phoneNumber) {
+        modalRef.current?.close();
+      }
+    },
     validate: () => !!modalRef.current?.validate(),
   }));
 

@@ -2,7 +2,6 @@ import type { Pagination } from '@models';
 import type { TableHeader, TableHeaders, TableProps } from '@components/Table/Table.type';
 import type { RootState, AppDispatch } from '@client/store';
 import type { InstanceItem, InstanceUpdate, WarmActive, WarmUpdate } from '@client/pages/Instance/store/instance.types';
-import type { ModalRef } from '@components/Modal/Modal.types';
 import type { MenuItem } from '@components/Menu/Menu.type';
 import React, { useEffect, useRef, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -31,7 +30,7 @@ import {
 } from '@client/pages/Instance/store/instance.constants';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@client/plugins';
-import AddInstanceModal from '@client/pages/Instance/modal/AddInstanceModal';
+import AddInstanceModal, { type AddInstanceModalRef } from '@client/pages/Instance/modal/AddInstanceModal';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { openDeletePopup } from '@helpers/open-delete-popup';
 import { InstanceEventEnum } from '@client/pages/Instance/constants/instance-event.enum';
@@ -201,7 +200,7 @@ const Comment = ({ item }: { item: InstanceItem }) => {
 
 const InstanceTable = () => {
   const { t } = useTranslation();
-  const modelRef = useRef<ModalRef>(null);
+  const addModalRef = useRef<AddInstanceModalRef>(null);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const toast = useToast({ y: 'bottom' });
@@ -369,7 +368,7 @@ const InstanceTable = () => {
 
     const registerToast = ({ phoneNumber }: InstanceItem) => {
       const text = t('INSTANCE.INSTANCE_REGISTRATION_COMPLETED', { phoneNumber: internationalPhonePrettier(phoneNumber, '-', true) }).toString();
-      modelRef.current?.close();
+      addModalRef.current?.close(phoneNumber);
       toast.success(text);
     };
 
@@ -423,7 +422,7 @@ const InstanceTable = () => {
     {
       label: 'GENERAL.REAUTHENTICATE',
       iconName: 'svg:scan-qr',
-      onClick: ({ phoneNumber }) => modelRef.current?.open(phoneNumber),
+      onClick: ({ phoneNumber }) => addModalRef.current?.open(phoneNumber),
       hidden: ({ statusCode }) => statusCode === 200,
     },
     {
@@ -461,7 +460,7 @@ const InstanceTable = () => {
         loading={instanceLoading}
         headers={headers}
         items={instanceList || []}
-        createCallback={() => modelRef.current?.open()}
+        createCallback={() => addModalRef.current?.open()}
         exportCallback={onExportToExcel}
         tableActions={tableActions}
         onPageChange={onPageChange}
@@ -472,7 +471,7 @@ const InstanceTable = () => {
         {...instancePagination}
       />
 
-      <AddInstanceModal ref={modelRef} />
+      <AddInstanceModal ref={addModalRef} />
     </div>
   );
 };
