@@ -28,6 +28,7 @@ import type { ErrorResponse } from '@services/http/types';
 import isEqual from 'lodash/isEqual';
 import { loadInstanceFilter, saveInstanceFilter, clearInstanceStorage } from './instance.storage';
 import { ApiService } from '@services/http/api.service';
+import { MAX_PAGE_SIZE } from '@client-constants';
 
 export interface InstanceState {
   [INSTANCE_SEARCH_DATA]: SearchInstanceRes['data'] | null;
@@ -40,7 +41,7 @@ export interface InstanceState {
 
 const initialState: InstanceState = {
   [INSTANCE_SEARCH_DATA]: null,
-  [INSTANCE_SEARCH_PAGINATION]: { pageSize: 50 },
+  [INSTANCE_SEARCH_PAGINATION]: { pageSize: MAX_PAGE_SIZE },
   [INSTANCE_SEARCH_FILTER]: loadInstanceFilter(),
   [INSTANCE_LOADING]: false,
   [INSTANCE_ERROR]: null,
@@ -156,7 +157,7 @@ const instanceSlice = createSlice({
     },
     reset: (state) => {
       state[INSTANCE_SEARCH_FILTER] = {};
-      state[INSTANCE_SEARCH_PAGINATION] = { pageSize: 50 };
+      state[INSTANCE_SEARCH_PAGINATION] = { pageSize: MAX_PAGE_SIZE };
       clearInstanceStorage();
     },
     updateInstance: (state, action) => {
