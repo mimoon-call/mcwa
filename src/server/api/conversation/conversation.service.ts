@@ -582,7 +582,20 @@ export const conversationService = {
 
     logger.debug('addToCrm:payload', { ...message[0], interested: true });
 
-    await webhookRequest({ ...message[0], interested: true });
+    try {
+      await webhookRequest({ ...message[0], interested: true });
+      WhatsappQueue.updateOne(
+        { instanceNumber: phoneNumber, phoneNumber: withPhoneNumber, sentAt: { $exists: true } },
+        { $set: { webhookSuccessFlag: true, webhookErrorMessage: null } }
+      );
+    } catch (error: any) {
+      WhatsappQueue.updateOne(
+        { instanceNumber: phoneNumber, phoneNumber: withPhoneNumber, sentAt: { $exists: true } },
+        { $set: { webhookSuccessFlag: true, webhookErrorMessage: String(error) } }
+      );
+
+      throw error;
+    }
 
     return { returnCode: 0, ...message[0] };
   },

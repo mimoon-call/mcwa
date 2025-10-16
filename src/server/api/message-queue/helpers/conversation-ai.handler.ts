@@ -71,20 +71,23 @@ const handleWebhook = async (doc: MessageDocument) => {
     followUpAt: doc.followUpAt,
   };
 
-  webhookRequest?.(webhookPayload)
-    .catch((error: any) => {
-      WhatsappQueue.updateOne(
-        { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
-        { webhookSuccessFlag: false, webhookErrorMessage: String(error), ...ai }
-      );
-      console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL);
-    })
-    .then(() => {
-      WhatsappQueue.updateOne(
-        { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
-        { webhookSuccessFlag: true, webhookErrorMessage: null, ...ai }
-      );
-    });
+  try {
+    if (!webhookRequest) throw new Error('No webhook URL configured');
+
+    await webhookRequest(webhookPayload);
+
+    WhatsappQueue.updateOne(
+      { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
+      { webhookSuccessFlag: true, webhookErrorMessage: null, ...ai }
+    );
+  } catch (error) {
+    console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL, String(error));
+
+    WhatsappQueue.updateOne(
+      { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
+      { webhookSuccessFlag: false, webhookErrorMessage: String(error), ...ai }
+    );
+  }
 };
 
 const handleAiInterest = async (doc: MessageDocument) => {
