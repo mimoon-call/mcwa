@@ -17,6 +17,8 @@ export type MessageQueueItem = {
   createdAt: Date;
   initiatorMessageId: string | null;
   metaTemplateId: string | null;
+  webhookSuccessFlag: boolean | null;
+  webhookErrorMessage: string | null;
   department?: InterestResult['department'];
 };
 

@@ -3,7 +3,7 @@ import type { MessageDocument } from '@server/services/whatsapp/whatsapp.type';
 import { ObjectId } from 'mongodb';
 import { WhatsAppMessage, WhatsAppUnsubscribe } from '@server/services/whatsapp/whatsapp.db';
 import { OpenAiService } from '@server/services/open-ai/open-ai.service';
-import { classifyInterest } from '@server/api/message-queue/reply/interest.classifier';
+import { classifyInterest, InterestResult } from '@server/api/message-queue/reply/interest.classifier';
 import { wa, app } from '@server/index';
 import { LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
@@ -60,9 +60,31 @@ const handleWebhook = async (doc: MessageDocument) => {
     });
   }
 
-  webhookRequest?.(webhookPayload).catch(() => {
-    console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL);
-  });
+  const ai: Partial<InterestResult> = {
+    interested: doc.interested,
+    intent: doc.intent,
+    reason: doc.reason,
+    confidence: doc.confidence,
+    suggestedReply: doc.suggestedReply,
+    action: doc.action,
+    department: doc.department,
+    followUpAt: doc.followUpAt,
+  };
+
+  webhookRequest?.(webhookPayload)
+    .catch((error: any) => {
+      WhatsappQueue.updateOne(
+        { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
+        { webhookSuccessFlag: false, webhookErrorMessage: String(error), ...ai }
+      );
+      console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL);
+    })
+    .then(() => {
+      WhatsappQueue.updateOne(
+        { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
+        { webhookSuccessFlag: true, webhookErrorMessage: null, ...ai }
+      );
+    });
 };
 
 const handleAiInterest = async (doc: MessageDocument) => {
@@ -226,11 +248,10 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
         const doc = await WhatsAppMessage.findOneAndUpdate(
           { _id: originalMessage._id },
           { $set: ai },
-          {
-            returnDocument: 'after',
-            projection: { __v: 0, internalFlag: 0, warmingFlag: 0, raw: 0 },
-          }
+          { returnDocument: 'after', projection: { __v: 0, internalFlag: 0, warmingFlag: 0, raw: 0 } }
         );
+
+        WhatsappQueue.updateOne({ messageId }, { $set: ai });
 
         if (callWebhookFlag && doc) await handleAiInterest(doc.toObject());
 
