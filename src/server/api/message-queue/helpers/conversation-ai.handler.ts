@@ -73,6 +73,7 @@ const handleWebhook = async (doc: MessageDocument) => {
   try {
     if (!webhookRequest) throw new Error('No webhook URL configured');
 
+    console.info(`handleWebhook:${process.env.LEAD_WEBHOOK_URL}`, webhookPayload);
     await webhookRequest(webhookPayload);
 
     WhatsappQueue.updateOne(
