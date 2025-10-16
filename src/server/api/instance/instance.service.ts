@@ -12,7 +12,8 @@ import {
   WARMUP_TOGGLE,
   WARMUP_TOGGLE_INSTANCE,
 } from '@server/api/instance/instance.map';
-import { WhatsAppAuth, WhatsAppKey } from '@server/services/whatsapp/whatsapp.db';
+import { WhatsAppAuth, WhatsAppKey, WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
+import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import { wa } from '@server/index';
 import ServerError from '@server/middleware/errors/server-error';
 import ExcelService from '@server/services/excel/excel.service';
@@ -101,9 +102,28 @@ export const instanceService = {
   [DELETE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
     const instance = wa.getInstance(phoneNumber);
 
-    await instance?.remove();
-    await WhatsAppAuth.deleteOne({ phoneNumber });
-    await WhatsAppKey.deleteMany({ phoneNumber });
+    // Start a MongoDB session for transaction
+    const session = await WhatsAppAuth.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        // Logout session and remove instance
+        await instance?.disconnect({ clearSocket: true, logout: true }, 'Deleting instance');
+        await instance?.remove();
+
+        // Delete instance auth and keys
+        await WhatsAppAuth.deleteOne({ phoneNumber }, { session });
+        await WhatsAppKey.deleteMany({ phoneNumber }, { session });
+
+        // Delete messages from queue related to this instance
+        await WhatsappQueue.deleteMany({ instanceNumber: phoneNumber }, { session });
+
+        // Delete all messages where this instance is either sender or receiver
+        await WhatsAppMessage.deleteMany({ $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] }, { session });
+      });
+    } finally {
+      await session.endSession();
+    }
   },
 
   [ACTIVE_TOGGLE_INSTANCE]: async (phoneNumber: string): Promise<void> => {
