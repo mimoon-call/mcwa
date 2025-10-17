@@ -273,7 +273,6 @@ const InstanceTable = () => {
     {
       title: 'GENERAL.CREATED_AT',
       value: 'createdAt',
-      hidden: !!instanceFilter.statusCode && instanceFilter.statusCode !== 200,
       class: ['whitespace-nowrap'],
       sortable: true,
       component: ({ item }) => dayjs(item.createdAt).format(DateFormat.DAY_MONTH_YEAR_TIME_FORMAT),
