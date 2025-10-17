@@ -92,6 +92,7 @@ export const messageQueueService = {
       });
 
     const inserted = await WhatsappQueue.insertMany(bulk);
+    messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
 
     return { returnCode: 0, addedCount: inserted.length, blockedCount: blocked.length };
   },
@@ -129,8 +130,6 @@ export const messageQueueService = {
         let hasMoreDocs = true;
 
         while (hasMoreDocs && isSending) {
-          messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
-
           // Check work hours before each message
           if (!isWithinWorkHours()) {
             isSending = false;
