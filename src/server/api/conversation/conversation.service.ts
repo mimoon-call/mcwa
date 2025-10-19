@@ -162,83 +162,28 @@ export const conversationService = {
     interested?: boolean
   ): Promise<SearchAllConversationsRes> => {
     const pipeline: PipelineStage[] = [
-      // Filter out internal messages and empty text
-      { $match: { $and: [{ internalFlag: false }, { text: { $ne: '' } }, { text: { $ne: null } }] } },
-
-      // Create a normalized conversation pair key (always smaller number first)
+      // Filter out queue items that don't have instance numbers or are empty
       {
-        $addFields: {
-          conversationKey: {
-            $cond: [
-              { $lt: ['$fromNumber', '$toNumber'] },
-              { $concat: ['$fromNumber', '|', '$toNumber'] },
-              { $concat: ['$toNumber', '|', '$fromNumber'] },
-            ],
-          },
-          participant1: { $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$fromNumber', '$toNumber'] },
-          participant2: { $cond: [{ $lt: ['$fromNumber', '$toNumber'] }, '$toNumber', '$fromNumber'] },
-          // Get pushName from incoming messages
-          pushName: { $ifNull: ['$raw.pushName', null] },
+        $match: {
+          $and: [
+            { instanceNumber: { $exists: true, $nin: [null, ''] } },
+            { phoneNumber: { $exists: true, $nin: [null, ''] } },
+            { textMessage: { $ne: '' } },
+            // Filter out group chats (phone numbers containing '@')
+            { phoneNumber: { $not: { $regex: '@' } } },
+          ],
         },
       },
 
-      // Filter out group chats (phone numbers containing '@')
-      { $match: { participant1: { $not: { $regex: '@' } }, participant2: { $not: { $regex: '@' } } } },
+      // Create a normalized conversation key
+      {
+        $addFields: {
+          conversationKey: { $concat: ['$phoneNumber', '|', '$instanceNumber'] },
+        },
+      },
     ];
 
-    // Add search filter if searchValue is provided
-    if (searchValue) {
-      pipeline.push({
-        $match: {
-          $or: [
-            { participant1: { $regex: searchValue, $options: 'i' } },
-            { participant2: { $regex: searchValue, $options: 'i' } },
-            { pushName: { $regex: searchValue, $options: 'i' } },
-            { text: { $regex: searchValue, $options: 'i' } },
-          ],
-        },
-      });
-    }
-
     pipeline.push(
-      // Lookup WhatsAppAuth to check which participants are registered
-      {
-        $lookup: {
-          from: 'whatsappauths',
-          let: { participant1: '$participant1', participant2: '$participant2' },
-          pipeline: [
-            { $match: { $expr: { $or: [{ $eq: ['$phoneNumber', '$$participant1'] }, { $eq: ['$phoneNumber', '$$participant2'] }] } } },
-            { $project: { phoneNumber: 1 } },
-          ],
-          as: 'registeredParticipants',
-        },
-      },
-
-      // Add field to identify which participant is not registered and get instance number
-      {
-        $addFields: {
-          registeredPhoneNumbers: { $map: { input: '$registeredParticipants', as: 'p', in: '$$p.phoneNumber' } },
-          unregisteredParticipant: {
-            $switch: {
-              branches: [
-                {
-                  case: { $not: { $in: ['$participant1', { $map: { input: '$registeredParticipants', as: 'p', in: '$$p.phoneNumber' } }] } },
-                  then: '$participant1',
-                },
-                {
-                  case: { $not: { $in: ['$participant2', { $map: { input: '$registeredParticipants', as: 'p', in: '$$p.phoneNumber' } }] } },
-                  then: '$participant2',
-                },
-              ],
-              default: '$participant1', // fallback to participant1 if both are registered (shouldn't happen)
-            },
-          },
-          instanceNumber: {
-            $let: { vars: { firstRegistered: { $first: '$registeredParticipants' } }, in: { $ifNull: ['$$firstRegistered.phoneNumber', null] } },
-          },
-        },
-      },
-
       // Sort by conversation key and createdAt to get the most recent message per conversation
       { $sort: { conversationKey: 1, createdAt: -1 } },
 
@@ -246,42 +191,113 @@ export const conversationService = {
       {
         $group: {
           _id: '$conversationKey',
-          name: { $push: { $ifNull: ['$pushName', null] } },
-          unregisteredParticipant: { $first: '$unregisteredParticipant' },
-          phoneNumber: { $first: '$unregisteredParticipant' },
+          name: { $first: { $ifNull: ['$fullName', '$phoneNumber'] } },
+          phoneNumber: { $first: '$phoneNumber' },
           instanceNumber: { $first: '$instanceNumber' },
-          lastMessage: { $first: '$text' },
           lastMessageAt: { $first: '$createdAt' },
           messageCount: { $sum: 1 },
+          // Get AI classification data from the most recent queue message
+          action: { $first: '$action' },
+          confidence: { $first: '$confidence' },
+          intent: { $first: '$intent' },
+          department: { $first: '$department' },
+          interested: { $first: '$interested' },
+          reason: { $first: '$reason' },
+          followUpAt: { $first: '$followUpAt' },
+          messageId: { $first: '$messageId' },
+          webhookErrorMessage: { $first: '$webhookErrorMessage' },
+          webhookSuccessFlag: { $first: '$webhookSuccessFlag' },
         },
       },
+    );
 
-      { $match: { instanceNumber: { $exists: true } } },
-
-      // Pick the first non-null name from the array, or use unregistered participant phone number as fallback
-      {
-        $set: {
-          name: {
-            $ifNull: [
+    // Add search filter if searchValue is provided - search across entire conversation history
+    if (searchValue) {
+      pipeline.push(
+        // Lookup all messages for this conversation pair
+        {
+          $lookup: {
+            from: 'whatsappmessages',
+            let: { phoneNum: '$phoneNumber', instanceNum: '$instanceNumber' },
+            pipeline: [
               {
-                $let: {
-                  vars: {
-                    foundName: { $first: { $filter: { input: '$name', as: 'n', cond: { $ne: ['$$n', null] } } } },
-                  },
-                  in: {
-                    $cond: [
-                      { $and: [{ $ne: ['$$foundName', null] }, { $ne: ['$$foundName', ''] }] },
-                      '$$foundName',
-                      { $ifNull: ['$unregisteredParticipant', '$participant1'] },
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $or: [
+                          { $and: [{ $eq: ['$fromNumber', '$$phoneNum'] }, { $eq: ['$toNumber', '$$instanceNum'] }] },
+                          { $and: [{ $eq: ['$fromNumber', '$$instanceNum'] }, { $eq: ['$toNumber', '$$phoneNum'] }] },
+                        ],
+                      },
+                      { $ne: ['$text', ''] },
+                      { $ne: ['$text', null] },
                     ],
                   },
                 },
               },
-              '$unregisteredParticipant',
+              {
+                $match: {
+                  text: { $regex: searchValue, $options: 'i' },
+                },
+              },
+              { $limit: 1 },
+            ],
+            as: 'matchingMessages',
+          },
+        },
+        // Filter to only include conversations with matching messages or matching phoneNumber/name
+        {
+          $match: {
+            $or: [
+              { phoneNumber: { $regex: searchValue, $options: 'i' } },
+              { name: { $regex: searchValue, $options: 'i' } },
+              { 'matchingMessages.0': { $exists: true } },
             ],
           },
         },
+        // Remove the temporary array
+        { $project: { matchingMessages: 0 } }
+      );
+    }
+
+    pipeline.push(
+
+      // Lookup WhatsAppMessage to get the last received message (fromNumber is the user, toNumber is the instance)
+      {
+        $lookup: {
+          from: 'whatsappmessages',
+          let: { phoneNum: '$phoneNumber', instanceNum: '$instanceNumber' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$fromNumber', '$$phoneNum'] },
+                    { $eq: ['$toNumber', '$$instanceNum'] },
+                    { $ne: ['$text', ''] },
+                    { $ne: ['$text', null] },
+                  ],
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            { $project: { text: 1, createdAt: 1 } },
+          ],
+          as: 'lastReceivedMessage',
+        },
       },
+
+      // Add lastMessage field from the lookup result
+      {
+        $addFields: {
+          lastMessage: { $arrayElemAt: ['$lastReceivedMessage.text', 0] },
+        },
+      },
+
+      // Remove the temporary array
+      { $project: { lastReceivedMessage: 0 } },
 
       // Sort by most recent message first
       { $sort: { lastMessageAt: -1 } },
@@ -296,59 +312,16 @@ export const conversationService = {
           messageCount: 1,
           instanceNumber: 1,
           phoneNumber: 1,
-        },
-      },
-
-      // Lookup the last messageId from whatsappqueues collection for this conversation
-      {
-        $lookup: {
-          from: 'whatsappqueues',
-          let: { phoneNumber: '$phoneNumber', instanceNumber: '$instanceNumber' },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$phoneNumber', '$$phoneNumber'] },
-                    { $eq: ['$instanceNumber', '$$instanceNumber'] },
-                    { $ne: ['$messageId', null] },
-                    { $ne: ['$messageId', ''] },
-                  ],
-                },
-              },
-            },
-            { $sort: { createdAt: -1 } },
-            { $limit: 1 },
-            { $project: { messageId: 1, fullName: 1 } },
-          ],
-          as: 'lastQueueMessage',
-        },
-      },
-
-      // Lookup the corresponding message from whatsappmessages collection
-      {
-        $lookup: {
-          from: 'whatsappmessages',
-          let: {
-            phoneNumber: '$phoneNumber',
-            instanceNumber: '$instanceNumber',
-            lastMessageId: { $arrayElemAt: ['$lastQueueMessage.messageId', 0] },
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$fromNumber', '$$instanceNumber'] },
-                    { $eq: ['$toNumber', '$$phoneNumber'] },
-                    { $eq: ['$messageId', '$$lastMessageId'] },
-                  ],
-                },
-              },
-            },
-            { $project: { action: 1, confidence: 1, department: 1, interested: 1, reason: 1, intent: 1 } },
-          ],
-          as: 'messageDetails',
+          action: 1,
+          confidence: 1,
+          intent: 1,
+          department: 1,
+          interested: 1,
+          reason: 1,
+          followUpAt: 1,
+          webhookErrorMessage: 1,
+          webhookSuccessFlag: 1,
+          hasStartMessage: { $cond: [{ $and: [{ $ne: ['$messageId', null] }, { $ne: ['$messageId', ''] }] }, true, false] },
         },
       },
 
@@ -363,31 +336,20 @@ export const conversationService = {
         },
       },
 
-      // Merge the fields from the message details
+      // Add unsubscribedAt field
       {
         $addFields: {
-          action: { $arrayElemAt: ['$messageDetails.action', 0] },
-          confidence: { $arrayElemAt: ['$messageDetails.confidence', 0] },
-          intent: { $arrayElemAt: ['$messageDetails.intent', 0] },
-          department: { $arrayElemAt: ['$messageDetails.department', 0] },
-          interested: { $arrayElemAt: ['$messageDetails.interested', 0] },
-          reason: { $arrayElemAt: ['$messageDetails.reason', 0] },
-          followUpAt: { $arrayElemAt: ['$messageDetails.followUpAt', 0] },
           unsubscribedAt: { $arrayElemAt: ['$unsubscribedData.createdAt', 0] },
-          hasStartMessage: { $cond: [{ $gt: [{ $size: '$lastQueueMessage' }, 0] }, true, false] },
         },
       },
 
-      // Set the name field to fullName from lastQueueMessage if available
-      // { $set: { name: { $ifNull: [{ $arrayElemAt: ['$lastQueueMessage.fullName', 0] }, '$name'] } } },
-
-      // Remove the temporary arrays
-      { $project: { lastQueueMessage: 0, messageDetails: 0, unsubscribedData: 0 } }
+      // Remove the temporary array
+      { $project: { unsubscribedData: 0 } }
     );
 
     // Add filter conditions for intents, departments, and interested
-    const filterConditions: any[] = [];
-    const orConditions: any[] = [];
+    const filterConditions: Record<string, unknown>[] = [];
+    const orConditions: Record<string, unknown>[] = [];
 
     if (intents && intents.length > 0) orConditions.push({ intent: { $in: intents } });
     if (departments && departments.length > 0) filterConditions.push({ department: { $in: departments } });
@@ -398,7 +360,7 @@ export const conversationService = {
 
     if (filterConditions.length > 0) pipeline.push({ $match: { $and: filterConditions } });
 
-    const { data, ...rest } = await WhatsAppMessage.pagination<ConversationPairItem>({ page }, pipeline);
+    const { data, ...rest } = await WhatsappQueue.pagination<ConversationPairItem>({ page }, pipeline);
 
     return {
       data: data.map((value) => {
@@ -586,15 +548,13 @@ export const conversationService = {
 
     try {
       await webhookRequest({ ...message[0], interested: true });
-      WhatsappQueue.updateOne(
-        { messageId },
-        { $set: { webhookSuccessFlag: true, webhookErrorMessage: null } }
-      ).catch((err) => logger.error('Failed to update webhook success flag', err));
-    } catch (error: any) {
-      WhatsappQueue.updateOne(
-        { messageId },
-        { $set: { webhookSuccessFlag: false, webhookErrorMessage: String(error) } }
-      ).catch((err) => logger.error('Failed to update webhook error flag', err));
+      WhatsappQueue.updateOne({ messageId }, { $set: { webhookSuccessFlag: true, webhookErrorMessage: null } }).catch((err) =>
+        logger.error('Failed to update webhook success flag', err)
+      );
+    } catch (error: unknown) {
+      WhatsappQueue.updateOne({ messageId }, { $set: { webhookSuccessFlag: false, webhookErrorMessage: String(error) } }).catch((err) =>
+        logger.error('Failed to update webhook error flag', err)
+      );
 
       throw error;
     }
