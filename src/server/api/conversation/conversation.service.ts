@@ -263,7 +263,7 @@ export const conversationService = {
 
     pipeline.push(
 
-      // Lookup WhatsAppMessage to get the last received message (fromNumber is the user, toNumber is the instance)
+      // Lookup WhatsAppMessage to get the last received message and pushName (fromNumber is the user, toNumber is the instance)
       {
         $lookup: {
           from: 'whatsappmessages',
@@ -283,16 +283,25 @@ export const conversationService = {
             },
             { $sort: { createdAt: -1 } },
             { $limit: 1 },
-            { $project: { text: 1, createdAt: 1 } },
+            { $project: { text: 1, createdAt: 1, 'raw.pushName': 1 } },
           ],
           as: 'lastReceivedMessage',
         },
       },
 
-      // Add lastMessage field from the lookup result
+      // Add lastMessage and pushName fields from the lookup result
       {
         $addFields: {
           lastMessage: { $arrayElemAt: ['$lastReceivedMessage.text', 0] },
+          pushName: { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
+          // Update name to use pushName if available, otherwise fall back to phoneNumber
+          name: {
+            $cond: [
+              { $ne: [{ $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] }, null] },
+              { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
+              '$name'
+            ]
+          },
         },
       },
 
