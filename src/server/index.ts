@@ -23,6 +23,7 @@ import { updateMessageHandler } from '@server/api/instance/helpers/update-messag
 import { messageSendingHandler } from '@server/api/instance/helpers/message-sending.handler';
 import { registerConversationSocketHandlers } from '@server/api/conversation/conversation-socket.handlers';
 import { getActiveInstanceState } from '@server/api/instance/helpers/get-active-instance-state';
+import logger from '@server/helpers/logger';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -51,7 +52,7 @@ export const app = new ServerExpress({
 
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
-  debugMode: isProduction ? ['info', 'error'] : true,
+  debugMode: isProduction ? logger.levels : true,
   warmUpOnReady: true,
   onIncomingMessage: incomingMessageHandler,
   onOutgoingMessage: outgoingMessageHandler,

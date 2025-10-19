@@ -130,7 +130,7 @@ export class ServerExpress {
   listen(port?: number) {
     const listenPort = port ?? 3000;
     this.server.listen(listenPort, () => {
-      console.log(`🚀 Server listening on http://localhost:${listenPort}`);
+      console.info(`🚀 Server listening on http://localhost:${listenPort}`);
     });
   }
 }

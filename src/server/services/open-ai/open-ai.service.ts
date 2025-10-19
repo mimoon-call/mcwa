@@ -1,6 +1,7 @@
 // open-ai.service.ts
 import axios, { type AxiosResponse } from 'axios';
 import type { OpenAiRequest, OpenAiMessage, JsonSchema, OpenAiFunction, OpenAiResponse, TTSFormat, STTModal, TTSModal } from './open-ai.types';
+import logger from '@server/helpers/logger';
 
 export interface OpenAiServiceConfig {
   apiKey?: string;
@@ -47,7 +48,7 @@ export class OpenAiService {
       return await asyncFunction(lastError, runTime + 1);
     } catch (err: unknown) {
       const errorMessage = this.extractErrMsg(err);
-      console.error('OpenAiService', `${runTime + 1}/${this.maxRetries}`, errorMessage);
+      logger.error('OpenAiService:retryAsyncFunction', `${runTime + 1}/${this.maxRetries}`, errorMessage);
       await new Promise((r) => setTimeout(r, this.delayMs));
 
       return this.retryAsyncFunction(asyncFunction, runTime + 1, errorMessage);
@@ -60,7 +61,7 @@ export class OpenAiService {
 
     return this.retryAsyncFunction(async (lastError, attempt) => {
       if (lastError) {
-        console.warn(`OpenAiService retry attempt ${attempt}: ${lastError}`);
+        logger.warn('OpenAiService:request', `retry attempt ${attempt}: ${lastError}`);
       }
 
       const response: AxiosResponse<OpenAiResponse> = await axios.post(this.apiUrl, requestPayload, {
@@ -113,8 +114,7 @@ export class OpenAiService {
     try {
       return JSON.parse(raw) as T;
     } catch (error) {
-      console.error('Failed to parse JSON response:', error);
-      console.error('Raw response:', raw);
+      logger.error('OpenAiService:requestWithJsonSchema', 'Failed to parse JSON response:', error, raw);
       return null;
     }
   }
@@ -127,7 +127,7 @@ export class OpenAiService {
 
     // Use your built-in retry wrapper
     return this.retryAsyncFunction<Buffer>(async (lastError, attempt) => {
-      if (lastError) console.warn('OpenAiService', `TTS retry ${attempt}: ${lastError}`);
+      if (lastError) logger.warn('OpenAiService:textToSpeech', `TTS retry ${attempt}: ${lastError}`);
 
       const res = await axios.post(
         ttsUrl,
@@ -151,7 +151,7 @@ export class OpenAiService {
     const model = options.model ?? 'gpt-4o-mini-transcribe'; // or "whisper-1"
 
     return this.retryAsyncFunction<string>(async (lastError, attempt) => {
-      if (lastError) console.warn('OpenAiService', `STT retry ${attempt}: ${lastError}`);
+      if (lastError) logger.warn('OpenAiService:speechToText', `STT retry ${attempt}: ${lastError}`);
 
       const formData = new FormData();
       formData.append('model', model);
