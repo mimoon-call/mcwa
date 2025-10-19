@@ -5,7 +5,7 @@ import { getLastZIndex } from '@helpers/get-last-z-index';
 const WIDTH_LIMIT = 300;
 
 type TooltipOptions = {
-  text?: string;
+  text?: string | null;
   color?: string;
   isAlwaysOn?: boolean;
   timeout?: number;
@@ -31,7 +31,9 @@ const getFormattedText = (element: HTMLElement): string => {
   return text.trim().replace(/\n\s*\n/g, '\n');
 };
 
-const setTooltipProps = (event: MouseEvent, tooltipEl: HTMLElement, color: string, text?: string, style?: CSSProperties) => {
+const setTooltipProps = (event: MouseEvent, tooltipEl: HTMLElement, color: string, text?: string | null, style?: CSSProperties) => {
+  if (text === null) return;
+
   const targetEl = event.target as HTMLElement;
   const computedStyle = window.getComputedStyle(targetEl);
   const direction = computedStyle.getPropertyValue('direction');

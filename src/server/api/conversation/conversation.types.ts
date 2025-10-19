@@ -1,6 +1,7 @@
 import type { WAAppAuth, WAMessage } from '@server/services/whatsapp/whatsapp-instance.type';
 import type { Pagination, EntityList } from '@models';
 import { InterestResult } from '@server/api/message-queue/reply/interest.classifier';
+import { MessageQueueItem } from '@server/api/message-queue/message-queue.types';
 
 export type SearchConversationItem = { phoneNumber: string; name: string | null; lastMessage: string; lastMessageAt: string; messageCount: number };
 
@@ -36,6 +37,8 @@ export type ConversationPairItem = {
   phoneNumber: string;
   instanceNumber: string | null;
   instanceConnected: boolean;
+  webhookErrorMessage?: MessageQueueItem['webhookErrorMessage'];
+  webhookSuccessFlag?: MessageQueueItem['webhookSuccessFlag'];
   action?: InterestResult['action'];
   confidence?: InterestResult['confidence'];
   department?: InterestResult['department'];

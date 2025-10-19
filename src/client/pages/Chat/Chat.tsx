@@ -51,7 +51,7 @@ import Avatar from '@components/Avatar/Avatar';
 import { useTranslation } from 'react-i18next';
 import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
 import { RESUBSCRIBE_NUMBER, UNSUBSCRIBE_NUMBER } from '@client/pages/Queue/store/message-queue.constants';
-import { useAsyncFn, useToast } from '@hooks';
+import { useAsyncFn, useToast, useTooltip } from '@hooks';
 
 type ChatProps = {
   className?: string;
@@ -63,6 +63,9 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
   const { t } = useTranslation();
   const phoneNumber = internationalPhonePrettier(contact.phoneNumber, '-', true);
   const contactName = contact.name === contact.phoneNumber ? '-' : contact.name;
+  const crmTooltipRef = useTooltip<HTMLParagraphElement>({ 
+    text: !contact.webhookSuccessFlag && contact.webhookErrorMessage ? contact.webhookErrorMessage : undefined,
+  });
 
   return (
     <div className="flex items-center justify-between p-4 border-b border-gray-300 bg-white">
@@ -99,6 +102,18 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
           <div className="flex flex-col pt-1 ps-4 border-s">
             <label className="text-gray-500 text-sm font-medium">{t('QUEUE.CONFIDENCE')}</label>
             <p>{contact.confidence}</p>
+          </div>
+        )}
+
+        {contact.webhookSuccessFlag !== undefined && contact.webhookSuccessFlag !== null && (
+          <div className="flex flex-col pt-1 ps-4 border-s">
+            <label className="text-gray-500 text-sm font-medium">{t('QUEUE.CRM_STATUS')}</label>
+            <p
+              ref={crmTooltipRef}
+              className={contact.webhookSuccessFlag ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}
+            >
+              {contact.webhookSuccessFlag ? t('QUEUE.CRM_STATUS_SUCCESS') : t('QUEUE.CRM_STATUS_FAILED')}
+            </p>
           </div>
         )}
       </div>
@@ -162,8 +177,14 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
   });
 
   const { call: addToCrmRequest } = useAsyncFn(() => addToCrm(selectedContact!.instanceNumber, selectedContact!.phoneNumber), {
-    successCallback: () => toast.success('QUEUE.LEAD_ADDED_TO_CRM_SUCCESSFULLY'),
-    errorCallback: () => toast.error('QUEUE.FAILED_TO_ADD_LEAD_TO_CRM'),
+    successCallback: () => {
+      toast.success('QUEUE.LEAD_ADDED_TO_CRM_SUCCESSFULLY');
+      dispatch(updateGlobalSelectedContact({ webhookSuccessFlag: true, webhookErrorMessage: null }));
+    },
+    errorCallback: (error) => {
+      toast.error('QUEUE.FAILED_TO_ADD_LEAD_TO_CRM');
+      dispatch(updateGlobalSelectedContact({ webhookSuccessFlag: false, webhookErrorMessage: error?.errorMessage?.[0]?.message || 'Unknown error' }));
+    },
     throwError: true,
   });
 

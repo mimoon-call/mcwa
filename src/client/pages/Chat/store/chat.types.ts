@@ -22,6 +22,8 @@ export type GlobalChatContact = {
   followUpAt?: string | null;
   hasStartMessage: boolean;
   unsubscribedAt?: string | null;
+  webhookSuccessFlag?: boolean | null;
+  webhookErrorMessage?: string | null;
 };
 
 export type ChatMessage = {

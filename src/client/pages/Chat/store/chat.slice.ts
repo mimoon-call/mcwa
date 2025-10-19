@@ -377,6 +377,17 @@ const chatSliceReducer = createSlice({
       if (!state[GLOBAL_SELECTED_CONTACT]) return;
 
       state[GLOBAL_SELECTED_CONTACT] = { ...state[GLOBAL_SELECTED_CONTACT], ...action.payload };
+
+      // Also update the conversation in the list if it exists
+      const existingConversations = (state[CHAT_SEARCH_DATA] as GlobalChatContact[]) || [];
+      const conversationIndex = existingConversations.findIndex(
+        (conv) =>
+          conv.instanceNumber === state[GLOBAL_SELECTED_CONTACT]!.instanceNumber && conv.phoneNumber === state[GLOBAL_SELECTED_CONTACT]!.phoneNumber
+      );
+
+      if (conversationIndex !== -1) {
+        existingConversations[conversationIndex] = { ...existingConversations[conversationIndex], ...action.payload };
+      }
     },
   },
   extraReducers: (builder) => {
