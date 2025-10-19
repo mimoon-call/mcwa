@@ -63,7 +63,7 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
   const { t } = useTranslation();
   const phoneNumber = internationalPhonePrettier(contact.phoneNumber, '-', true);
   const contactName = contact.name === contact.phoneNumber ? '-' : contact.name;
-  const crmTooltipRef = useTooltip<HTMLParagraphElement>({ 
+  const crmTooltipRef = useTooltip<HTMLParagraphElement>({
     text: !contact.webhookSuccessFlag && contact.webhookErrorMessage ? contact.webhookErrorMessage : undefined,
   });
 
@@ -108,10 +108,7 @@ const ChatHeader = ({ contact }: { contact?: GlobalChatContact | null }) => {
         {contact.webhookSuccessFlag !== undefined && contact.webhookSuccessFlag !== null && (
           <div className="flex flex-col pt-1 ps-4 border-s">
             <label className="text-gray-500 text-sm font-medium">{t('QUEUE.CRM_STATUS')}</label>
-            <p
-              ref={crmTooltipRef}
-              className={contact.webhookSuccessFlag ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}
-            >
+            <p ref={crmTooltipRef} className={contact.webhookSuccessFlag ? 'text-green-600 font-medium' : 'text-red-600 font-medium underline'}>
               {contact.webhookSuccessFlag ? t('QUEUE.CRM_STATUS_SUCCESS') : t('QUEUE.CRM_STATUS_FAILED')}
             </p>
           </div>

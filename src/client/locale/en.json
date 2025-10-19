@@ -130,7 +130,7 @@
     "FAILED_TO_ADD_LEAD_TO_CRM": "Failed to add lead to CRM",
     "CRM_STATUS": "CRM",
     "CRM_STATUS_SUCCESS": "Added",
-    "CRM_STATUS_FAILED": "Not Added",
+    "CRM_STATUS_FAILED": "Failed",
     "MESSAGE_SENDING_STARTED": "Message sending started, processing {{totalMessages}} messages via {{totalInstances}} instances",
     "FAILED_TO_START_SENDING_MESSAGES": "Failed to start sending messages",
     "ERROR_NO_ACTIVE_INSTANCES": "Cannot start sending messages - no active instances",
