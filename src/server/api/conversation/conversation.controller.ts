@@ -15,7 +15,7 @@ import { MAX_PAGE_SIZE, RegexPattern } from '@server/constants';
 import {
   GET_CONVERSATION,
   SEARCH_CONVERSATIONS,
-  SEARCH_ALL_CONVERSATIONS,
+  SEARCH_ADS_CONVERSATIONS,
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
@@ -41,7 +41,7 @@ export const conversationController = {
     res.send(await conversationService[GET_CONVERSATION](phoneNumber, withPhoneNumber, page));
   },
 
-  [SEARCH_ALL_CONVERSATIONS]: async (req: Request<never, never, SearchAllConversationsReq>, res: Response<SearchAllConversationsRes>) => {
+  [SEARCH_ADS_CONVERSATIONS]: async (req: Request<never, never, SearchAllConversationsReq>, res: Response<SearchAllConversationsRes>) => {
     const { page, searchValue, intents, departments, interested } = await new RecordValidator(req.body, [
       ['searchValue', { type: ['String'] }],
       ['intents', { type: [['Array', 'Null']] }],
@@ -52,7 +52,7 @@ export const conversationController = {
       ['page.pageSort', { type: [['Object', 'Null']] }],
     ]).validate();
 
-    res.send(await conversationService[SEARCH_ALL_CONVERSATIONS](page, searchValue, intents, departments, interested ?? undefined));
+    res.send(await conversationService[SEARCH_ADS_CONVERSATIONS](page, searchValue, intents, departments, interested ?? undefined));
   },
 
   [SEARCH_CONVERSATIONS]: async (req: Request<{ phoneNumber: string }, never, SearchConversationReq>, res: Response<SearchConversationRes>) => {

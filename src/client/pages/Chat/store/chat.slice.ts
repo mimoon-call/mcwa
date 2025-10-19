@@ -18,7 +18,7 @@ import {
   CHAT_SET_SELECTED_CONTACT,
   CHAT_DELETE_CONVERSATION,
   CHAT_REMOVE_CONVERSATION,
-  CHAT_SEARCH_ALL_CONVERSATIONS,
+  CHAT_SEARCH_ADS_CONVERSATIONS,
   CHAT_SEARCH_CONVERSATIONS,
   CHAT_SET_SELECTED_PHONE_NUMBER,
   INSTANCE_GET_CONVERSATION,
@@ -131,7 +131,7 @@ const api = new ApiService('/conversation');
 
 // Async thunk for search all conversations (Global Chat)
 const searchAllConversations = createAsyncThunk(
-  `${StoreEnum.globalChat}/${CHAT_SEARCH_ALL_CONVERSATIONS}`,
+  `${StoreEnum.globalChat}/${CHAT_SEARCH_ADS_CONVERSATIONS}`,
   async ({ page, searchValue, intents, departments, interested }: SearchAllConversationsReq, { rejectWithValue, getState }) => {
     try {
       const state = getState() as RootState;
@@ -146,7 +146,7 @@ const searchAllConversations = createAsyncThunk(
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
 
-      const result = await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ALL_CONVERSATIONS, data);
+      const result = await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ADS_CONVERSATIONS, data);
 
       return { ...result, isNewSearch: searchValue !== currentSearchValue };
     } catch (error: unknown) {
@@ -263,7 +263,7 @@ const loadMoreGlobalConversations = createAsyncThunk(
         interested: interested !== undefined ? interested : lastSearchParams?.interested,
       };
 
-      return await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ALL_CONVERSATIONS, data);
+      return await api.post<SearchAllConversationsRes, typeof data>(CHAT_SEARCH_ADS_CONVERSATIONS, data);
     } catch (error: unknown) {
       return rejectWithValue(error as ErrorResponse);
     }
@@ -609,7 +609,7 @@ export const chatSlice = {
   actions: chatSliceReducer.actions,
 
   // Global chat async actions using constants
-  [CHAT_SEARCH_ALL_CONVERSATIONS]: searchAllConversations,
+  [CHAT_SEARCH_ADS_CONVERSATIONS]: searchAllConversations,
   [CHAT_GET_CONVERSATION]: getGlobalConversation,
   [CHAT_LOAD_MORE_MESSAGES]: loadMoreGlobalMessages,
   [CHAT_LOAD_MORE_CONVERSATIONS]: loadMoreGlobalConversations,

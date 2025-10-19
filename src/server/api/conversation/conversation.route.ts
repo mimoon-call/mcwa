@@ -4,7 +4,7 @@ import { conversationController } from '@server/api/conversation/conversation.co
 import {
   GET_CONVERSATION,
   SEARCH_CONVERSATIONS,
-  SEARCH_ALL_CONVERSATIONS,
+  SEARCH_ADS_CONVERSATIONS,
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
@@ -23,7 +23,7 @@ conversationRoute.post(
   routeMiddleware({ isAuthRequired: true }, conversationController[GET_CONVERSATION])
 );
 
-conversationRoute.post(`/${SEARCH_ALL_CONVERSATIONS}`, routeMiddleware({ isAuthRequired: true }, conversationController[SEARCH_ALL_CONVERSATIONS]));
+conversationRoute.post(`/${SEARCH_ADS_CONVERSATIONS}`, routeMiddleware({ isAuthRequired: true }, conversationController[SEARCH_ADS_CONVERSATIONS]));
 
 conversationRoute.post(`/${SEND_MESSAGE}/:fromNumber/:toNumber`, routeMiddleware({ isAuthRequired: true }, conversationController[SEND_MESSAGE]));
 

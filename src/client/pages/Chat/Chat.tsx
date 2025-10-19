@@ -15,7 +15,7 @@ import {
   CHAT_ADD_INCOMING_MESSAGE,
   CHAT_ADD_NEW_CONVERSATION,
   CHAT_RESET_PAGINATION,
-  CHAT_SEARCH_ALL_CONVERSATIONS,
+  CHAT_SEARCH_ADS_CONVERSATIONS,
   CHAT_GET_CONVERSATION,
   CHAT_DELETE_CONVERSATION,
   CHAT_SET_SELECTED_CONTACT,
@@ -132,7 +132,7 @@ const Chat: React.FC<ChatProps> = ({ className }) => {
 
   // Get all chat actions using constants
   const {
-    [CHAT_SEARCH_ALL_CONVERSATIONS]: searchConversations,
+    [CHAT_SEARCH_ADS_CONVERSATIONS]: searchConversations,
     [CHAT_GET_CONVERSATION]: getConversation,
     [CHAT_DELETE_CONVERSATION]: deleteConversation,
     [CHAT_ADD_INCOMING_MESSAGE]: addIncomingMessage,

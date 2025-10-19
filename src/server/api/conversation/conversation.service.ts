@@ -12,7 +12,7 @@ import { WhatsappQueue } from '@server/api/message-queue/whatsapp.queue';
 import {
   GET_CONVERSATION,
   SEARCH_CONVERSATIONS,
-  SEARCH_ALL_CONVERSATIONS,
+  SEARCH_ADS_CONVERSATIONS,
   SEND_MESSAGE,
   DELETE_CONVERSATION,
   AI_REASONING_CONVERSATION,
@@ -154,7 +154,7 @@ export const conversationService = {
     };
   },
 
-  [SEARCH_ALL_CONVERSATIONS]: async (
+  [SEARCH_ADS_CONVERSATIONS]: async (
     page: Pagination,
     searchValue?: string,
     intents?: string[],
@@ -209,7 +209,7 @@ export const conversationService = {
           webhookErrorMessage: { $first: '$webhookErrorMessage' },
           webhookSuccessFlag: { $first: '$webhookSuccessFlag' },
         },
-      },
+      }
     );
 
     // Add search filter if searchValue is provided - search across entire conversation history
@@ -263,7 +263,6 @@ export const conversationService = {
     }
 
     pipeline.push(
-
       // Lookup WhatsAppMessage to get the last received message and pushName (fromNumber is the user, toNumber is the instance)
       {
         $lookup: {
@@ -295,11 +294,7 @@ export const conversationService = {
       {
         $addFields: {
           lastMessage: {
-            $cond: [
-              { $gt: [{ $size: '$lastReceivedMessage' }, 0] },
-              { $arrayElemAt: ['$lastReceivedMessage.text', 0] },
-              '$textMessage'
-            ]
+            $cond: [{ $gt: [{ $size: '$lastReceivedMessage' }, 0] }, { $arrayElemAt: ['$lastReceivedMessage.text', 0] }, '$textMessage'],
           },
           pushName: { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
           // Update name to use pushName if available, otherwise fall back to phoneNumber
@@ -307,8 +302,8 @@ export const conversationService = {
             $cond: [
               { $ne: [{ $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] }, null] },
               { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
-              '$name'
-            ]
+              '$name',
+            ],
           },
         },
       },

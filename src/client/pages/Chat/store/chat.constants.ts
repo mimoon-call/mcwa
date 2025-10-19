@@ -25,7 +25,7 @@ export const CHAT_LOAD_MORE_CONVERSATIONS = 'load-more-conversations';
 export const CHAT_SET_SELECTED_CONTACT = 'set-selected-contact';
 export const CHAT_DELETE_CONVERSATION = 'delete-conversation';
 export const CHAT_REMOVE_CONVERSATION = 'remove-conversation';
-export const CHAT_SEARCH_ALL_CONVERSATIONS = 'search-all-conversations';
+export const CHAT_SEARCH_ADS_CONVERSATIONS = 'search-ads-conversations';
 export const CHAT_SEARCH_CONVERSATIONS = 'search-conversations';
 export const CHAT_SET_SELECTED_PHONE_NUMBER = 'set-selected-phone-number';
 
