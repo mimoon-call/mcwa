@@ -33,7 +33,7 @@ const handleWebhook = async (doc: MessageDocument) => {
 
     const api = new HttpService({ baseURL: url, timeout: 30 * 1000, headers: { 'Content-type': 'application/json; charset=UTF-8' } });
 
-    return (payload: LeadWebhookPayload) => api.post<void, LeadWebhookPayload>('', payload, { signatureKey: process.env.WEBHOOK_SECRET });
+    return (payload: LeadWebhookPayload) => api.post<any, LeadWebhookPayload>('', payload, { signatureKey: process.env.WEBHOOK_SECRET });
   })();
 
   const additionalData = (
@@ -71,22 +71,25 @@ const handleWebhook = async (doc: MessageDocument) => {
   };
 
   try {
+    console.log('handleWebhook:posting to', process.env.LEAD_WEBHOOK_URL, webhookPayload);
     if (!webhookRequest) throw new Error('No webhook URL configured');
 
     console.info(`handleWebhook:${process.env.LEAD_WEBHOOK_URL}`, webhookPayload);
-    await webhookRequest(webhookPayload);
+    const res = await webhookRequest(webhookPayload);
+
+    console.info(`handleWebhook:response from ${process.env.LEAD_WEBHOOK_URL}`, res);
 
     WhatsappQueue.updateOne(
       { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
       { webhookSuccessFlag: true, webhookErrorMessage: null, ...ai }
-    );
+    ).catch((error) => console.error('Failed to update webhook success flag:', error));
   } catch (error) {
     console.error('handleWebhook:failed', process.env.LEAD_WEBHOOK_URL, String(error));
 
     WhatsappQueue.updateOne(
       { instanceNumber: doc.fromNumber, phoneNumber: doc.toNumber, messageId: doc.messageId },
       { webhookSuccessFlag: false, webhookErrorMessage: String(error), ...ai }
-    );
+    ).catch((error) => console.error('Failed to update webhook error flag:', error));
   }
 };
 
@@ -254,7 +257,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           { returnDocument: 'after', projection: { __v: 0, internalFlag: 0, warmingFlag: 0, raw: 0 } }
         );
 
-        WhatsappQueue.updateOne({ messageId }, { $set: ai });
+        WhatsappQueue.updateOne({ messageId }, { $set: ai }).catch((error) => console.error('Failed to update queue with AI classification:', error));
 
         if (callWebhookFlag && doc) await handleAiInterest(doc.toObject());
 
