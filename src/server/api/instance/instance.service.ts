@@ -106,11 +106,8 @@ export const instanceService = {
     const session = await WhatsAppAuth.startSession();
 
     try {
+      // Perform all database operations in a transaction
       await session.withTransaction(async () => {
-        // Logout session and remove instance
-        await instance?.disconnect({ clearSocket: true, logout: true }, 'Deleting instance');
-        await instance?.remove();
-
         // Delete instance auth and keys
         await WhatsAppAuth.deleteOne({ phoneNumber }, { session });
         await WhatsAppKey.deleteMany({ phoneNumber }, { session });
@@ -121,6 +118,10 @@ export const instanceService = {
         // Delete all messages where this instance is either sender or receiver
         await WhatsAppMessage.deleteMany({ $or: [{ fromNumber: phoneNumber }, { toNumber: phoneNumber }] }, { session });
       });
+
+      // Only after successful transaction, disconnect and remove the instance
+      await instance?.disconnect({ clearSocket: true, logout: true }, 'Deleting instance');
+      await instance?.remove();
     } finally {
       await session.endSession();
     }
