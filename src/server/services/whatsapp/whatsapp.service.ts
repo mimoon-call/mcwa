@@ -103,14 +103,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
       const internalPhoneNumber = (await this.listAppAuth()).map(({ phoneNumber }) => phoneNumber);
       const internalFlag = internalPhoneNumber.includes(message.fromNumber);
 
-      setTimeout(
-        () => {
-          const fromInstance = this.instances.get(message.fromNumber);
-          fromInstance?.read(raw.key);
-        },
-        this.getRealisticDelay(500, 2000)
-      );
-
       return Promise.allSettled([
         config.onIncomingMessage?.({ ...message, internalFlag }, raw, ...arg),
         ...this.messageCallback.map((cb) => cb?.({ ...message, internalFlag }, raw, ...arg)),
