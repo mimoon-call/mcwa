@@ -194,6 +194,7 @@ export const conversationService = {
           name: { $first: { $ifNull: ['$fullName', '$phoneNumber'] } },
           phoneNumber: { $first: '$phoneNumber' },
           instanceNumber: { $first: '$instanceNumber' },
+          textMessage: { $first: '$textMessage' }, // Keep the queue message text as fallback
           lastMessageAt: { $first: '$createdAt' },
           messageCount: { $sum: 1 },
           // Get AI classification data from the most recent queue message
@@ -290,9 +291,16 @@ export const conversationService = {
       },
 
       // Add lastMessage and pushName fields from the lookup result
+      // If no received message exists, fall back to the queue message
       {
         $addFields: {
-          lastMessage: { $arrayElemAt: ['$lastReceivedMessage.text', 0] },
+          lastMessage: {
+            $cond: [
+              { $gt: [{ $size: '$lastReceivedMessage' }, 0] },
+              { $arrayElemAt: ['$lastReceivedMessage.text', 0] },
+              '$textMessage'
+            ]
+          },
           pushName: { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
           // Update name to use pushName if available, otherwise fall back to phoneNumber
           name: {
