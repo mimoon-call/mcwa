@@ -75,19 +75,27 @@ const InstanceItem = ({ item }: { item: InstanceItem }) => {
 };
 
 const ActiveStatus = ({ item }: { item: InstanceItem }) => {
+  const toast = useToast();
   const { [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate } = instanceStore;
 
-  const dispatch = useDispatch<AppDispatch>();
-  const onActiveToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceActivate(phoneNumber));
+  const { call: onActiveToggle } = useAsyncFn(async ({ phoneNumber }: InstanceItem) => await toggleInstanceActivate(phoneNumber), {
+    errorCallback: (_, text) => {
+      toast.error(text || 'INSTANCE.ACTIVE_STATUS_TOGGLE_FAILED');
+    },
+  });
 
   return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.isActive} onUpdateModelValue={() => onActiveToggle(item)} />;
 };
 
 const WarmStatus = ({ item }: { item: InstanceItem }) => {
+  const toast = useToast();
   const { [WARMUP_TOGGLE_INSTANCE]: toggleInstanceWarmUp } = instanceStore;
 
-  const dispatch = useDispatch<AppDispatch>();
-  const onWarmUpToggle = async ({ phoneNumber }: InstanceItem) => await dispatch(toggleInstanceWarmUp(phoneNumber));
+  const { call: onWarmUpToggle } = useAsyncFn(async ({ phoneNumber }: InstanceItem) => await toggleInstanceWarmUp(phoneNumber), {
+    errorCallback: (_, text) => {
+      toast.error(text || 'INSTANCE.WARM_STATUS_TOGGLE_FAILED');
+    },
+  });
 
   return <ToggleSwitch className="flex align-middle justify-center" modelValue={item.hasWarmedUp} onUpdateModelValue={() => onWarmUpToggle(item)} />;
 };
