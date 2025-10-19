@@ -115,6 +115,10 @@ export const messageQueueService = {
     // Check if we're within work hours before starting
     if (!isWithinWorkHours()) throw new ServerError('QUEUE.ERROR_SENDING_OUTSIDE_WORKTIME', ErrorCodeEnum.BAD_REQUEST_400);
 
+    if (!messageCount) {
+      messageCount = await WhatsappQueue.countDocuments({ sentAt: { $exists: false } });
+    }
+
     const totalInstances = wa.listInstanceNumbers({ hasWarmedUp: true, onlyConnectedFlag: true }).length;
     if (totalInstances === 0) throw new ServerError('QUEUE.ERROR_NO_ACTIVE_INSTANCES', ErrorCodeEnum.BAD_REQUEST_400);
 
