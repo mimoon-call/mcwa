@@ -104,40 +104,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private recovering: boolean = false;
 
   private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
-  
-  // More realistic idle times: 2-8 seconds with occasional longer pauses
-  private randomIdle = (min = 2000, max = 8000): number => {
-    const base = min + Math.floor(Math.random() * (max - min));
-    // 15% chance of much longer pause (10-20 seconds) - human distraction
-    if (Math.random() < 0.15) {
-      return base + Math.floor(Math.random() * 12000) + 10000;
-    }
-    return base;
-  };
+  private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
 
-  // More realistic human typing: 40-60 WPM with variability
   private humanDelayFor(text: string): number {
-    if (!text) return 2000 + Math.floor(Math.random() * 1000); // 2-3s for empty
-    
-    const chars = text.length;
-    
-    // Average typing speed: 50 WPM = ~250 characters per minute = ~4.2 chars/sec
-    // But humans vary: 40-60 WPM range
-    const wpmVariation = 40 + Math.random() * 20; // 40-60 WPM
-    const charsPerSecond = (wpmVariation * 5) / 60; // ~3.3-5 chars/sec
-    const baseTypingTime = (chars / charsPerSecond) * 1000;
-    
-    // Add thinking time: 0.5-2 seconds per sentence
-    const sentences = Math.max(1, text.split(/[.!?]+/).length - 1);
-    const thinkingTime = sentences * (500 + Math.random() * 1500);
-    
-    // Add random pauses (hesitation): 10% chance of 1-3 second pause
-    const hesitation = Math.random() < 0.1 ? 1000 + Math.random() * 2000 : 0;
-    
-    const total = baseTypingTime + thinkingTime + hesitation;
-    
-    // Minimum 2 seconds, maximum 60 seconds (for very long messages)
-    return Math.min(60000, Math.max(2000, total));
+    if (!text) return 1500; // Minimum delay for empty text (1.5s)
+
+    const words = Math.max(1, text.split(/\s+/).length);
+    const base = 800 + words * 220; // base typing time
+    const jitter = Math.floor(Math.random() * 1200);
+
+    return base + jitter; // 1–5s typical
   }
 
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
@@ -1158,39 +1134,20 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startKeepAlive(): void {
     this.stopKeepAlive();
 
-    // More realistic keep-alive: 3-5 minutes with randomization to avoid patterns
-    const getNextKeepAliveDelay = () => {
-      const baseDelay = 180000; // 3 minutes base
-      const variation = Math.random() * 120000; // +0-2 minutes
-      return baseDelay + variation; // 3-5 minutes
-    };
-
-    const scheduleNextKeepAlive = () => {
-      const delay = getNextKeepAliveDelay();
-      this.keepAliveInterval = setTimeout(async () => {
-        try {
-          if (this.socket?.user && this.socket.user.id) {
-            // Only send presence if we haven't sent anything recently (no activity)
-            // This avoids excessive presence updates during active usage
-            await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-          }
-        } catch (error) {
-          this.log('error', `Keep-alive failed:`, error);
+    this.keepAliveInterval = setInterval(async () => {
+      try {
+        if (this.socket?.user && this.socket.user.id) {
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
         }
-        
-        // Schedule next keep-alive with new random delay
-        scheduleNextKeepAlive();
-      }, delay) as unknown as NodeJS.Timeout;
-    };
-
-    scheduleNextKeepAlive();
+      } catch (error) {
+        this.log('error', `Keep-alive failed:`, error);
+      }
+    }, 30000); // 30 seconds
   }
 
   private stopKeepAlive(): void {
-    if (this.keepAliveInterval) {
-      clearTimeout(this.keepAliveInterval);
-      this.keepAliveInterval = undefined;
-    }
+    clearInterval(this.keepAliveInterval);
+    this.keepAliveInterval = undefined;
   }
 
   // Message delivery tracking methods
@@ -1446,98 +1403,57 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startHealthCheck(): void {
     this.stopHealthCheck();
 
-    // Less aggressive health check: 8-12 minutes with randomization
-    const getNextHealthCheckDelay = () => {
-      const baseDelay = 480000; // 8 minutes base
-      const variation = Math.random() * 240000; // +0-4 minutes
-      return baseDelay + variation; // 8-12 minutes
-    };
-
-    const scheduleNextHealthCheck = () => {
-      const delay = getNextHealthCheckDelay();
-      this.healthCheckInterval = setTimeout(async () => {
-        try {
-          // Don't send presence updates - just check if socket is responsive
-          // Presence updates are handled by keep-alive
-          if (this.socket?.user?.id) {
-            // Simple connectivity check without additional presence spam
-            const isAlive = !!this.socket.user;
-            if (!isAlive) {
-              throw new Error('Socket appears unresponsive');
-            }
-          }
-        } catch (error) {
-          this.log('error', 'Health check failed, connection may be dead:', error);
-          this.onError(error);
+    this.healthCheckInterval = setInterval(async () => {
+      try {
+        // Try to send a presence update to check if connection is still alive
+        if (this.socket?.user?.id) {
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
         }
-        
-        // Schedule next health check with new random delay
-        scheduleNextHealthCheck();
-      }, delay) as unknown as NodeJS.Timeout;
-    };
+      } catch (error) {
+        this.log('error', 'Health check failed, connection may be dead:', error);
 
-    scheduleNextHealthCheck();
+        this.onError(error);
+      }
+    }, 60000); // 60 seconds
   }
 
   private stopHealthCheck(): void {
-    if (this.healthCheckInterval) {
-      clearTimeout(this.healthCheckInterval);
-      this.healthCheckInterval = undefined;
-    }
+    clearInterval(this.healthCheckInterval);
+    this.healthCheckInterval = undefined;
   }
 
   private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
+    let keepAlive: NodeJS.Timeout | undefined;
+
     try {
-      // Only subscribe once, not every time we send a message
       await this.socket.presenceSubscribe(jid);
-      
-      // Send initial typing/recording indicator
-      await this.socket.sendPresenceUpdate(type, jid);
-      
-      // For longer messages, send occasional updates with random intervals
-      // But not too frequently - humans don't constantly re-trigger typing
-      if (ms > 10000) { // Only for messages taking >10 seconds
-        const numUpdates = Math.floor(ms / 15000); // Update every ~15 seconds
-        for (let i = 0; i < numUpdates; i++) {
-          await this.delay(12000 + Math.random() * 6000); // 12-18 seconds
-          
-          // 20% chance to pause (human stops typing momentarily)
-          if (Math.random() < 0.2) {
-            await this.socket.sendPresenceUpdate('paused', jid);
-            await this.delay(1000 + Math.random() * 2000); // Pause 1-3 seconds
-          }
-          
-          try {
-            await this.socket?.sendPresenceUpdate(type, jid);
-          } catch (error) {
-            this.log('error', 'Failed to send presence update:', error);
-            break; // Stop updating if there's an error
-          }
+      keepAlive = setInterval(() => {
+        try {
+          this.socket?.sendPresenceUpdate(type, jid);
+        } catch (error) {
+          this.log('error', 'Failed to send presence update:', error);
         }
-        
-        // Wait for remaining time
-        const remainingTime = ms - (numUpdates * 15000);
-        if (remainingTime > 0) {
-          await this.delay(remainingTime);
-        }
-      } else {
-        // For shorter messages, just wait
-        await this.delay(ms);
+      }, 4500);
+
+      await this.delay(ms);
+
+      if (keepAlive) {
+        clearInterval(keepAlive);
+        keepAlive = undefined;
       }
 
-      // Send paused status
       await this.socket.sendPresenceUpdate('paused', jid);
-      await this.delay(300 + Math.random() * 400); // 300-700ms pause
-      
-      // Return to available
-      await this.socket?.sendPresenceUpdate('available', jid);
+      await this.delay(250);
     } catch (error) {
       this.log('error', 'Error during human emulation:', error);
-      
-      // Try to restore to available state
+    } finally {
+      if (keepAlive) {
+        clearInterval(keepAlive);
+      }
+
       try {
         await this.socket?.sendPresenceUpdate('available', jid);
       } catch (error) {
@@ -1985,8 +1901,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             (content as any).mimetype = (content as any).mimetype ?? 'audio/ogg; codecs=opus';
           }
 
-          // presenceSubscribe is now handled inside emulateHuman to avoid duplicate subscriptions
-          
+          await this.socket.presenceSubscribe(jid);
+
           if (isAudio) {
             const seconds = payload?.duration || 0;
             const ms = seconds * 1000; // Convert seconds to milliseconds
