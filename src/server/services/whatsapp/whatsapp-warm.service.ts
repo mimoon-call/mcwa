@@ -565,40 +565,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             if (!targetConnected) throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
             if (!targetActive) throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
 
-            // Mark previous messages as read and played (if audio) before sending
-            try {
-              const lastIncomingMessage = await WhatsAppMessage.findOne({
-                fromNumber: currentMessage.toNumber,
-                toNumber: currentMessage.fromNumber,
-                status: { $in: [MessageStatusEnum.DELIVERED, MessageStatusEnum.READ, MessageStatusEnum.PLAYED] },
-              }).sort({ createdAt: -1 });
-
-              if (lastIncomingMessage && lastIncomingMessage.messageId) {
-                const rawData = lastIncomingMessage.raw as { mediaType?: string } | undefined;
-                const mediaType = rawData?.mediaType;
-
-                // Mark as read if not already
-                if (lastIncomingMessage.status !== MessageStatusEnum.READ && lastIncomingMessage.status !== MessageStatusEnum.PLAYED) {
-                  await WhatsAppMessage.updateOne(
-                    { messageId: lastIncomingMessage.messageId },
-                    { $set: { status: MessageStatusEnum.READ, readAt: getLocalTime() } }
-                  );
-                  this.log('debug', `[${conversationKey}] Marked message ${lastIncomingMessage.messageId} as read`);
-                }
-
-                // Mark as played if it's an audio message
-                if (mediaType === 'ptt' || mediaType === 'audio') {
-                  await WhatsAppMessage.updateOne(
-                    { messageId: lastIncomingMessage.messageId },
-                    { $set: { status: MessageStatusEnum.PLAYED, playedAt: getLocalTime() } }
-                  );
-                  this.log('debug', `[${conversationKey}] Marked audio message ${lastIncomingMessage.messageId} as played`);
-                }
-              }
-            } catch (readError) {
-              this.log('warn', `[${conversationKey}] Failed to mark messages as read/played:`, readError);
-            }
-
             // 20% chance to send as audio message (PTT), but only if text is suitable
             const isSuitableText = this.isSuitableForTTS(currentMessage.text);
             const sendAsAudio = isSuitableText && Math.random() < 0.2;
