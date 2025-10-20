@@ -8,6 +8,8 @@ import { clearTimeout } from 'node:timers';
 import { MessageStatusEnum } from './whatsapp.enum';
 import { LRUCache } from 'lru-cache';
 import getLocalTime from '@server/helpers/get-local-time';
+import { OpenAiService } from '@server/services/open-ai/open-ai.service';
+import { AudioService } from '@server/services/ffmpeg/ffmpeg.service';
 
 type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
@@ -17,6 +19,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
+  private readonly scheduledConversations = new Map<string, NodeJS.Timeout>(); // Track scheduled conversations
   private dailyScheduleTimeHour = 9;
   private dailyScheduleTimeMinute = 0;
   private isWarmingRunning: boolean = false;
@@ -27,7 +30,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
   private warmingStatusCallback: ((isWarming: boolean) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
-  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
+  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 * 3 }); // 3 days TTL (increased from 1 day)
   private dailyTimeWindow = [
     [5, 0],
     [7, 59],
@@ -82,6 +85,25 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     // If we're at or past the daily schedule time, return today's date
     return now.toISOString().split('T')[0];
+  }
+
+  private isSuitableForTTS(text: string): boolean {
+    if (!text || text.trim().length === 0) return false;
+
+    // Check for emojis (most common ranges)
+    const emojiRegex =
+      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u;
+    if (emojiRegex.test(text)) return false;
+
+    // Check if text is too short (less than 10 characters)
+    if (text.trim().length < 10) return false;
+
+    // Check if text contains mostly special characters or numbers
+    const alphaCount = (text.match(/[a-zA-Z\u0590-\u05FF\u0600-\u06FF]/g) || []).length;
+    const totalChars = text.replace(/\s/g, '').length;
+    if (totalChars > 0 && alphaCount / totalChars < 0.5) return false;
+
+    return true;
   }
 
   private setWarmUpActive(value: boolean) {
@@ -208,7 +230,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
     const lastMessages = await this.getLastMessages(personaA.phoneNumber, personaB.phoneNumber);
-    const script = await this.ai.generateConversation(personaA, personaB, 8, 12, lastMessages);
+    // More varied message counts: 5-15 messages instead of fixed 8-12
+    const minMessages = this.randomDelayBetween(5, 8);
+    const maxMessages = this.randomDelayBetween(10, 15);
+    const script = await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, lastMessages);
 
     this.log(
       'debug',
@@ -227,22 +252,24 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     const warmUpDay = instance.get('warmUpDay');
 
+    // More conservative ramp-up over 21 days to avoid spam detection
     if (warmUpDay <= 0) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
+      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 }; // Day 0: very light
     } else if (warmUpDay <= 3) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
-    } else if (warmUpDay <= 6) {
-      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
-    } else if (warmUpDay <= 10) {
-      dailyLimit = { maxConversation: 30, minMessages: 100, maxMessages: 150 };
+      dailyLimit = { maxConversation: 3, minMessages: 8, maxMessages: 15 }; // Days 1-3: gentle start
+    } else if (warmUpDay <= 7) {
+      dailyLimit = { maxConversation: 5, minMessages: 15, maxMessages: 25 }; // Days 4-7: slow increase
     } else if (warmUpDay <= 14) {
-      dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
-    } else if (warmUpDay === 15) {
+      dailyLimit = { maxConversation: 8, minMessages: 25, maxMessages: 40 }; // Days 8-14: moderate
+    } else if (warmUpDay <= 21) {
+      dailyLimit = { maxConversation: 12, minMessages: 35, maxMessages: 60 }; // Days 15-21: steady growth
+    } else if (warmUpDay === 22) {
       // Final day of warm-up, mark as fully warmed up
       instance.update({ hasWarmedUp: true });
-      dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
+      dailyLimit = { maxConversation: 15, minMessages: 45, maxMessages: 80 };
     } else {
-      dailyLimit = { maxConversation: 100, minMessages: 25, maxMessages: 200 };
+      // Fully warmed up - still conservative to maintain trust score
+      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
     }
 
     return dailyLimit;
@@ -461,13 +488,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     const sendTimeout = () => {
-      const randomSeconds = this.getRealisticDelay(5, 30);
-      const sendingDelay = randomSeconds * 1000;
+      // More realistic human-like delays: 2-8 minutes, with 20% chance of 10-20 minutes
+      const randomMinutes = this.getRealisticDelay(2, 8);
+      const sendingDelay = randomMinutes * 60 * 1000; // Convert to milliseconds
       const currentState = this.activeConversation.get(conversationKey);
       const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
       const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
 
-      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
+      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomMinutes} minutes`);
 
       return setTimeout(async () => {
         if (!currentState || !currentMessage || currentIndex === undefined) {
@@ -475,8 +503,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           return;
         }
-
-        const messageContent = { type: 'text' as const, text: currentMessage.text };
 
         try {
           const [key1, key2] = conversationKey.split(':');
@@ -503,14 +529,95 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             if (!targetConnected) throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
             if (!targetActive) throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
 
-            this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
+            // Mark previous messages as read and played (if audio) before sending
+            try {
+              const lastIncomingMessage = await WhatsAppMessage.findOne({
+                fromNumber: currentMessage.toNumber,
+                toNumber: currentMessage.fromNumber,
+                status: { $in: [MessageStatusEnum.DELIVERED, MessageStatusEnum.READ, MessageStatusEnum.PLAYED] },
+              }).sort({ createdAt: -1 });
 
-            await instance.send(currentMessage.toNumber, messageContent, {
-              trackDelivery: true, // Enable delivery tracking
-              waitForDelivery: true, // Wait for delivery confirmation
-              waitTimeout: 60000, // 1 minute timeout
-              throwOnDeliveryError: true, // Throw to see the actual error
-            });
+              if (lastIncomingMessage && lastIncomingMessage.messageId) {
+                const rawData = lastIncomingMessage.raw as { mediaType?: string } | undefined;
+                const mediaType = rawData?.mediaType;
+
+                // Mark as read if not already
+                if (lastIncomingMessage.status !== MessageStatusEnum.READ && lastIncomingMessage.status !== MessageStatusEnum.PLAYED) {
+                  await WhatsAppMessage.updateOne(
+                    { messageId: lastIncomingMessage.messageId },
+                    { $set: { status: MessageStatusEnum.READ, readAt: getLocalTime() } }
+                  );
+                  this.log('debug', `[${conversationKey}] Marked message ${lastIncomingMessage.messageId} as read`);
+                }
+
+                // Mark as played if it's an audio message
+                if (mediaType === 'ptt' || mediaType === 'audio') {
+                  await WhatsAppMessage.updateOne(
+                    { messageId: lastIncomingMessage.messageId },
+                    { $set: { status: MessageStatusEnum.PLAYED, playedAt: getLocalTime() } }
+                  );
+                  this.log('debug', `[${conversationKey}] Marked audio message ${lastIncomingMessage.messageId} as played`);
+                }
+              }
+            } catch (readError) {
+              this.log('warn', `[${conversationKey}] Failed to mark messages as read/played:`, readError);
+            }
+
+            // 20% chance to send as audio message (PTT), but only if text is suitable
+            const isSuitableText = this.isSuitableForTTS(currentMessage.text);
+            const sendAsAudio = isSuitableText && Math.random() < 0.2;
+
+            if (sendAsAudio) {
+              this.log('debug', `[${conversationKey}] Sending audio message (PTT) from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
+
+              try {
+                const openAi = new OpenAiService();
+                const audioSvc = new AudioService();
+                const ttsBuf = await openAi.textToSpeech(currentMessage.text, 'ogg');
+
+                if (!ttsBuf) throw new Error('TTS failed: empty buffer');
+
+                const ogg = await audioSvc.ensureOpusOgg(ttsBuf);
+                const seconds = await audioSvc.getDurationSeconds(ogg, 'audio/ogg');
+
+                await instance.send(
+                  currentMessage.toNumber,
+                  { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds, text: currentMessage.text },
+                  {
+                    trackDelivery: true,
+                    waitForDelivery: true,
+                    waitTimeout: 60000,
+                    throwOnDeliveryError: true,
+                  }
+                );
+              } catch (audioError) {
+                this.log('warn', `[${conversationKey}] Audio message failed, falling back to text:`, audioError);
+                // Fallback to text message if audio fails
+                await instance.send(
+                  currentMessage.toNumber,
+                  { type: 'text', text: currentMessage.text },
+                  {
+                    trackDelivery: true,
+                    waitForDelivery: true,
+                    waitTimeout: 60000,
+                    throwOnDeliveryError: true,
+                  }
+                );
+              }
+            } else {
+              this.log('debug', `[${conversationKey}] Sending text message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
+
+              await instance.send(
+                currentMessage.toNumber,
+                { type: 'text', text: currentMessage.text },
+                {
+                  trackDelivery: true,
+                  waitForDelivery: true,
+                  waitTimeout: 60000,
+                  throwOnDeliveryError: true,
+                }
+              );
+            }
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
@@ -592,29 +699,87 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       );
       this.setWarmUpActive(true);
 
-      // Process conversations sequentially with delays to prevent simultaneous creation
+      // Spread conversations throughout the day (current time to end of time window)
+      const now = getLocalTime();
+      const endOfWindow = new Date(now);
+      endOfWindow.setHours(this.dailyTimeWindow[1][0], this.dailyTimeWindow[1][1], 0, 0);
+
+      const availableTimeMs = endOfWindow.getTime() - now.getTime();
+
+      // If we're past the time window, schedule for tomorrow
+      if (availableTimeMs <= 0) {
+        this.log('debug', 'Past time window, scheduling for tomorrow');
+        this.setWarmUpActive(false);
+        const nextWarmingTime = this.getNextWarmingTime();
+        const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
+
+        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
+        this.nextWarmUp = nextWarmingTime;
+        this.nextCheckUpdate?.(this.nextWarmUp);
+
+        return;
+      }
+
+      // Schedule each conversation at random intervals throughout the day
+      // Minimum 45 minutes between conversations, maximum spread across available time
+      const minDelayMinutes = 45;
+      const maxDelayMinutes = Math.min(180, Math.floor(availableTimeMs / (1000 * 60 * instancesPairs.length))); // 3 hours or spread evenly
+
+      let cumulativeDelay = 0;
+      let scheduledCount = 0;
+
       for (const pair of instancesPairs) {
-        if (pair.length < 2) return;
+        if (pair.length < 2) continue;
 
-        // Add a delay between conversation creations to prevent simultaneous processing
-        if (this.activeConversation.size > 0) {
-          const delay = this.randomDelayBetween(3, 8) * 1000; // 3-8 seconds delay
-          this.log('debug', `Waiting ${delay / 1000}s before creating next conversation to prevent simultaneous processing`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-
-        try {
-          await this.createConversation(pair);
-
-          const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
-          await new Promise((resolve) => setTimeout(resolve, setupDelay));
-        } catch (conversationError) {
-          // Mark this pair as failed
+        // 10% chance to skip this conversation to add unpredictability
+        if (Math.random() < 0.1) {
           const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
-
-          this.log('error', `[${conversationKey}] Conversation failed, marking pair as failed:`, conversationError);
-          // Continue with next pair instead of stopping the entire warming process
+          this.log('debug', `[${conversationKey}] Randomly skipping conversation for human-like behavior`);
+          continue;
         }
+
+        // Random delay between 45 minutes and 3 hours (or available time)
+        // Add extra randomness: 80% use normal range, 20% add extra delay
+        let delayMinutes = this.randomDelayBetween(minDelayMinutes, Math.max(minDelayMinutes, maxDelayMinutes));
+        if (Math.random() < 0.2) {
+          delayMinutes += this.randomDelayBetween(15, 45); // Add 15-45 extra minutes
+        }
+        cumulativeDelay += delayMinutes * 60 * 1000;
+
+        const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
+
+        this.log('debug', `[${conversationKey}] Scheduling conversation in ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
+
+        const timeout = setTimeout(async () => {
+          try {
+            // Add small random jitter (0-5 minutes) at conversation start for more unpredictability
+            const jitterMs = this.randomDelayBetween(0, 5) * 60 * 1000;
+            await new Promise((resolve) => setTimeout(resolve, jitterMs));
+
+            await this.createConversation(pair);
+            this.scheduledConversations.delete(conversationKey);
+          } catch (conversationError) {
+            this.log('error', `[${conversationKey}] Conversation failed:`, conversationError);
+            this.scheduledConversations.delete(conversationKey);
+            this.markPairAsFailed(conversationKey);
+          }
+        }, cumulativeDelay);
+
+        this.scheduledConversations.set(conversationKey, timeout);
+        scheduledCount++;
+      }
+
+      this.log(
+        'info',
+        `Scheduled ${scheduledCount} of ${instancesPairs.length} conversations over ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`
+      );
+
+      // Update nextWarmUp to show when the NEXT warm-up cycle will start (tomorrow)
+      if (scheduledCount > 0) {
+        const nextWarmingTime = this.getNextWarmingTime();
+        this.nextWarmUp = nextWarmingTime;
+        this.nextCheckUpdate?.(this.nextWarmUp);
+        this.log('info', `Next warm-up cycle scheduled for ${nextWarmingTime.toISOString()}`);
       }
     } catch (error) {
       this.log('error', 'Error occurred in warming process', error);
@@ -626,10 +791,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   public stopWarmingUp() {
     this.setWarmUpActive(false);
 
-    Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
+    // Clear all timeouts: active conversations, scheduled conversations, and next warming
+    Array.from([...this.timeoutConversation.values(), ...this.scheduledConversations.values(), this.nextStartWarming]).forEach(clearTimeout);
+
     this.timeoutConversation.clear();
+    this.scheduledConversations.clear();
     this.activeConversation.clear();
-    this.creatingConversation.clear(); // Clear conversations being created
+    this.creatingConversation.clear();
   }
 
   public async addInstanceQR(phoneNumber: string) {
