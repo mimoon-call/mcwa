@@ -8,8 +8,6 @@ import { clearTimeout } from 'node:timers';
 import { MessageStatusEnum } from './whatsapp.enum';
 import { LRUCache } from 'lru-cache';
 import getLocalTime from '@server/helpers/get-local-time';
-import { OpenAiService } from '@server/services/open-ai/open-ai.service';
-import { AudioService } from '@server/services/ffmpeg/ffmpeg.service';
 
 type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
@@ -31,11 +29,6 @@ type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean }
  * - Days 8-14: 8 conversations, 25-40 messages
  * - Days 15-21: 12 conversations, 35-60 messages
  * - Day 22+: 15-20 conversations, 45-100 messages (fully warmed)
- * 
- * MESSAGE VARIETY:
- * - 20% of suitable messages sent as audio (PTT) for natural conversation flow
- * - Audio only for plain text (no emojis, min 10 chars, mostly alphabetic)
- * - Automatic fallback to text if audio generation fails
  * 
  * ANTI-SPAM FEATURES:
  * - No retry mechanism - warming happens once per day only
@@ -121,24 +114,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     // If we're at or past the daily schedule time, return today's date
     return now.toISOString().split('T')[0];
-  }
-
-  private isSuitableForTTS(text: string): boolean {
-    if (!text || text.trim().length === 0) return false;
-
-    // Check for emojis (most common ranges)
-    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u;
-    if (emojiRegex.test(text)) return false;
-
-    // Check if text is too short (less than 10 characters)
-    if (text.trim().length < 10) return false;
-
-    // Check if text contains mostly special characters or numbers
-    const alphaCount = (text.match(/[a-zA-Z\u0590-\u05FF\u0600-\u06FF]/g) || []).length;
-    const totalChars = text.replace(/\s/g, '').length;
-    if (totalChars > 0 && alphaCount / totalChars < 0.5) return false;
-
-    return true;
   }
 
   private setWarmUpActive(value: boolean) {
@@ -540,6 +515,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           return;
         }
 
+        const messageContent = { type: 'text' as const, text: currentMessage.text };
+
         try {
           const [key1, key2] = conversationKey.split(':');
           const instance1 = this.getInstance(key1);
@@ -565,53 +542,14 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
             if (!targetConnected) throw new Error(`Target instance ${currentMessage.toNumber} is not connected`);
             if (!targetActive) throw new Error(`Target instance ${currentMessage.toNumber} is not active`);
 
-            // 20% chance to send as audio message (PTT), but only if text is suitable
-            const isSuitableText = this.isSuitableForTTS(currentMessage.text);
-            const sendAsAudio = isSuitableText && Math.random() < 0.2;
+            this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
 
-            if (sendAsAudio) {
-              this.log('debug', `[${conversationKey}] Sending audio message (PTT) from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
-
-              try {
-                const openAi = new OpenAiService();
-                const audioSvc = new AudioService();
-                const ttsBuf = await openAi.textToSpeech(currentMessage.text, 'ogg');
-
-                if (!ttsBuf) throw new Error('TTS failed: empty buffer');
-
-                const ogg = await audioSvc.ensureOpusOgg(ttsBuf);
-                const seconds = await audioSvc.getDurationSeconds(ogg, 'audio/ogg');
-
-                await instance.send(
-                  currentMessage.toNumber,
-                  { type: 'audio', data: ogg, mimetype: 'audio/ogg; codecs=opus', ptt: true, duration: seconds, text: currentMessage.text },
-                  {
-                    trackDelivery: true,
-                    waitForDelivery: true,
-                    waitTimeout: 60000,
-                    throwOnDeliveryError: true,
-                  }
-                );
-              } catch (audioError) {
-                this.log('warn', `[${conversationKey}] Audio message failed, falling back to text:`, audioError);
-                // Fallback to text message if audio fails
-                await instance.send(currentMessage.toNumber, { type: 'text', text: currentMessage.text }, {
-                  trackDelivery: true,
-                  waitForDelivery: true,
-                  waitTimeout: 60000,
-                  throwOnDeliveryError: true,
-                });
-              }
-            } else {
-              this.log('debug', `[${conversationKey}] Sending text message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
-
-              await instance.send(currentMessage.toNumber, { type: 'text', text: currentMessage.text }, {
-                trackDelivery: true,
-                waitForDelivery: true,
-                waitTimeout: 60000,
-                throwOnDeliveryError: true,
-              });
-            }
+            await instance.send(currentMessage.toNumber, messageContent, {
+              trackDelivery: true, // Enable delivery tracking
+              waitForDelivery: true, // Wait for delivery confirmation
+              waitTimeout: 60000, // 1 minute timeout
+              throwOnDeliveryError: true, // Throw to see the actual error
+            });
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
