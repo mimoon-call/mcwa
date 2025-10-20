@@ -15,28 +15,28 @@ type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean }
 
 /**
  * WhatsApp Warm-Up Service with Anti-Spam Protection
- * 
+ *
  * This service implements a conservative, realistic warming strategy to avoid spam detection:
- * 
+ *
  * TIMING STRATEGY:
  * - Daily window: 8 AM - 10 PM (14 hours) - spread throughout business hours
  * - Start time: Randomized within first quarter of window (8 AM - 11:30 AM)
  * - Between conversations: 45 minutes - 3 hours
  * - Between messages: 2-8 minutes (20% chance of 10-20 minutes)
- * 
+ *
  * VOLUME STRATEGY (21-day warm-up period):
  * - Day 0: 2 conversations, 5-10 messages
- * - Days 1-3: 3 conversations, 8-15 messages  
+ * - Days 1-3: 3 conversations, 8-15 messages
  * - Days 4-7: 5 conversations, 15-25 messages
  * - Days 8-14: 8 conversations, 25-40 messages
  * - Days 15-21: 12 conversations, 35-60 messages
  * - Day 22+: 15-20 conversations, 45-100 messages (fully warmed)
- * 
+ *
  * MESSAGE VARIETY:
  * - 20% of suitable messages sent as audio (PTT) for natural conversation flow
  * - Audio only for plain text (no emojis, min 10 chars, mostly alphabetic)
  * - Automatic fallback to text if audio generation fails
- * 
+ *
  * ANTI-SPAM FEATURES:
  * - No retry mechanism - warming happens once per day only
  * - Conversations spread throughout entire day window
@@ -63,8 +63,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private warmUpTimeout: NodeJS.Timeout | undefined;
   private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 * 3 }); // 3 days TTL (increased from 1 day)
   private dailyTimeWindow = [
-    [8, 0], // 8:00 AM
-    [22, 0], // 10:00 PM - spread throughout the day
+    [5, 0], // 5:00 AM
+    [7, 59], // 7:59 PM
   ];
   public nextWarmUp: Date | null = null;
 
@@ -101,7 +101,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const windowStart = this.dailyTimeWindow[0][0];
     const windowEnd = this.dailyTimeWindow[1][0];
     const firstQuarter = windowStart + Math.floor((windowEnd - windowStart) / 4);
-    
+
     this.dailyScheduleTimeHour = this.randomDelayBetween(windowStart, firstQuarter);
     this.dailyScheduleTimeMinute = this.randomDelayBetween(0, 59); // Full minute randomization
   }
@@ -127,7 +127,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!text || text.trim().length === 0) return false;
 
     // Check for emojis (most common ranges)
-    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u;
+    const emojiRegex =
+      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u;
     if (emojiRegex.test(text)) return false;
 
     // Check if text is too short (less than 10 characters)
@@ -629,22 +630,30 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
               } catch (audioError) {
                 this.log('warn', `[${conversationKey}] Audio message failed, falling back to text:`, audioError);
                 // Fallback to text message if audio fails
-                await instance.send(currentMessage.toNumber, { type: 'text', text: currentMessage.text }, {
-                  trackDelivery: true,
-                  waitForDelivery: true,
-                  waitTimeout: 60000,
-                  throwOnDeliveryError: true,
-                });
+                await instance.send(
+                  currentMessage.toNumber,
+                  { type: 'text', text: currentMessage.text },
+                  {
+                    trackDelivery: true,
+                    waitForDelivery: true,
+                    waitTimeout: 60000,
+                    throwOnDeliveryError: true,
+                  }
+                );
               }
             } else {
               this.log('debug', `[${conversationKey}] Sending text message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
 
-              await instance.send(currentMessage.toNumber, { type: 'text', text: currentMessage.text }, {
-                trackDelivery: true,
-                waitForDelivery: true,
-                waitTimeout: 60000,
-                throwOnDeliveryError: true,
-              });
+              await instance.send(
+                currentMessage.toNumber,
+                { type: 'text', text: currentMessage.text },
+                {
+                  trackDelivery: true,
+                  waitForDelivery: true,
+                  waitTimeout: 60000,
+                  throwOnDeliveryError: true,
+                }
+              );
             }
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
@@ -731,20 +740,20 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const now = getLocalTime();
       const endOfWindow = new Date(now);
       endOfWindow.setHours(this.dailyTimeWindow[1][0], this.dailyTimeWindow[1][1], 0, 0);
-      
+
       const availableTimeMs = endOfWindow.getTime() - now.getTime();
-      
+
       // If we're past the time window, schedule for tomorrow
       if (availableTimeMs <= 0) {
         this.log('debug', 'Past time window, scheduling for tomorrow');
         this.setWarmUpActive(false);
         const nextWarmingTime = this.getNextWarmingTime();
         const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
-        
+
         this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
         this.nextWarmUp = nextWarmingTime;
         this.nextCheckUpdate?.(this.nextWarmUp);
-        
+
         return;
       }
 
@@ -775,15 +784,15 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         cumulativeDelay += delayMinutes * 60 * 1000;
 
         const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
-        
+
         this.log('debug', `[${conversationKey}] Scheduling conversation in ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
 
         const timeout = setTimeout(async () => {
           try {
             // Add small random jitter (0-5 minutes) at conversation start for more unpredictability
             const jitterMs = this.randomDelayBetween(0, 5) * 60 * 1000;
-            await new Promise(resolve => setTimeout(resolve, jitterMs));
-            
+            await new Promise((resolve) => setTimeout(resolve, jitterMs));
+
             await this.createConversation(pair);
             this.scheduledConversations.delete(conversationKey);
           } catch (conversationError) {
@@ -797,8 +806,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         scheduledCount++;
       }
 
-      this.log('info', `Scheduled ${scheduledCount} of ${instancesPairs.length} conversations over ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
-      
+      this.log(
+        'info',
+        `Scheduled ${scheduledCount} of ${instancesPairs.length} conversations over ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`
+      );
+
       // Update nextWarmUp to show when the NEXT warm-up cycle will start (tomorrow)
       if (scheduledCount > 0) {
         const nextWarmingTime = this.getNextWarmingTime();
@@ -817,12 +829,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     this.setWarmUpActive(false);
 
     // Clear all timeouts: active conversations, scheduled conversations, and next warming
-    Array.from([
-      ...this.timeoutConversation.values(),
-      ...this.scheduledConversations.values(),
-      this.nextStartWarming
-    ]).forEach(clearTimeout);
-    
+    Array.from([...this.timeoutConversation.values(), ...this.scheduledConversations.values(), this.nextStartWarming]).forEach(clearTimeout);
+
     this.timeoutConversation.clear();
     this.scheduledConversations.clear();
     this.activeConversation.clear();
