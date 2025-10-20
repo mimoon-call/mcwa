@@ -11,39 +11,12 @@ import getLocalTime from '@server/helpers/get-local-time';
 
 type Config<T extends object> = WAServiceConfig<T> & { warmUpOnReady?: boolean };
 
-/**
- * WhatsApp Warm-Up Service with Anti-Spam Protection
- * 
- * This service implements a conservative, realistic warming strategy to avoid spam detection:
- * 
- * TIMING STRATEGY:
- * - Daily window: 8 AM - 10 PM (14 hours) - spread throughout business hours
- * - Start time: Randomized within first quarter of window (8 AM - 11:30 AM)
- * - Between conversations: 45 minutes - 3 hours
- * - Between messages: 2-8 minutes (20% chance of 10-20 minutes)
- * 
- * VOLUME STRATEGY (21-day warm-up period):
- * - Day 0: 2 conversations, 5-10 messages
- * - Days 1-3: 3 conversations, 8-15 messages  
- * - Days 4-7: 5 conversations, 15-25 messages
- * - Days 8-14: 8 conversations, 25-40 messages
- * - Days 15-21: 12 conversations, 35-60 messages
- * - Day 22+: 15-20 conversations, 45-100 messages (fully warmed)
- * 
- * ANTI-SPAM FEATURES:
- * - No retry mechanism - warming happens once per day only
- * - Conversations spread throughout entire day window
- * - Failed pairs blocked for 3 days instead of 1
- * - Natural variation in message count (5-15 messages per conversation)
- * - Human-like delays with realistic variability
- */
 export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private readonly ai = new WhatsappAiService();
   private readonly warmUpOnReady: boolean = false;
   private readonly activeConversation = new Map<string, WAConversation[]>();
   private readonly timeoutConversation = new Map<string, NodeJS.Timeout>();
   private readonly creatingConversation = new Set<string>(); // Track conversations being created
-  private readonly scheduledConversations = new Map<string, NodeJS.Timeout>(); // Track scheduled conversations
   private dailyScheduleTimeHour = 9;
   private dailyScheduleTimeMinute = 0;
   private isWarmingRunning: boolean = false;
@@ -54,10 +27,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
   private warmingStatusCallback: ((isWarming: boolean) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
-  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 * 3 }); // 3 days TTL (increased from 1 day)
+  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
   private dailyTimeWindow = [
-    [8, 0], // 8:00 AM
-    [22, 0], // 10:00 PM - spread throughout the day
+    [5, 0],
+    [7, 59],
   ];
   public nextWarmUp: Date | null = null;
 
@@ -90,13 +63,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   private randomNextTimeWindow() {
-    // Randomize start time within first quarter of the day window to allow for spread
-    const windowStart = this.dailyTimeWindow[0][0];
-    const windowEnd = this.dailyTimeWindow[1][0];
-    const firstQuarter = windowStart + Math.floor((windowEnd - windowStart) / 4);
-    
-    this.dailyScheduleTimeHour = this.randomDelayBetween(windowStart, firstQuarter);
-    this.dailyScheduleTimeMinute = this.randomDelayBetween(0, 59); // Full minute randomization
+    this.dailyScheduleTimeHour = this.randomDelayBetween(this.dailyTimeWindow[0][0], this.dailyTimeWindow[1][0]);
+    this.dailyScheduleTimeMinute = this.randomDelayBetween(this.dailyTimeWindow[0][1], this.dailyTimeWindow[1][1]);
   }
 
   private getTodayDate(): string {
@@ -240,10 +208,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
     const lastMessages = await this.getLastMessages(personaA.phoneNumber, personaB.phoneNumber);
-    // More varied message counts: 5-15 messages instead of fixed 8-12
-    const minMessages = this.randomDelayBetween(5, 8);
-    const maxMessages = this.randomDelayBetween(10, 15);
-    const script = await this.ai.generateConversation(personaA, personaB, minMessages, maxMessages, lastMessages);
+    const script = await this.ai.generateConversation(personaA, personaB, 8, 12, lastMessages);
 
     this.log(
       'debug',
@@ -262,24 +227,22 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     const warmUpDay = instance.get('warmUpDay');
 
-    // More conservative ramp-up over 21 days to avoid spam detection
     if (warmUpDay <= 0) {
-      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 }; // Day 0: very light
+      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
     } else if (warmUpDay <= 3) {
-      dailyLimit = { maxConversation: 3, minMessages: 8, maxMessages: 15 }; // Days 1-3: gentle start
-    } else if (warmUpDay <= 7) {
-      dailyLimit = { maxConversation: 5, minMessages: 15, maxMessages: 25 }; // Days 4-7: slow increase
+      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
+    } else if (warmUpDay <= 6) {
+      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
+    } else if (warmUpDay <= 10) {
+      dailyLimit = { maxConversation: 30, minMessages: 100, maxMessages: 150 };
     } else if (warmUpDay <= 14) {
-      dailyLimit = { maxConversation: 8, minMessages: 25, maxMessages: 40 }; // Days 8-14: moderate
-    } else if (warmUpDay <= 21) {
-      dailyLimit = { maxConversation: 12, minMessages: 35, maxMessages: 60 }; // Days 15-21: steady growth
-    } else if (warmUpDay === 22) {
+      dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
+    } else if (warmUpDay === 15) {
       // Final day of warm-up, mark as fully warmed up
       instance.update({ hasWarmedUp: true });
-      dailyLimit = { maxConversation: 15, minMessages: 45, maxMessages: 80 };
+      dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
     } else {
-      // Fully warmed up - still conservative to maintain trust score
-      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
+      dailyLimit = { maxConversation: 100, minMessages: 25, maxMessages: 200 };
     }
 
     return dailyLimit;
@@ -379,25 +342,24 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     this.activeConversation.delete(conversationKey);
+    const stillNeededWarm = this.listInstanceNumbers({ hasWarmedUp: false });
 
-    // Only stop warming if explicitly stopped or all scheduled conversations are done
+    // Only start new warming if we're still in warming mode and no active conversations
     if (!this.isWarmingRunning) {
       this.stopWarmingUp();
-    } else if (this.activeConversation.size === 0 && this.scheduledConversations.size === 0) {
-      // All conversations finished (active and scheduled), schedule next day's warming
+    } else if (this.activeConversation.size === 0) {
+      // All conversations finished, stop warming and set up next session
       this.setWarmUpActive(false);
       clearTimeout(this.nextStartWarming);
       this.nextCheckUpdate?.(null);
 
-      // Schedule next warming for tomorrow's time window
-      const nextWarmingTime = this.getNextWarmingTime();
-      const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
+      if (stillNeededWarm.length > 0) {
+        const delay = this.randomDelayBetween(30, 90) * 1000 * 60;
+        this.nextWarmUp = new Date(new Date().valueOf() + delay);
+        this.nextCheckUpdate?.(this.nextWarmUp);
 
-      this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-      this.nextWarmUp = nextWarmingTime;
-      this.nextCheckUpdate?.(this.nextWarmUp);
-
-      this.log('info', `All conversations completed. Next warming scheduled for ${nextWarmingTime.toISOString()}`);
+        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), delay);
+      }
     }
   }
 
@@ -499,14 +461,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     const sendTimeout = () => {
-      // More realistic human-like delays: 2-8 minutes, with 20% chance of 10-20 minutes
-      const randomMinutes = this.getRealisticDelay(2, 8);
-      const sendingDelay = randomMinutes * 60 * 1000; // Convert to milliseconds
+      const randomSeconds = this.getRealisticDelay(5, 30);
+      const sendingDelay = randomSeconds * 1000;
       const currentState = this.activeConversation.get(conversationKey);
       const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
       const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
 
-      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomMinutes} minutes`);
+      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
 
       return setTimeout(async () => {
         if (!currentState || !currentMessage || currentIndex === undefined) {
@@ -631,77 +592,30 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       );
       this.setWarmUpActive(true);
 
-      // Spread conversations throughout the day (current time to end of time window)
-      const now = getLocalTime();
-      const endOfWindow = new Date(now);
-      endOfWindow.setHours(this.dailyTimeWindow[1][0], this.dailyTimeWindow[1][1], 0, 0);
-      
-      const availableTimeMs = endOfWindow.getTime() - now.getTime();
-      
-      // If we're past the time window, schedule for tomorrow
-      if (availableTimeMs <= 0) {
-        this.log('debug', 'Past time window, scheduling for tomorrow');
-        this.setWarmUpActive(false);
-        const nextWarmingTime = this.getNextWarmingTime();
-        const timeUntilNextWarming = nextWarmingTime.getTime() - Date.now();
-        
-        this.nextStartWarming = setTimeout(() => this.startWarmingUp(), timeUntilNextWarming);
-        this.nextWarmUp = nextWarmingTime;
-        this.nextCheckUpdate?.(this.nextWarmUp);
-        
-        return;
-      }
-
-      // Schedule each conversation at random intervals throughout the day
-      // Minimum 45 minutes between conversations, maximum spread across available time
-      const minDelayMinutes = 45;
-      const maxDelayMinutes = Math.min(180, Math.floor(availableTimeMs / (1000 * 60 * instancesPairs.length))); // 3 hours or spread evenly
-
-      let cumulativeDelay = 0;
-      let scheduledCount = 0;
-
+      // Process conversations sequentially with delays to prevent simultaneous creation
       for (const pair of instancesPairs) {
-        if (pair.length < 2) continue;
+        if (pair.length < 2) return;
 
-        // 10% chance to skip this conversation to add unpredictability
-        if (Math.random() < 0.1) {
+        // Add a delay between conversation creations to prevent simultaneous processing
+        if (this.activeConversation.size > 0) {
+          const delay = this.randomDelayBetween(3, 8) * 1000; // 3-8 seconds delay
+          this.log('debug', `Waiting ${delay / 1000}s before creating next conversation to prevent simultaneous processing`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+
+        try {
+          await this.createConversation(pair);
+
+          const setupDelay = 2000; // 2 seconds to ensure conversation is properly initialized
+          await new Promise((resolve) => setTimeout(resolve, setupDelay));
+        } catch (conversationError) {
+          // Mark this pair as failed
           const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
-          this.log('debug', `[${conversationKey}] Randomly skipping conversation for human-like behavior`);
-          continue;
+
+          this.log('error', `[${conversationKey}] Conversation failed, marking pair as failed:`, conversationError);
+          // Continue with next pair instead of stopping the entire warming process
         }
-
-        // Random delay between 45 minutes and 3 hours (or available time)
-        // Add extra randomness: 80% use normal range, 20% add extra delay
-        let delayMinutes = this.randomDelayBetween(minDelayMinutes, Math.max(minDelayMinutes, maxDelayMinutes));
-        if (Math.random() < 0.2) {
-          delayMinutes += this.randomDelayBetween(15, 45); // Add 15-45 extra minutes
-        }
-        cumulativeDelay += delayMinutes * 60 * 1000;
-
-        const conversationKey = this.getPairKey('phoneNumber', pair[0], pair[1]);
-        
-        this.log('debug', `[${conversationKey}] Scheduling conversation in ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
-
-        const timeout = setTimeout(async () => {
-          try {
-            // Add small random jitter (0-5 minutes) at conversation start for more unpredictability
-            const jitterMs = this.randomDelayBetween(0, 5) * 60 * 1000;
-            await new Promise(resolve => setTimeout(resolve, jitterMs));
-            
-            await this.createConversation(pair);
-            this.scheduledConversations.delete(conversationKey);
-          } catch (conversationError) {
-            this.log('error', `[${conversationKey}] Conversation failed:`, conversationError);
-            this.scheduledConversations.delete(conversationKey);
-            this.markPairAsFailed(conversationKey);
-          }
-        }, cumulativeDelay);
-
-        this.scheduledConversations.set(conversationKey, timeout);
-        scheduledCount++;
       }
-
-      this.log('info', `Scheduled ${scheduledCount} of ${instancesPairs.length} conversations over ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
     } catch (error) {
       this.log('error', 'Error occurred in warming process', error);
       // Stop warming on error and let the scheduled warming handle it
@@ -712,17 +626,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   public stopWarmingUp() {
     this.setWarmUpActive(false);
 
-    // Clear all timeouts: active conversations, scheduled conversations, and next warming
-    Array.from([
-      ...this.timeoutConversation.values(),
-      ...this.scheduledConversations.values(),
-      this.nextStartWarming
-    ]).forEach(clearTimeout);
-    
+    Array.from([...this.timeoutConversation.values(), this.nextStartWarming]).forEach(clearTimeout);
     this.timeoutConversation.clear();
-    this.scheduledConversations.clear();
     this.activeConversation.clear();
-    this.creatingConversation.clear();
+    this.creatingConversation.clear(); // Clear conversations being created
   }
 
   public async addInstanceQR(phoneNumber: string) {
