@@ -798,14 +798,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
 
       this.log('info', `Scheduled ${scheduledCount} of ${instancesPairs.length} conversations over ${Math.floor(cumulativeDelay / 1000 / 60)} minutes`);
-      
-      // Update nextWarmUp to show when the NEXT warm-up cycle will start (tomorrow)
-      if (scheduledCount > 0) {
-        const nextWarmingTime = this.getNextWarmingTime();
-        this.nextWarmUp = nextWarmingTime;
-        this.nextCheckUpdate?.(this.nextWarmUp);
-        this.log('info', `Next warm-up cycle scheduled for ${nextWarmingTime.toISOString()}`);
-      }
     } catch (error) {
       this.log('error', 'Error occurred in warming process', error);
       // Stop warming on error and let the scheduled warming handle it
