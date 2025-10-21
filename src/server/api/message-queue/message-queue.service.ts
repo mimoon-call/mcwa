@@ -108,6 +108,10 @@ export const messageQueueService = {
     const _id = new ObjectId(queueId);
     await WhatsappQueue.deleteOne({ _id });
 
+    messagePass = 0;
+    messageCount = 0;
+    app.socket.broadcast<MessageQueueActiveEvent>(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, { messageCount, messagePass, isSending: false });
+
     return { returnCode: 0 };
   },
 
