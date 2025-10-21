@@ -222,6 +222,48 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return script;
   }
 
+  private getRealisticMessageDelay(messageLength: number, previousMessageAt?: Date): number {
+    // Base delay considering reading time (~200 words per minute)
+    const readingTime = messageLength / 5; // ~60 chars per min = 1 char per second
+
+    // Typing time (~40 words per minute)
+    const typingTime = messageLength / 3.3; // ~200 chars per min
+
+    // Add thinking time (10-60 seconds)
+    const thinkingTime = this.randomDelayBetween(10, 60);
+
+    // Total base delay
+    let baseDelay = readingTime + typingTime + thinkingTime;
+
+    // Add variation based on time since last message
+    if (previousMessageAt) {
+      const timeSinceLastMsg = (Date.now() - previousMessageAt.getTime()) / 1000;
+      // If previous message was long ago, reduce delay (already "read" it)
+      if (timeSinceLastMsg > 300) baseDelay *= 0.6; // 5+ minutes ago
+    }
+
+    // 30% chance of distraction (2-10 minutes delay)
+    if (Math.random() < 0.3) {
+      baseDelay += this.randomDelayBetween(120, 600);
+    }
+
+    // 5% chance of much longer delay (15-60 minutes)
+    if (Math.random() < 0.05) {
+      baseDelay += this.randomDelayBetween(900, 3600);
+    }
+
+    return Math.max(15, baseDelay); // Minimum 15 seconds
+  }
+
+  private async simulateReadDelay(): Promise<void> {
+    // Sometimes read message but delay response (15% chance)
+    if (Math.random() < 0.15) {
+      const readDelay = this.randomDelayBetween(30, 300); // 30s - 5min
+      this.log('debug', `Simulating read-without-immediate-reply: ${readDelay}s`);
+      await new Promise((resolve) => setTimeout(resolve, readDelay * 1000));
+    }
+  }
+
   private getDailyLimits(instance: WAInstance<WAPersona>) {
     let dailyLimit: { maxConversation: number; minMessages: number; maxMessages: number };
 
@@ -229,22 +271,24 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     // More conservative ramp-up over 21 days to avoid spam detection
     if (warmUpDay <= 0) {
-      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 }; // Day 0: very light
-    } else if (warmUpDay <= 3) {
-      dailyLimit = { maxConversation: 3, minMessages: 8, maxMessages: 15 }; // Days 1-3: gentle start
-    } else if (warmUpDay <= 7) {
-      dailyLimit = { maxConversation: 5, minMessages: 15, maxMessages: 25 }; // Days 4-7: slow increase
-    } else if (warmUpDay <= 14) {
-      dailyLimit = { maxConversation: 8, minMessages: 25, maxMessages: 40 }; // Days 8-14: moderate
+      dailyLimit = { maxConversation: 1, minMessages: 3, maxMessages: 5 }; // Day 0: extremely light
+    } else if (warmUpDay <= 2) {
+      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 8 }; // Days 1-2: very gentle
+    } else if (warmUpDay <= 5) {
+      dailyLimit = { maxConversation: 3, minMessages: 8, maxMessages: 12 }; // Days 3-5: still cautious
+    } else if (warmUpDay <= 10) {
+      dailyLimit = { maxConversation: 5, minMessages: 12, maxMessages: 20 }; // Days 6-10: slow growth
+    } else if (warmUpDay <= 15) {
+      dailyLimit = { maxConversation: 7, minMessages: 20, maxMessages: 35 }; // Days 11-15: moderate
     } else if (warmUpDay <= 21) {
-      dailyLimit = { maxConversation: 12, minMessages: 35, maxMessages: 60 }; // Days 15-21: steady growth
+      dailyLimit = { maxConversation: 10, minMessages: 30, maxMessages: 50 }; // Days 16-21: steady
     } else if (warmUpDay === 22) {
       // Final day of warm-up, mark as fully warmed up
       instance.update({ hasWarmedUp: true });
-      dailyLimit = { maxConversation: 15, minMessages: 45, maxMessages: 80 };
+      dailyLimit = { maxConversation: 12, minMessages: 40, maxMessages: 65 };
     } else {
       // Fully warmed up - still conservative to maintain trust score
-      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
+      dailyLimit = { maxConversation: 15, minMessages: 50, maxMessages: 80 };
     }
 
     return dailyLimit;
@@ -463,13 +507,19 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     const sendTimeout = () => {
-      const randomSeconds = this.getRealisticDelay(5, 30);
-      const sendingDelay = randomSeconds * 1000;
       const currentState = this.activeConversation.get(conversationKey);
       const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
       const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
+      
+      // Get previous message for context
+      const previousMessage = currentState?.filter(({ sentAt }) => sentAt).slice(-1)[0];
+      
+      // Calculate realistic delay based on message length and context
+      const messageLength = currentMessage?.text?.length || 50;
+      const delaySeconds = this.getRealisticMessageDelay(messageLength, previousMessage?.sentAt);
+      const sendingDelay = delaySeconds * 1000;
 
-      this.log('debug', `[${conversationKey}]`, `schedule message in ${randomSeconds} seconds`);
+      this.log('debug', `[${conversationKey}]`, `schedule message in ${Math.round(delaySeconds)} seconds (msg length: ${messageLength})`);
 
       return setTimeout(async () => {
         if (!currentState || !currentMessage || currentIndex === undefined) {
@@ -477,6 +527,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           return;
         }
+
+        // Simulate read delay (sometimes read message but don't reply immediately)
+        await this.simulateReadDelay();
 
         const messageContent = { type: 'text' as const, text: currentMessage.text };
 
@@ -598,10 +651,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       for (const pair of instancesPairs) {
         if (pair.length < 2) return;
 
-        // Add a delay between conversation creations to prevent simultaneous processing
+        // Add a realistic delay between conversation creations (humans don't start multiple conversations rapidly)
         if (this.activeConversation.size > 0) {
-          const delay = this.randomDelayBetween(3, 8) * 1000; // 3-8 seconds delay
-          this.log('debug', `Waiting ${delay / 1000}s before creating next conversation to prevent simultaneous processing`);
+          const delay = this.randomDelayBetween(15, 45) * 60 * 1000; // 15-45 minutes delay
+          this.log('debug', `Waiting ${delay / 60000} minutes before creating next conversation to simulate realistic behavior`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
