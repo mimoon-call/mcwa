@@ -27,10 +27,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   private nextCheckUpdate: ((nextWarmAt: Date | null) => unknown) | undefined;
   private warmingStatusCallback: ((isWarming: boolean) => unknown) | undefined;
   private warmUpTimeout: NodeJS.Timeout | undefined;
-  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 }); // 24 hours TTL
+  private spammyBehaviorPairs = new LRUCache<string, boolean>({ max: 10000, ttl: 1000 * 60 * 60 * 24 * 3 }); // 3 days TTL (increased from 1 day)
   private dailyTimeWindow = [
-    [5, 0],
-    [7, 59],
+    [5, 0], // 5:00 AM
+    [7, 59], // 7:59 PM
   ];
   public nextWarmUp: Date | null = null;
 
@@ -227,22 +227,24 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     const warmUpDay = instance.get('warmUpDay');
 
+    // More conservative ramp-up over 21 days to avoid spam detection
     if (warmUpDay <= 0) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
+      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 }; // Day 0: very light
     } else if (warmUpDay <= 3) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
-    } else if (warmUpDay <= 6) {
-      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
-    } else if (warmUpDay <= 10) {
-      dailyLimit = { maxConversation: 30, minMessages: 100, maxMessages: 150 };
+      dailyLimit = { maxConversation: 3, minMessages: 8, maxMessages: 15 }; // Days 1-3: gentle start
+    } else if (warmUpDay <= 7) {
+      dailyLimit = { maxConversation: 5, minMessages: 15, maxMessages: 25 }; // Days 4-7: slow increase
     } else if (warmUpDay <= 14) {
-      dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
-    } else if (warmUpDay === 15) {
+      dailyLimit = { maxConversation: 8, minMessages: 25, maxMessages: 40 }; // Days 8-14: moderate
+    } else if (warmUpDay <= 21) {
+      dailyLimit = { maxConversation: 12, minMessages: 35, maxMessages: 60 }; // Days 15-21: steady growth
+    } else if (warmUpDay === 22) {
       // Final day of warm-up, mark as fully warmed up
       instance.update({ hasWarmedUp: true });
-      dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
+      dailyLimit = { maxConversation: 15, minMessages: 45, maxMessages: 80 };
     } else {
-      dailyLimit = { maxConversation: 100, minMessages: 25, maxMessages: 200 };
+      // Fully warmed up - still conservative to maintain trust score
+      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
     }
 
     return dailyLimit;
