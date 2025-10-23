@@ -8,6 +8,8 @@ export interface OpenAiServiceConfig {
   apiUrl?: string;
   maxRetries?: number;
   delayMs?: number;
+  throwErrorFlag?: boolean;
+  failureCallback?: (errorMessage?: string) => void;
 }
 
 export class OpenAiService {
@@ -15,12 +17,16 @@ export class OpenAiService {
   private readonly apiUrl: string;
   private readonly maxRetries: number;
   private readonly delayMs: number;
+  private readonly throwErrorFlag: boolean;
+  private readonly failureCallback: OpenAiServiceConfig['failureCallback'] | undefined;
 
   constructor(config: OpenAiServiceConfig = {}) {
     this.apiKey = config.apiKey || process.env.OPENAI_API_KEY!;
     this.apiUrl = config.apiUrl || process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions';
     this.maxRetries = config.maxRetries || 3;
     this.delayMs = config.delayMs || 500;
+    this.throwErrorFlag = config.throwErrorFlag ?? false;
+    this.failureCallback = config.failureCallback;
 
     if (!this.apiKey) {
       throw new Error('OpenAI API key is required');
@@ -42,13 +48,18 @@ export class OpenAiService {
     runTime: number = 0,
     lastError?: string
   ): Promise<T | null> {
-    if (runTime >= this.maxRetries) return null;
+    if (runTime >= this.maxRetries) {
+      this.failureCallback?.(lastError);
+      if (this.throwErrorFlag && lastError) throw new Error(lastError);
+
+      return null;
+    }
 
     try {
       return await asyncFunction(lastError, runTime + 1);
     } catch (err: unknown) {
       const errorMessage = this.extractErrMsg(err);
-      logger.error('OpenAiService:retryAsyncFunction', `${runTime + 1}/${this.maxRetries}`, errorMessage);
+      logger.error('OpenAiService:retryAsyncFunction', `${runTime + 1}/${this.maxRetries}: ${errorMessage}`);
       await new Promise((r) => setTimeout(r, this.delayMs));
 
       return this.retryAsyncFunction(asyncFunction, runTime + 1, errorMessage);
@@ -85,11 +96,7 @@ export class OpenAiService {
       parameters: jsonSchema,
     };
 
-    const response = await this.request(messages, {
-      ...options,
-      functions: [functionDefinition],
-      function_call: { name: functionName },
-    });
+    const response = await this.request(messages, { ...options, functions: [functionDefinition], function_call: { name: functionName } });
 
     if (!response) {
       return null;
@@ -132,10 +139,7 @@ export class OpenAiService {
       const res = await axios.post(
         ttsUrl,
         { model, voice, input: text, format },
-        {
-          headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
-          responseType: 'arraybuffer', // <-- get raw audio bytes
-        }
+        { headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' }, responseType: 'arraybuffer' }
       );
 
       return Buffer.from(res.data);

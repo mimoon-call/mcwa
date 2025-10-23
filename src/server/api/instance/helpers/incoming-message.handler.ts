@@ -5,13 +5,19 @@ import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { conversationAiHandler } from '@server/api/message-queue/helpers/conversation-ai.handler';
 import logger from '@server/helpers/logger';
+import { app } from '@server/index';
+import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 
 const speechToText = async (raw: WAMessageIncomingRaw) => {
   // Check if raw message contains audio and has buffer
   if (raw.mediaType === 'audio' || raw.mediaType === 'ptt') {
     if (raw.buffer && raw.mimeType) {
       try {
-        const openAiService = new OpenAiService();
+        const openAiService = new OpenAiService({
+          failureCallback: (errorMessage) => app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage }),
+          throwErrorFlag: true,
+        });
+
         const transcribedText = await openAiService.speechToText(raw.buffer, raw.mimeType, {
           model: 'gpt-4o-mini-transcribe',
           language: 'he', // Force Hebrew output regardless of input language

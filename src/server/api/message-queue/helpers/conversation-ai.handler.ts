@@ -234,7 +234,9 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           };
         });
 
-      const svc = new OpenAiService();
+      const svc = new OpenAiService({
+        failureCallback: (errorMessage) => app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage }),
+      });
 
       try {
         const ai = await classifyInterest(svc, {
@@ -298,7 +300,6 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           }
         }
       } catch (e) {
-        app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage: String(e) });
         logger.error('classifyInterest:error', e);
       }
     } finally {

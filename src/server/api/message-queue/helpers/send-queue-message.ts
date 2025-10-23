@@ -10,6 +10,7 @@ import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { WhatsAppMessage } from '@server/services/whatsapp/whatsapp.db';
 import { LRUCache } from 'lru-cache';
 import { MAX_SEND_ATTEMPT } from '@server/api/message-queue/message-queue.constants';
+import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 
 const SENT_STATUSES = [MessageStatusEnum.DELIVERED, MessageStatusEnum.READ, MessageStatusEnum.PLAYED];
 const deliveryCache = new LRUCache<string, WAMessageDelivery>({ max: 500, ttl: 1000 * 60 * 60 * 12 }); // Cache for 12 hours
@@ -64,7 +65,11 @@ export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: 
     await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { sentAt: getLocalTime() }, $unset: { lastError: 1 } });
 
     if (doc.tts) {
-      const openAi = new OpenAiService();
+      const openAi = new OpenAiService({
+        failureCallback: (errorMessage) => app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage }),
+        throwErrorFlag: true,
+      });
+
       const audioSvc = new AudioService();
       const ttsBuf = await openAi.textToSpeech(doc.textMessage, 'ogg');
       if (!ttsBuf) throw new Error('TTS failed: empty buffer');

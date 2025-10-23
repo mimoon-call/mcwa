@@ -3,6 +3,8 @@ import type { JsonSchema } from '../open-ai/open-ai.types';
 import { OpenAiService } from '../open-ai/open-ai.service';
 import { WhatsAppAuth } from '@server/services/whatsapp/whatsapp.db';
 import logger from '@server/helpers/logger';
+import { app } from '@server/index';
+import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 
 export type Language = 'en' | 'he' | 'ar' | 'ru';
 
@@ -11,7 +13,7 @@ export class WhatsappAiService {
   private langMap: Record<Language, string> = { en: 'English', he: 'Hebrew', ar: 'Arabic', ru: 'Russian' };
 
   constructor() {
-    this.ai = new OpenAiService();
+    this.ai = new OpenAiService({ failureCallback: (errorMessage) => app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage }) });
   }
 
   // Helpers
