@@ -8,6 +8,7 @@ import { MESSAGE_QUEUE_COUNT, MESSAGE_QUEUE_SENT_COUNT, UPDATE_MESSAGE_COUNT } f
 import messageQueueSlice from '@client/pages/Queue/store/message-queue.slice';
 import getClientSocket from '@helpers/get-client-socket.helper';
 import { MessageQueueEventEnum } from '@client/pages/Queue/constants/message-queue-event.enum';
+import { ConversationEventEnum } from '@client/pages/Chat/store/chat-event.enum';
 import { cn } from '@client/plugins';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -31,25 +32,27 @@ const MessageQueueCounter = ({ className }: { className?: ClassValue }) => {
     };
 
     const newOpportunity = (data: NewOpportunityEvent) => {
-      const instanceNumber = data.instanceNumber;
+      const instanceNumber = internationalPhonePrettier(data.instanceNumber);
       const department = t(`CHAT.DEPARTMENT.${data.department}`);
       const link = `/chat/${instanceNumber}/${data.phoneNumber}`;
 
-      toast.info(t('QUEUE.NEW_OPPORTUNITY', { instanceNumber: internationalPhonePrettier(instanceNumber, '-', true), department }), {
-        duration: 7000,
-        closeable: true,
-        onClick: () => navigate(link),
-      });
+      toast.info(t('QUEUE.NEW_OPPORTUNITY', { instanceNumber, department }), { duration: 10000, closeable: true, onClick: () => navigate(link) });
+    };
+
+    const aiFailure = (errorData: { errorMessage: string }) => {
+      toast.error(errorData.errorMessage, { duration: 20000, closeable: true });
     };
 
     socket?.on(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);
     socket?.on(MessageQueueEventEnum.NEW_OPPORTUNITY, newOpportunity);
+    socket?.on(ConversationEventEnum.AI_FAILURE, aiFailure);
 
     return () => {
       socket?.off(MessageQueueEventEnum.QUEUE_SEND_ACTIVE, update);
       socket?.off(MessageQueueEventEnum.NEW_OPPORTUNITY, newOpportunity);
+      socket?.off(ConversationEventEnum.AI_FAILURE, aiFailure);
     };
-  }, [dispatch, updateMessageCount]);
+  }, [dispatch, updateMessageCount, t, toast, navigate]);
 
   return (
     <div className={cn('px-2 flex gap-2', className)}>

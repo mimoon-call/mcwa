@@ -298,6 +298,7 @@ export const conversationAiHandler = async (id: ObjectId, options?: Options): Pr
           }
         }
       } catch (e) {
+        app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage: String(e) });
         logger.error('classifyInterest:error', e);
       }
     } finally {
