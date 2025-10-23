@@ -264,6 +264,22 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
   }
 
+  private async simulateRealisticUserBehavior(): Promise<void> {
+    // 10% chance: take a break (2-10 minutes offline)
+    if (Math.random() < 0.1) {
+      const breakTime = this.randomDelayBetween(120, 600);
+      this.log('debug', `Simulating user break: ${breakTime}s offline`);
+      await new Promise((resolve) => setTimeout(resolve, breakTime * 1000));
+    }
+
+    // 5% chance: check messages but don't reply immediately (read without reply)
+    if (Math.random() < 0.05) {
+      const delayBeforeReply = this.randomDelayBetween(300, 1800); // 5-30 minutes
+      this.log('debug', `Simulating check-without-immediate-reply: ${delayBeforeReply}s`);
+      await new Promise((resolve) => setTimeout(resolve, delayBeforeReply * 1000));
+    }
+  }
+
   private getDailyLimits(instance: WAInstance<WAPersona>) {
     let dailyLimit: { maxConversation: number; minMessages: number; maxMessages: number };
 
@@ -510,10 +526,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const currentState = this.activeConversation.get(conversationKey);
       const currentMessage = currentState?.find(({ sentAt }) => !sentAt);
       const currentIndex = currentState?.findIndex(({ sentAt }) => !sentAt);
-      
+
       // Get previous message for context
       const previousMessage = currentState?.filter(({ sentAt }) => sentAt).slice(-1)[0];
-      
+
       // Calculate realistic delay based on message length and context
       const messageLength = currentMessage?.text?.length || 50;
       const delaySeconds = this.getRealisticMessageDelay(messageLength, previousMessage?.sentAt);
@@ -530,6 +546,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
         // Simulate read delay (sometimes read message but don't reply immediately)
         await this.simulateReadDelay();
+
+        // Simulate realistic user behavior (take a break, check messages)
+        await this.simulateRealisticUserBehavior();
 
         const messageContent = { type: 'text' as const, text: currentMessage.text };
 
@@ -560,37 +579,67 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
             this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
 
-            await instance.send(currentMessage.toNumber, messageContent, {
-              trackDelivery: true, // Enable delivery tracking
-              waitForDelivery: true, // Wait for delivery confirmation
-              waitTimeout: 60000, // 1 minute timeout
-              throwOnDeliveryError: true, // Throw to see the actual error
+            // Send without blocking - use onUpdate callback to track delivery
+            const deliveryPromise = new Promise<void>((resolve, reject) => {
+              const timeoutId = setTimeout(() => {
+                reject(new Error('Delivery confirmation timeout - assuming message lost'));
+              }, 15000); // 15 second timeout to receive delivery confirmation
+
+              instance
+                .send(currentMessage.toNumber, messageContent, {
+                  trackDelivery: true,
+                  waitForDelivery: false, // Don't block - use callback instead
+                  onUpdate: (messageId, deliveryStatus) => {
+                    // Check if message reached DELIVERED or READ status
+                    if (deliveryStatus.status === MessageStatusEnum.DELIVERED || deliveryStatus.status === MessageStatusEnum.READ) {
+                      clearTimeout(timeoutId);
+                      resolve();
+                    }
+                  },
+                })
+                .catch((error) => {
+                  clearTimeout(timeoutId);
+                  reject(error);
+                });
             });
+
+            // Wait for delivery confirmation before marking as sent
+            try {
+              await deliveryPromise;
+              currentMessage.sentAt = getLocalTime();
+              this.log('debug', `[${conversationKey}] Message delivered from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
+            } catch (deliveryError) {
+              // If delivery fails, still mark as sent but log the error
+              // This prevents the conversation from getting stuck
+              currentMessage.sentAt = getLocalTime();
+              this.log('warn', `[${conversationKey}] Delivery confirmation timeout, continuing anyway:`, deliveryError);
+            }
+
+            // Occasionally refresh session (5% chance) - not after every message
+            if (Math.random() < 0.05) {
+              try {
+                const client = this.getInstance(currentMessage.fromNumber);
+                await client?.refresh();
+              } catch (error) {
+                this.log('error', `[${currentMessage.fromNumber}] Failed to refresh session:`, error);
+              }
+            }
+
+            const remainingMessages = currentState.filter((msg) => !msg.sentAt);
+
+            if (remainingMessages.length === 0) {
+              this.log('debug', `[${conversationKey}]`, 'Conversation completed, cleaning up...');
+              await this.cleanupConversation(conversationKey);
+
+              return;
+            }
+
+            const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
+            this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
+            await this.handleConversationMessage(conversationKey);
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
           }
-
-          currentMessage.sentAt = getLocalTime();
-
-          try {
-            const client = this.getInstance(currentMessage.fromNumber);
-            await client?.refresh();
-          } catch (error) {
-            this.log('error', `[${currentMessage.fromNumber}] Failed to refresh session:`, error);
-          }
-
-          const remainingMessages = currentState.filter((msg) => !msg.sentAt);
-
-          if (remainingMessages.length === 0) {
-            this.log('debug', `[${conversationKey}]`, 'Conversation completed, cleaning up...');
-            await this.cleanupConversation(conversationKey);
-
-            return;
-          }
-
-          const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
-          this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
-          await this.handleConversationMessage(conversationKey);
         } catch {
           this.log(
             'error',
@@ -653,8 +702,8 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
         // Add a realistic delay between conversation creations (humans don't start multiple conversations rapidly)
         if (this.activeConversation.size > 0) {
-          const delay = this.randomDelayBetween(15, 45) * 60 * 1000; // 15-45 minutes delay
-          this.log('debug', `Waiting ${delay / 60000} minutes before creating next conversation to simulate realistic behavior`);
+          const delay = this.randomDelayBetween(45, 120) * 60 * 1000; // 45-120 minutes delay
+          this.log('debug', `Waiting ${Math.round(delay / 60000)} minutes before creating next conversation to simulate realistic behavior`);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
 
