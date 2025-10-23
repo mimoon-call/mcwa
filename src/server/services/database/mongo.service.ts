@@ -424,10 +424,11 @@ export class MongoService<TDoc extends object> {
         bufferCommands: false,
       });
 
-      logger.info('✅ MongoDB connected successfully', uri.replace(/:\/\/(.*?):.*?@/, '://$1@').replace(/\?.*/, ''));
+      const maskedUri = uri.replace(/:\/\/(.*?):.*?@/, '://$1@').replace(/\?.*/, '');
+      logger.info(`✅ MongoDB connected successfully to ${maskedUri}`);
 
       mongoose.connection.on('error', (error) => {
-        logger.error('MongoDB connection error:', error);
+        logger.error(`MongoDB connection error: ${String(error)}`);
       });
 
       mongoose.connection.on('disconnected', () => {
@@ -458,7 +459,7 @@ export class MongoService<TDoc extends object> {
       await mongoose.disconnect();
       logger.debug('MongoDB disconnected via MongoService');
     } catch (error) {
-      logger.error('Error disconnecting from MongoDB:', error);
+      logger.error(`Error disconnecting from MongoDB:${String(error)}`);
       throw error;
     }
   }
@@ -505,8 +506,8 @@ export class MongoService<TDoc extends object> {
           MongoService.reconnectAttempts = 0;
           logger.debug('✅ Reconnection successful!');
         }
-      } catch (reconnectError) {
-        logger.error(`❌ Reconnection attempt ${MongoService.reconnectAttempts} failed:`, reconnectError);
+      } catch (error) {
+        logger.error(`❌ Reconnection attempt ${MongoService.reconnectAttempts} failed: ${String(error)}`);
         // Try again if we haven't reached max retries
         if (MongoService.reconnectAttempts < RECONNECT_CONFIG.maxRetries) {
           MongoService.attemptReconnect();
