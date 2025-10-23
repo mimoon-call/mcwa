@@ -305,6 +305,13 @@ export const conversationService = {
               '$name',
             ],
           },
+          // Ensure lastMessageAt always has a value - use queue createdAt as fallback
+          lastMessageAt: {
+            $ifNull: [
+              { $cond: [{ $gt: [{ $size: '$lastReceivedMessage' }, 0] }, { $arrayElemAt: ['$lastReceivedMessage.createdAt', 0] }, null] },
+              '$lastMessageAt'
+            ],
+          },
         },
       },
 
