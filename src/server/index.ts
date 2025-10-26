@@ -52,7 +52,7 @@ export const app = new ServerExpress({
 
 export const wa = new WhatsappWarmService({
   ...whatsappConfig,
-  debugMode: isProduction ? logger.levels : true,
+  debugMode: true,
   warmUpOnReady: true,
   onIncomingMessage: incomingMessageHandler,
   onOutgoingMessage: outgoingMessageHandler,
