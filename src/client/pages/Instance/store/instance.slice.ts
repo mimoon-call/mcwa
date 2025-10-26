@@ -88,13 +88,13 @@ const deleteInstance = createAsyncThunk(`${StoreEnum.instance}/${DELETE_INSTANCE
   await dispatch(searchInstance({}));
 });
 
-const toggleInstanceActivate = createAsyncThunk(`${ACTIVE_TOGGLE_INSTANCE}`, async (phoneNumber: string) => {
+const toggleInstanceActivate = async (phoneNumber: string) => {
   await api.post<void>(`${ACTIVE_TOGGLE_INSTANCE}/${phoneNumber}`);
-});
+};
 
-const toggleInstanceWarmUp = createAsyncThunk(`${WARMUP_TOGGLE_INSTANCE}`, async (phoneNumber: string) => {
+const toggleInstanceWarmUp = async (phoneNumber: string) => {
   await api.post<void>(`${WARMUP_TOGGLE_INSTANCE}/${phoneNumber}`);
-});
+};
 
 const refreshInstance = createAsyncThunk(`${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
   await api.post<void>(`${INSTANCE_REFRESH}/${phoneNumber}`);

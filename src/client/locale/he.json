@@ -178,7 +178,9 @@
     "COMMENT_HAS_BEEN_UPDATED_SUCCESSFULLY": "ההערה עודכנה בהצלחה",
     "COMMENT_UPDATE_FAILED": "עדכון ההערה נכשל",
     "NOT_FOUND": "הקו לא נמצא",
-    "NOT_READY": "הקו לא מוכן"
+    "NOT_READY": "הקו לא מוכן",
+    "ACTIVE_STATUS_TOGGLE_FAILED": "שינוי סטטוס פעיל נכשל",
+    "WARM_STATUS_TOGGLE_FAILED": "שינוי סטטוס חימום נכשל"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",
