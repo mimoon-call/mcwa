@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { INSTANCE_SEARCH_FILTER, RESET_INSTANCE_SEARCH, SEARCH_INSTANCE, UPDATE_FILTER } from '@client/pages/Instance/store/instance.constants';
 import instanceStore from '@client/pages/Instance/store/instance.slice';
 import { StoreEnum } from '@client/store/store.enum';
-import { SearchPanel } from '@client/components/SearchPanel';
+import { SearchPanel } from '@components/SearchPanel';
 
 export const InstanceSearchPanel = () => {
   const { t } = useTranslation();
