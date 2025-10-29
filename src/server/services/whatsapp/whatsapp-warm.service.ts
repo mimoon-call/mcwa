@@ -227,22 +227,22 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
     const warmUpDay = instance.get('warmUpDay');
 
-    if (warmUpDay <= 0) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
+    if (warmUpDay <= 1) {
+      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 };
     } else if (warmUpDay <= 3) {
-      dailyLimit = { maxConversation: 10, minMessages: 20, maxMessages: 30 };
+      dailyLimit = { maxConversation: 4, minMessages: 10, maxMessages: 20 };
     } else if (warmUpDay <= 6) {
-      dailyLimit = { maxConversation: 20, minMessages: 50, maxMessages: 100 };
+      dailyLimit = { maxConversation: 6, minMessages: 20, maxMessages: 30 };
     } else if (warmUpDay <= 10) {
-      dailyLimit = { maxConversation: 30, minMessages: 100, maxMessages: 150 };
+      dailyLimit = { maxConversation: 8, minMessages: 30, maxMessages: 40 };
     } else if (warmUpDay <= 14) {
-      dailyLimit = { maxConversation: 50, minMessages: 100, maxMessages: 200 };
+      dailyLimit = { maxConversation: 10, minMessages: 40, maxMessages: 50 };
     } else if (warmUpDay === 15) {
       // Final day of warm-up, mark as fully warmed up
       instance.update({ hasWarmedUp: true });
-      dailyLimit = { maxConversation: 100, minMessages: 30, maxMessages: 200 };
+      dailyLimit = { maxConversation: 10, minMessages: 10, maxMessages: 20 };
     } else {
-      dailyLimit = { maxConversation: 100, minMessages: 25, maxMessages: 200 };
+      dailyLimit = { maxConversation: 10, minMessages: 5, maxMessages: 10 };
     }
 
     return dailyLimit;
