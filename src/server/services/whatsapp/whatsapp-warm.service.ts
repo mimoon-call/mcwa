@@ -3,7 +3,7 @@ import type { WAConversation, WAPersona, WAServiceConfig } from './whatsapp.type
 import type { WAActiveWarm, WAWarmUpdate } from '@server/services/whatsapp/whatsapp-warm.types';
 import { WhatsappAiService } from './whatsapp.ai';
 import { WAInstance, WhatsappService } from './whatsapp.service';
-import { WhatsAppMessage } from './whatsapp.db';
+import { WhatsAppMessage, WhatsAppAuth } from './whatsapp.db';
 import { clearTimeout } from 'node:timers';
 import { MessageStatusEnum } from './whatsapp.enum';
 import { LRUCache } from 'lru-cache';
@@ -167,6 +167,146 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
   private getPairKey<T extends object>(key: keyof T, a: T, b: T): string {
     return [String(a[key]), String(b[key])].sort((a, b) => a.localeCompare(b)).join(':');
+  }
+
+  /**
+   * Check if a pair has existing message history between them
+   */
+  private async hasMessageHistory(phoneNumber1: string, phoneNumber2: string): Promise<boolean> {
+    try {
+      const messages = await WhatsAppMessage.findOne({
+        $or: [
+          { fromNumber: phoneNumber1, toNumber: phoneNumber2 },
+          { fromNumber: phoneNumber2, toNumber: phoneNumber1 },
+        ],
+        // Exclude internal/warming messages - only count real conversation history
+        internalFlag: { $ne: true },
+        warmingFlag: { $ne: true },
+      }, { _id: 1 }).lean();
+
+      return !!messages;
+    } catch (error) {
+      this.log('error', `Error checking message history between ${phoneNumber1} and ${phoneNumber2}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get pairs with smart prioritization:
+   * 1. Prefer pairs with existing message history
+   * 2. Prefer pairing old instances (high warmUpDay) with new instances (low warmUpDay)
+   */
+  private async getSmartPairs<T extends WAInstance<WAPersona>>(
+    key: keyof T,
+    arr: T[],
+    fallbackInstance?: (phoneNumber: string) => T,
+    allInstances?: T[]
+  ): Promise<[T, T][]> {
+    if (arr.length === 1) {
+      const fallback = this.getAvailableFallbackInstance(arr[0][key] as string, fallbackInstance, allInstances);
+
+      if (!fallback) {
+        this.log('error', 'No available fallback instance found (all pairs have failed recently)');
+        return [];
+      }
+
+      this.log('debug', `[${this.getPairKey(key, arr[0], fallback)}]`, `Using fallback to warm '${arr[0][key]}' ...`);
+      return fallback ? [[arr[0], fallback]] : [];
+    }
+
+    // Collect all valid pairs with their metadata
+    const allPairs: Array<{ 
+      pair: [T, T]; 
+      phoneNumber1: string; 
+      phoneNumber2: string; 
+      warmUpDay1: number; 
+      warmUpDay2: number; 
+      hasHistory: boolean 
+    }> = [];
+
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        const key1 = arr[i][key];
+        const key2 = arr[j][key];
+
+        if (key1 === key2) continue;
+
+        const pairKey = this.getPairKey(key, arr[i], arr[j]);
+        
+        // Skip pairs that have failed recently
+        if (this.spammyBehaviorPairs.has(pairKey)) {
+          this.log('debug', `[${pairKey}] Skipping pair - failed recently`);
+          continue;
+        }
+
+        const phoneNumber1 = String(key1);
+        const phoneNumber2 = String(key2);
+        const warmUpDay1 = arr[i].get('warmUpDay') || 0;
+        const warmUpDay2 = arr[j].get('warmUpDay') || 0;
+        
+        // Check for existing message history
+        const hasHistory = await this.hasMessageHistory(phoneNumber1, phoneNumber2);
+
+        allPairs.push({
+          pair: [arr[i], arr[j]],
+          phoneNumber1,
+          phoneNumber2,
+          warmUpDay1,
+          warmUpDay2,
+          hasHistory,
+        });
+      }
+    }
+
+    // Sort pairs by priority:
+    // 1. Pairs with history first (hasHistory = true gets priority)
+    // 2. Then by warmUpDay difference (prefer pairing old with new - larger difference = better)
+    // 3. Break ties by preferring higher total warmup days (at least one well-warmed instance)
+    allPairs.sort((a, b) => {
+      // Priority 1: History (has history = higher priority)
+      if (a.hasHistory !== b.hasHistory) {
+        return a.hasHistory ? -1 : 1;
+      }
+
+      // Priority 2: Warmup day difference - prefer pairing old (high days) with new (low days)
+      const diffA = Math.abs(a.warmUpDay1 - a.warmUpDay2);
+      const diffB = Math.abs(b.warmUpDay1 - b.warmUpDay2);
+      
+      // Higher difference = better (old with new)
+      if (diffA !== diffB) {
+        return diffB - diffA;
+      }
+
+      // Priority 3: Total warmup days - prefer pairs with at least one well-warmed instance
+      const totalA = a.warmUpDay1 + a.warmUpDay2;
+      const totalB = b.warmUpDay1 + b.warmUpDay2;
+      
+      return totalB - totalA;
+    });
+
+    // Extract pairs in priority order and ensure no overlaps
+    const result: [T, T][] = [];
+    const usedInstances = new Set<string>();
+
+    for (const { pair, phoneNumber1, phoneNumber2, hasHistory } of allPairs) {
+      // Skip if either instance is already used in another pair
+      if (usedInstances.has(phoneNumber1) || usedInstances.has(phoneNumber2)) {
+        continue;
+      }
+
+      usedInstances.add(phoneNumber1);
+      usedInstances.add(phoneNumber2);
+      result.push(pair);
+
+      const pairKey = this.getPairKey(key, pair[0], pair[1]);
+      const historyNote = hasHistory ? ' (has history)' : ' (new conversation)';
+      const minWarmup = Math.min(pair[0].get('warmUpDay') || 0, pair[1].get('warmUpDay') || 0);
+      const maxWarmup = Math.max(pair[0].get('warmUpDay') || 0, pair[1].get('warmUpDay') || 0);
+      const warmupNote = `warmup: ${minWarmup}d + ${maxWarmup}d`;
+      this.log('debug', `[${pairKey}] Selected pair${historyNote}, ${warmupNote}`);
+    }
+
+    return result;
   }
 
   private markPairAsFailed(conversationKey: string): void {
@@ -418,12 +558,50 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return null;
   }
 
+  /**
+   * Check if an instance is old enough to start warm-up.
+   * WhatsApp may flag accounts that start sending messages immediately after registration.
+   * Wait at least 24 hours after registration before starting warm-up.
+   */
+  private async isInstanceReadyForWarmUp(instance: WAInstance<WAPersona>): Promise<boolean> {
+    try {
+      // Query database for createdAt as it's not in the instance state
+      const authDoc = await WhatsAppAuth.findOne({ phoneNumber: instance.phoneNumber }, { createdAt: 1 }).lean();
+      const createdAt = authDoc?.createdAt;
+      
+      if (!createdAt) {
+        // If no creation date, allow warm-up (legacy instances)
+        return true;
+      }
+
+      const now = getLocalTime();
+      const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+      const MIN_WAIT_HOURS = 24; // Wait at least 24 hours after registration
+
+      if (hoursSinceCreation < MIN_WAIT_HOURS) {
+        this.log('info', `Instance ${instance.phoneNumber} is too new (${Math.round(hoursSinceCreation)} hours old). Waiting ${Math.round(MIN_WAIT_HOURS - hoursSinceCreation)} more hours before warm-up to avoid WhatsApp restrictions.`);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.log('error', `Error checking if instance ${instance.phoneNumber} is ready for warm-up:`, error);
+      // On error, allow warm-up to avoid blocking legitimate instances
+      return true;
+    }
+  }
+
   private async getWarmInstances(instances: WAInstance<WAPersona>[]) {
     const warmInstances: WAInstance<WAPersona>[] = [];
     const todayDate = this.getTodayDate();
     const actualToday = new Date().toISOString().split('T')[0]; // Real today's date
 
     for (const instance of instances) {
+      // CRITICAL: Don't warm up instances that are too new to avoid WhatsApp restrictions
+      if (!(await this.isInstanceReadyForWarmUp(instance))) {
+        continue;
+      }
+
       const lastWarmedUpDay = instance.get('lastWarmedUpDay');
       const dailyWarmUpCount = instance.get('dailyWarmUpCount') || 0;
       const dailyWarmConversationCount = instance.get('dailyWarmConversationCount') || 0;
@@ -584,7 +762,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       }
 
       this.log('debug', warmUpTodayInstances.map(({ phoneNumber }) => phoneNumber).join(','), `Start Warming Up ${warmUpTodayInstances.length}`);
-      const instancesPairs = this.getAllUniquePairs(
+      const instancesPairs = await this.getSmartPairs(
         'phoneNumber',
         warmUpTodayInstances,
         this.getFallbackInstance(allActiveInstances),
@@ -640,9 +818,17 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   }
 
   onReady(callback: () => Promise<void> | void) {
-    super.onReady(() => {
+    super.onReady(async () => {
       clearTimeout(this.warmUpTimeout);
-      if (this.warmUpOnReady) this.warmUpTimeout = setTimeout(() => this.startWarmingUp(), 5 * 1000);
+      
+      // Only auto-start warm-up if enabled
+      if (this.warmUpOnReady) {
+        // Delay 30 seconds to ensure instance is fully ready, then start warm-up
+        // The startWarmingUp method will check if instances are ready via getWarmInstances
+        this.warmUpTimeout = setTimeout(async () => {
+          await this.startWarmingUp();
+        }, 30 * 1000);
+      }
 
       callback?.();
     });

@@ -296,14 +296,6 @@ export const conversationService = {
           lastMessage: {
             $cond: [{ $gt: [{ $size: '$lastReceivedMessage' }, 0] }, { $arrayElemAt: ['$lastReceivedMessage.text', 0] }, '$textMessage'],
           },
-          // Prefer the real last received message time when available
-          lastMessageAt: {
-            $cond: [
-              { $gt: [{ $size: '$lastReceivedMessage' }, 0] },
-              { $arrayElemAt: ['$lastReceivedMessage.createdAt', 0] },
-              '$lastMessageAt',
-            ],
-          },
           pushName: { $arrayElemAt: ['$lastReceivedMessage.raw.pushName', 0] },
           // Update name to use pushName if available, otherwise fall back to phoneNumber
           name: {
@@ -313,7 +305,7 @@ export const conversationService = {
               '$name',
             ],
           },
-          // Ensure lastMessageAt always has a value - use queue createdAt as fallback
+          // Ensure lastMessageAt always has a value - prefer received message, fall back to existing lastMessageAt
           lastMessageAt: {
             $ifNull: [
               { $cond: [{ $gt: [{ $size: '$lastReceivedMessage' }, 0] }, { $arrayElemAt: ['$lastReceivedMessage.createdAt', 0] }, null] },
