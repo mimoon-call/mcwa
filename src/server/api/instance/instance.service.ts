@@ -6,6 +6,7 @@ import {
   DELETE_INSTANCE,
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
+  RELOAD_INSTANCES,
   RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
@@ -218,5 +219,9 @@ export const instanceService = {
   [RESET_INSTANCE]: async (phoneNumber: string): Promise<void> => {
     const instance = await getInstance(phoneNumber);
     await instance.update({ incomingMessageCount: 0, outgoingMessageCount: 0, outgoingErrorCount: 0 });
+  },
+
+  [RELOAD_INSTANCES]: async (): Promise<void> => {
+    await wa.reloadInstances();
   },
 };

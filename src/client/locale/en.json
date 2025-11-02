@@ -180,7 +180,9 @@
     "NOT_FOUND": "Instance not found",
     "NOT_READY": "Instance not ready",
     "ACTIVE_STATUS_TOGGLE_FAILED": "Failed to toggle active status",
-    "WARM_STATUS_TOGGLE_FAILED": "Failed to toggle warm status"
+    "WARM_STATUS_TOGGLE_FAILED": "Failed to toggle warm status",
+    "RELOAD_INSTANCES": "Reload",
+    "INSTANCES_RELOADED_SUCCESSFULLY": "Instances reloaded successfully"
   },
   "VALIDATE": {
     "KEBAB_CASE": "lowercase letters, numbers and hyphens (-)",

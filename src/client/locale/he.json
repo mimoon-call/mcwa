@@ -180,7 +180,9 @@
     "NOT_FOUND": "הקו לא נמצא",
     "NOT_READY": "הקו לא מוכן",
     "ACTIVE_STATUS_TOGGLE_FAILED": "שינוי סטטוס פעיל נכשל",
-    "WARM_STATUS_TOGGLE_FAILED": "שינוי סטטוס חימום נכשל"
+    "WARM_STATUS_TOGGLE_FAILED": "שינוי סטטוס חימום נכשל",
+    "RELOAD_INSTANCES": "טען קווים מחדש",
+    "INSTANCES_RELOADED_SUCCESSFULLY": "הקווים נטענו מחדש בהצלחה"
   },
   "VALIDATE": {
     "KEBAB_CASE": "אותיות קטנות באנגלית, מקפים (-)",

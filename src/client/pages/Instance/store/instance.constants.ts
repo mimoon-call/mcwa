@@ -2,6 +2,7 @@ export const SEARCH_INSTANCE = 'search-instance';
 export const ADD_INSTANCE = 'add-instance';
 export const DELETE_INSTANCE = 'delete-instance';
 export const INSTANCE_REFRESH = 'refresh-instance';
+export const RELOAD_INSTANCES = 'reload-instances';
 export const ACTIVE_TOGGLE_INSTANCE = 'active-toggle-instance';
 export const WARMUP_TOGGLE_INSTANCE = 'warmup-toggle-instance';
 export const WARMUP_TOGGLE = 'warmup-toggle';

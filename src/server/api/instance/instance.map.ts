@@ -5,6 +5,7 @@ export const WARMUP_TOGGLE_INSTANCE = 'warmup-toggle-instance';
 export const DELETE_INSTANCE = 'delete-instance';
 export const RESET_INSTANCE = 'reset-instance';
 export const INSTANCE_REFRESH = 'refresh-instance';
+export const RELOAD_INSTANCES = 'reload-instances';
 export const WARMUP_TOGGLE = 'warmup-toggle';
 export const EXPORT_INSTANCES_TO_EXCEL = 'export-instances-to-excel';
 export const UPDATE_INSTANCE_COMMENT = 'update-instance-comment';

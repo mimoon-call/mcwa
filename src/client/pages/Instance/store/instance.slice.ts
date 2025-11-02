@@ -10,6 +10,7 @@ import {
   INSTANCE_ERROR,
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
+  RELOAD_INSTANCES,
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
@@ -98,6 +99,11 @@ const toggleInstanceWarmUp = async (phoneNumber: string) => {
 
 const refreshInstance = createAsyncThunk(`${INSTANCE_REFRESH}`, async (phoneNumber: string, { dispatch }) => {
   await api.post<void>(`${INSTANCE_REFRESH}/${phoneNumber}`);
+  await dispatch(searchInstance({}));
+});
+
+const reloadInstances = createAsyncThunk(`${RELOAD_INSTANCES}`, async (_, { dispatch }) => {
+  await api.post<void>(`${RELOAD_INSTANCES}`);
   await dispatch(searchInstance({}));
 });
 
@@ -213,6 +219,7 @@ export default {
   [ACTIVE_TOGGLE_INSTANCE]: toggleInstanceActivate,
   [WARMUP_TOGGLE_INSTANCE]: toggleInstanceWarmUp,
   [INSTANCE_REFRESH]: refreshInstance,
+  [RELOAD_INSTANCES]: reloadInstances,
   [RESET_INSTANCE]: resetInstance,
   [WARMUP_TOGGLE]: toggleWarmup,
   [EXPORT_INSTANCES_TO_EXCEL]: exportInstancesToExcel,

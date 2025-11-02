@@ -7,6 +7,7 @@ import {
   DELETE_INSTANCE,
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_REFRESH,
+  RELOAD_INSTANCES,
   RESET_INSTANCE,
   SEARCH_INSTANCE,
   UPDATE_INSTANCE_COMMENT,
@@ -104,6 +105,12 @@ export const instanceController = {
   [RESET_INSTANCE]: async (req: Request<{ phoneNumber: string }>, res: Response<BaseResponse>) => {
     const { phoneNumber } = await new RecordValidator(req.params, [['phoneNumber', { type: ['String'], regex: [RegexPattern.PHONE_IL] }]]).validate();
     await instanceService[RESET_INSTANCE](phoneNumber);
+
+    res.send({ returnCode: 0 });
+  },
+
+  [RELOAD_INSTANCES]: async (_req: Request, res: Response<BaseResponse>) => {
+    await instanceService[RELOAD_INSTANCES]();
 
     res.send({ returnCode: 0 });
   },

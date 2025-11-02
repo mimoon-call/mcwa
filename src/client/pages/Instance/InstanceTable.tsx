@@ -17,6 +17,7 @@ import {
   EXPORT_INSTANCES_TO_EXCEL,
   INSTANCE_LOADING,
   INSTANCE_REFRESH,
+  RELOAD_INSTANCES,
   INSTANCE_SEARCH_DATA,
   INSTANCE_SEARCH_FILTER,
   INSTANCE_SEARCH_PAGINATION,
@@ -217,6 +218,7 @@ const InstanceTable = () => {
     [SEARCH_INSTANCE]: searchInstance,
     [DELETE_INSTANCE]: deleteInstance,
     [INSTANCE_REFRESH]: refreshInstance,
+    [RELOAD_INSTANCES]: reloadInstances,
     [RESET_INSTANCE]: resetInstance,
     [UPDATE_INSTANCE]: updateInstance,
     [WARMUP_TOGGLE]: toggleWarmup,
@@ -410,6 +412,10 @@ const InstanceTable = () => {
   const onRefresh = async ({ phoneNumber }: InstanceItem) => await dispatch(refreshInstance(phoneNumber));
   const onReset = async ({ phoneNumber }: InstanceItem) => await resetInstanceRequest(phoneNumber);
   const onWarmUp = async () => await dispatch(toggleWarmup());
+  const onReloadInstances = async () => {
+    await dispatch(reloadInstances());
+    toast.success('INSTANCE.INSTANCES_RELOADED_SUCCESSFULLY');
+  };
 
   const onExportToExcel = async () => {
     try {
@@ -451,6 +457,11 @@ const InstanceTable = () => {
       label: isGlobalWarmingUp ? 'INSTANCE.STOP_WARM_UP' : 'INSTANCE.START_WARM_UP',
       iconName: 'svg:warm',
       onClick: onWarmUp,
+    },
+    {
+      label: 'INSTANCE.RELOAD_INSTANCES',
+      iconName: 'svg:refresh',
+      onClick: onReloadInstances,
     },
   ];
 
