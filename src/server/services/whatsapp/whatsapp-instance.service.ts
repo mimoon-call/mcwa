@@ -345,8 +345,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
   private handleIncomingMessage(raw: WAMessageIncomingRaw, sock: WASocket): [WAMessageIncoming, WAMessageIncomingRaw] {
     const text = this.extractText(raw.message) || '';
-    const fromJid = raw.key.remoteJid!;
-    const toJid = sock.user!.id!;
+    const fromJid = raw.key?.remoteJid;
+    const toJid = sock.user?.id;
+
+    if (!fromJid || !toJid) {
+      throw new Error('Missing required JID information');
+    }
 
     return [{ fromNumber: this.jidToNumber(fromJid), toNumber: this.jidToNumber(toJid), text }, raw];
   }
@@ -1974,7 +1978,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
 
-        const raw: WebMessageInfo | undefined = await (async () => {
+        const raw = await (async () => {
           if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
           const isAudio = typeof payload === 'object' && (payload as any).type === 'audio';
@@ -2003,7 +2007,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           const idleTime = this.randomIdle(); // Add random idle time after sending
           await new Promise((resolve) => setTimeout(resolve, idleTime));
 
-          return messageResult;
+          return messageResult as WebMessageInfo | undefined;
         })();
 
         this.log('info', `Message sent successfully to ${jid}`);
@@ -2055,7 +2059,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         onSuccess?.(record, raw, deliveryStatus || undefined);
 
-        return { messageId: raw!.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
+        return { messageId: raw?.key?.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 

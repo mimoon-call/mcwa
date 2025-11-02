@@ -28,6 +28,8 @@ export const sendMessageToSocketRoom = (message: MessageDocument): void => {
 
   if (app.socket.hasRoomMembers(conversationKey)) {
     const instance = wa.getInstance(message.toNumber);
-    instance?.read(message.raw.key);
+    if (message.raw?.key) {
+      instance?.read(message.raw.key);
+    }
   }
 };

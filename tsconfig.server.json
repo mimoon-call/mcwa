@@ -35,5 +35,6 @@
     }
   },
   "rootDir": "src",
-  "include": ["src/server/**/*", "src/client/**/*.ts", "src/client/**/*.tsx", "src/client/**/*.json", "src/dir.ts"]
+  "include": ["src/server/**/*", "src/client/**/*.ts", "src/client/**/*.tsx", "src/client/**/*.json", "src/dir.ts"],
+  "exclude": ["dist", "node_modules"]
 }

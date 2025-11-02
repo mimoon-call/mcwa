@@ -17,7 +17,7 @@ const deliveryCache = new LRUCache<string, WAMessageDelivery>({ max: 500, ttl: 1
 
 export const sendQueueMessage = async (doc: MessageQueueItem, successCallback?: () => Promise<unknown> | unknown) => {
   const onSuccess: WAMessageOutgoingCallback = async ({ fromNumber }, raw) => {
-    const messageId = raw?.key.id;
+    const messageId = raw?.key?.id;
     if (!messageId || !fromNumber) return;
 
     await WhatsappQueue.updateOne({ _id: doc._id }, { $set: { messageId, instanceNumber: fromNumber } });

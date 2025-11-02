@@ -24,14 +24,14 @@ const speechToText = async (raw: WAMessageIncomingRaw) => {
         });
 
         if (transcribedText) {
-          logger.debug(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcribed:`, transcribedText);
+          logger.debug(getLocalTime(), `[${raw.key?.id}]`, `[${raw.key?.remoteJid}]`, `Audio transcribed:`, transcribedText);
           return transcribedText;
         }
       } catch (error) {
-        logger.error(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio transcription failed:`, error);
+        logger.error(getLocalTime(), `[${raw.key?.id}]`, `[${raw.key?.remoteJid}]`, `Audio transcription failed:`, error);
       }
     } else {
-      logger.debug(getLocalTime(), `[${raw.key.id}]`, `[${raw.key.remoteJid}]`, `Audio message without buffer or mimeType`);
+      logger.debug(getLocalTime(), `[${raw.key?.id}]`, `[${raw.key?.remoteJid}]`, `Audio message without buffer or mimeType`);
     }
   }
 
