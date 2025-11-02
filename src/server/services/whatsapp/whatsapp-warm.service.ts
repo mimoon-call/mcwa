@@ -174,15 +174,18 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
    */
   private async hasMessageHistory(phoneNumber1: string, phoneNumber2: string): Promise<boolean> {
     try {
-      const messages = await WhatsAppMessage.findOne({
-        $or: [
-          { fromNumber: phoneNumber1, toNumber: phoneNumber2 },
-          { fromNumber: phoneNumber2, toNumber: phoneNumber1 },
-        ],
-        // Exclude internal/warming messages - only count real conversation history
-        internalFlag: { $ne: true },
-        warmingFlag: { $ne: true },
-      }, { _id: 1 }).lean();
+      const messages = await WhatsAppMessage.findOne(
+        {
+          $or: [
+            { fromNumber: phoneNumber1, toNumber: phoneNumber2 },
+            { fromNumber: phoneNumber2, toNumber: phoneNumber1 },
+          ],
+          // Exclude internal/warming messages - only count real conversation history
+          internalFlag: { $ne: true },
+          warmingFlag: { $ne: true },
+        },
+        { _id: 1 }
+      ).lean();
 
       return !!messages;
     } catch (error) {
@@ -215,13 +218,13 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
 
     // Collect all valid pairs with their metadata
-    const allPairs: Array<{ 
-      pair: [T, T]; 
-      phoneNumber1: string; 
-      phoneNumber2: string; 
-      warmUpDay1: number; 
-      warmUpDay2: number; 
-      hasHistory: boolean 
+    const allPairs: Array<{
+      pair: [T, T];
+      phoneNumber1: string;
+      phoneNumber2: string;
+      warmUpDay1: number;
+      warmUpDay2: number;
+      hasHistory: boolean;
     }> = [];
 
     for (let i = 0; i < arr.length; i++) {
@@ -232,7 +235,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         if (key1 === key2) continue;
 
         const pairKey = this.getPairKey(key, arr[i], arr[j]);
-        
+
         // Skip pairs that have failed recently
         if (this.spammyBehaviorPairs.has(pairKey)) {
           this.log('debug', `[${pairKey}] Skipping pair - failed recently`);
@@ -243,7 +246,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
         const phoneNumber2 = String(key2);
         const warmUpDay1 = arr[i].get('warmUpDay') || 0;
         const warmUpDay2 = arr[j].get('warmUpDay') || 0;
-        
+
         // Check for existing message history
         const hasHistory = await this.hasMessageHistory(phoneNumber1, phoneNumber2);
 
@@ -271,7 +274,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       // Priority 2: Warmup day difference - prefer pairing old (high days) with new (low days)
       const diffA = Math.abs(a.warmUpDay1 - a.warmUpDay2);
       const diffB = Math.abs(b.warmUpDay1 - b.warmUpDay2);
-      
+
       // Higher difference = better (old with new)
       if (diffA !== diffB) {
         return diffB - diffA;
@@ -280,7 +283,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       // Priority 3: Total warmup days - prefer pairs with at least one well-warmed instance
       const totalA = a.warmUpDay1 + a.warmUpDay2;
       const totalB = b.warmUpDay1 + b.warmUpDay2;
-      
+
       return totalB - totalA;
     });
 
@@ -568,7 +571,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       // Query database for createdAt as it's not in the instance state
       const authDoc = await WhatsAppAuth.findOne({ phoneNumber: instance.phoneNumber }, { createdAt: 1 }).lean();
       const createdAt = authDoc?.createdAt;
-      
+
       if (!createdAt) {
         // If no creation date, allow warm-up (legacy instances)
         return true;
@@ -579,7 +582,10 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
       const MIN_WAIT_HOURS = 24; // Wait at least 24 hours after registration
 
       if (hoursSinceCreation < MIN_WAIT_HOURS) {
-        this.log('info', `Instance ${instance.phoneNumber} is too new (${Math.round(hoursSinceCreation)} hours old). Waiting ${Math.round(MIN_WAIT_HOURS - hoursSinceCreation)} more hours before warm-up to avoid WhatsApp restrictions.`);
+        this.log(
+          'info',
+          `Instance ${instance.phoneNumber} is too new (${Math.round(hoursSinceCreation)} hours old). Waiting ${Math.round(MIN_WAIT_HOURS - hoursSinceCreation)} more hours before warm-up to avoid WhatsApp restrictions.`
+        );
         return false;
       }
 
@@ -688,6 +694,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
               waitForDelivery: true, // Wait for delivery confirmation
               waitTimeout: 60000, // 1 minute timeout
               throwOnDeliveryError: true, // Throw to see the actual error
+              maxRetries: 1,
             });
           } else {
             throw new Error(`Instance ${currentMessage.fromNumber} not found`);
@@ -820,7 +827,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
   onReady(callback: () => Promise<void> | void) {
     super.onReady(async () => {
       clearTimeout(this.warmUpTimeout);
-      
+
       // Only auto-start warm-up if enabled
       if (this.warmUpOnReady) {
         // Delay 30 seconds to ensure instance is fully ready, then start warm-up
