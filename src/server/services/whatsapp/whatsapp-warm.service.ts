@@ -671,7 +671,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
           const instance = this.getInstance(currentMessage.fromNumber);
 
-          if (instance) {
+          if (instance && instance.get('warmUpDay') > 1) {
             const isConnected = instance.connected;
             const isActive = instance.get('isActive');
             this.log('debug', `[${conversationKey}] Instance status - Connected: ${isConnected}, Active: ${isActive}`);
