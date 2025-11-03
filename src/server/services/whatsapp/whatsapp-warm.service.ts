@@ -312,12 +312,9 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     return result;
   }
 
-  private markPairAsFailed(conversationKey: string, isNewNumber: boolean = false): void {
-    const ttlHours = isNewNumber ? 72 : 24; // New numbers get 72 hour ban vs 24 hours
-    const ttlMs = ttlHours * 60 * 60 * 1000;
-    // Set with specific TTL for this entry
-    this.spammyBehaviorPairs.set(conversationKey, true, { ttl: ttlMs });
-    this.log('debug', `[${conversationKey}] Marked pair as failed - will avoid for ${ttlHours} hours${isNewNumber ? ' (new number penalty)' : ''}`);
+  private markPairAsFailed(conversationKey: string): void {
+    this.spammyBehaviorPairs.set(conversationKey, true);
+    this.log('debug', `[${conversationKey}] Marked pair as failed - will avoid for 24 hours`);
   }
 
   private async getLastMessages(fromNumber: string, toNumber: string, limit: number = 10): Promise<WAConversation[]> {
@@ -344,17 +341,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     }
   }
 
-  /**
-   * Check if an instance should be allowed to send messages (not just receive)
-   * Very new numbers (warmUpDay 0) should only receive, not send
-   */
-  private canInstanceSend(instance: WAInstance<WAPersona>): boolean {
-    const warmUpDay = instance.get('warmUpDay') || 0;
-    // Day 0: receive only, no sending to avoid immediate spam detection
-    // Day 1+: can send
-    return warmUpDay > 0;
-  }
-
   private async getRandomScript(pair: [WAInstance<WAPersona>, WAInstance<WAPersona>]): Promise<Omit<WAConversation, 'sentAt'>[] | null> {
     const [instanceA, instanceB] = pair;
     const personaA = instanceA.get() as WAPersona;
@@ -365,57 +351,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     if (!personaB.phoneNumber) personaB.phoneNumber = instanceB.phoneNumber;
 
     const lastMessages = await this.getLastMessages(personaA.phoneNumber, personaB.phoneNumber);
-    
-    // Check if either instance is too new to send
-    const canASend = this.canInstanceSend(instanceA);
-    const canBSend = this.canInstanceSend(instanceB);
-    
-    // If both can send, generate normal conversation
-    // If one can't send, generate one-sided conversation (only from the one that can send)
-    let script: Omit<WAConversation, 'sentAt'>[] | null;
-    
-    if (!canASend && !canBSend) {
-      // Both are too new - generate receive-only script for both (one sends to other)
-      // In this case, prefer the one with slightly higher warmUpDay
-      const warmUpDayA = instanceA.get('warmUpDay') || 0;
-      const warmUpDayB = instanceB.get('warmUpDay') || 0;
-      
-      if (warmUpDayA >= warmUpDayB) {
-        // A can send to B (A is slightly less new)
-        script = await this.ai.generateConversation(personaA, personaB, 3, 5, lastMessages);
-        // Filter to only include messages from A to B
-        if (script) {
-          script = script.filter((msg) => msg.fromNumber === personaA.phoneNumber && msg.toNumber === personaB.phoneNumber);
-        }
-      } else {
-        // B can send to A
-        script = await this.ai.generateConversation(personaB, personaA, 3, 5, lastMessages);
-        // Filter to only include messages from B to A
-        if (script) {
-          script = script.filter((msg) => msg.fromNumber === personaB.phoneNumber && msg.toNumber === personaA.phoneNumber);
-        }
-      }
-    } else if (!canASend) {
-      // Only B can send - generate one-sided conversation from B to A
-      script = await this.ai.generateConversation(personaB, personaA, 5, 8, lastMessages);
-      if (script) {
-        script = script.filter((msg) => msg.fromNumber === personaB.phoneNumber && msg.toNumber === personaA.phoneNumber);
-      }
-    } else if (!canBSend) {
-      // Only A can send - generate one-sided conversation from A to B
-      script = await this.ai.generateConversation(personaA, personaB, 5, 8, lastMessages);
-      if (script) {
-        script = script.filter((msg) => msg.fromNumber === personaA.phoneNumber && msg.toNumber === personaB.phoneNumber);
-      }
-    } else {
-      // Both can send - normal conversation
-      script = await this.ai.generateConversation(personaA, personaB, 8, 12, lastMessages);
-    }
+    const script = await this.ai.generateConversation(personaA, personaB, 8, 12, lastMessages);
 
     this.log(
       'debug',
       `[${[personaA.phoneNumber, personaB.phoneNumber].join(':')}]`,
-      `A can send: ${canASend}, B can send: ${canBSend}`,
       '\n---- Previous Conversation ----',
       ...(lastMessages || []).map((msg) => `\n${msg.fromNumber} -> ${msg.toNumber}: ${msg.text}`),
       '\n---- AI Script ----',
@@ -431,11 +371,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const warmUpDay = instance.get('warmUpDay');
 
     if (warmUpDay <= 0) {
-      // Very new numbers: receive-only for first day, very conservative
-      dailyLimit = { maxConversation: 1, minMessages: 0, maxMessages: 3 }; // Receive only, no sending
-    } else if (warmUpDay === 1) {
-      // Day 1: Mostly receive, minimal sending
-      dailyLimit = { maxConversation: 2, minMessages: 2, maxMessages: 5 };
+      dailyLimit = { maxConversation: 2, minMessages: 5, maxMessages: 10 };
     } else if (warmUpDay <= 3) {
       dailyLimit = { maxConversation: 4, minMessages: 10, maxMessages: 20 };
     } else if (warmUpDay <= 6) {
@@ -459,11 +395,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const conversationCount = instance.get('dailyWarmConversationCount') || 0;
     const messageCount = instance.get('dailyWarmUpCount') || 0;
     const dailyLimit = this.getDailyLimits(instance);
-
-    // For very new numbers (minMessages = 0), only check conversation count
-    if (dailyLimit.minMessages === 0) {
-      return conversationCount < dailyLimit.maxConversation;
-    }
 
     return conversationCount < dailyLimit.maxConversation && messageCount < dailyLimit.minMessages;
   }
@@ -528,15 +459,7 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
     const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
     this.conversationEndCallback?.({ phoneNumber1, phoneNumber2, totalMessages, sentMessages, unsentMessages });
 
-    if (totalMessages > 0 && sentMessages === 0) {
-      // Check if either number is very new (warmUpDay <= 1) to apply stricter penalty
-      const instance1 = this.getInstance(phoneNumber1);
-      const instance2 = this.getInstance(phoneNumber2);
-      const isNewNumber = 
-        (instance1?.get('warmUpDay') || 0) <= 1 || 
-        (instance2?.get('warmUpDay') || 0) <= 1;
-      this.markPairAsFailed(conversationKey, isNewNumber);
-    }
+    if (totalMessages > 0 && sentMessages === 0) this.markPairAsFailed(conversationKey);
 
     this.log('debug', `[${conversationKey}]`, `total messages: ${totalMessages}, sent: ${sentMessages}, unsent: ${unsentMessages}`);
 
@@ -766,16 +689,6 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
 
             this.log('debug', `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber}`);
 
-            // Check if this is a new number sending - add extra delay before sending
-            const warmUpDay = instance.get('warmUpDay') || 0;
-            if (warmUpDay <= 2) {
-              // For new numbers (warmUpDay 0-2), add extra delay before sending to avoid spam detection
-              // This simulates reading the message before replying
-              const extraDelay = warmUpDay === 0 ? 300000 : 180000; // 5 minutes for day 0, 3 minutes for day 1-2
-              this.log('debug', `[${conversationKey}] New number (warmUpDay ${warmUpDay}) - waiting ${extraDelay / 1000}s before sending to avoid spam detection`);
-              await new Promise((resolve) => setTimeout(resolve, extraDelay));
-            }
-
             await instance.send(currentMessage.toNumber, messageContent, {
               trackDelivery: true, // Enable delivery tracking
               waitForDelivery: true, // Wait for delivery confirmation
@@ -808,32 +721,11 @@ export class WhatsappWarmService extends WhatsappService<WAPersona> {
           const [phoneNumber1, phoneNumber2] = conversationKey.split(':');
           this.conversationActiveCallback?.({ phoneNumber1, phoneNumber2 });
           await this.handleConversationMessage(conversationKey);
-        } catch (error: unknown) {
-          const errorMessage = (error as Error)?.message || '';
-          const errorObj = error as { output?: { statusCode?: number }; statusCode?: number };
-          const errorCode = errorObj?.output?.statusCode || errorObj?.statusCode;
-          
-          // Check if this is a 403 error (spam/blocked)
-          const is403Error = errorCode === 403 || errorMessage.includes('403') || errorMessage.includes('Forbidden');
-          
-          // Check if this is a new number
-          const instance = this.getInstance(currentMessage.fromNumber);
-          const warmUpDay = instance?.get('warmUpDay') || 0;
-          const isNewNumber = warmUpDay <= 2;
-          
-          if (is403Error && isNewNumber) {
-            this.log(
-              'error',
-              `[${conversationKey}] 403 error for new number (warmUpDay ${warmUpDay}) - marking pair as failed with extended penalty`
-            );
-            // Mark as failed with extended penalty for new numbers
-            this.markPairAsFailed(conversationKey, true);
-          } else {
-            this.log(
-              'error',
-              `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber} failed, aborting conversation`
-            );
-          }
+        } catch {
+          this.log(
+            'error',
+            `[${conversationKey}] Sending message from ${currentMessage.fromNumber} to ${currentMessage.toNumber} failed, aborting conversation`
+          );
 
           await this.cleanupConversation(conversationKey);
         }
