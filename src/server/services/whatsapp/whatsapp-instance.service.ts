@@ -1590,6 +1590,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
+    // Skip presence updates if privacy is set to invisible to avoid 403 errors
+    // When privacy is invisible, sending presence updates conflicts with the privacy setting
+    const isPrivacyInvisible = this.appState?.hasPrivacyUpdated === true;
+    
+    if (isPrivacyInvisible) {
+      // Just add delay for human-like behavior without presence updates
+      await this.delay(ms);
+      return;
+    }
+
     try {
       // Only subscribe once, not every time we send a message
       await this.socket.presenceSubscribe(jid);
@@ -2105,15 +2115,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           }
 
           // presenceSubscribe is now handled inside emulateHuman to avoid duplicate subscriptions
-          // if (isAudio) {
-          //   const seconds = payload?.duration || 0;
-          //   const ms = seconds * 1000; // Convert seconds to milliseconds
-          //   await this.emulateHuman(jid, 'recording', ms);
-          // } else if (typeof payload === 'string' || payload?.text) {
-          //   const text = (typeof payload === 'string' ? payload : payload?.text)!;
-          //   const ms = this.humanDelayFor(text);
-          //   await this.emulateHuman(jid, 'composing', ms);
-          // }
+          // emulateHuman will skip presence updates if privacy is set to invisible (to avoid 403 errors)
+          if (isAudio) {
+            const seconds = payload?.duration || 0;
+            const ms = seconds * 1000; // Convert seconds to milliseconds
+            await this.emulateHuman(jid, 'recording', ms);
+          } else if (typeof payload === 'string' || payload?.text) {
+            const text = (typeof payload === 'string' ? payload : payload?.text)!;
+            const ms = this.humanDelayFor(text);
+            await this.emulateHuman(jid, 'composing', ms);
+          }
 
           const messageResult = await this.socket.sendMessage(jid, content); // Send the actual message
           if (options?.trackDelivery && messageResult?.key?.id) this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options); // Track message delivery if enabled
