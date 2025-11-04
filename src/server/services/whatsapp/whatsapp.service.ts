@@ -376,12 +376,24 @@ export class WhatsappService<T extends object = Record<never, never>> {
   }
 
   async addInstanceQR(phoneNumber: string): Promise<{ qrCode: string; instance: WAInstance<T> }> {
-    const instance = this.instances.get(phoneNumber);
+    // CRITICAL: Prevent duplicate connections - check if instance already exists and is connecting/connected
+    const existingInstance = this.instances.get(phoneNumber);
 
-    if (instance?.connected) {
+    if (existingInstance?.connected) {
       throw new Error(`Number [${phoneNumber}] is already registered and connected.`);
-    } else if (instance?.get('statusCode') === 200) {
+    } else if (existingInstance?.get('statusCode') === 200) {
       throw new Error(`Number [${phoneNumber}] is already authenticated. Please restart the server or use it directly.`);
+    }
+
+    // CRITICAL: If instance exists but not connected, remove it first to prevent duplicate sessions
+    if (existingInstance && !existingInstance.connected) {
+      this.log('warn', `⚠️ Existing instance found for ${phoneNumber} but not connected - cleaning up before creating new one`);
+      try {
+        await existingInstance.disconnect({ clearSocket: true, logout: false }, 'Replacing with new instance');
+      } catch (error) {
+        this.log('warn', `Error disconnecting existing instance: ${error}`);
+      }
+      this.instances.delete(phoneNumber);
     }
 
     // Create new instance
