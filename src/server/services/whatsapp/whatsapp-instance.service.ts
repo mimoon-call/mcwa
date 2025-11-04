@@ -104,40 +104,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private recovering: boolean = false;
 
   private delay = async (ms: number = 0) => await new Promise((resolve) => setTimeout(resolve, ms));
-  
-  // More realistic idle times: 2-8 seconds with occasional longer pauses
-  private randomIdle = (min = 2000, max = 8000): number => {
-    const base = min + Math.floor(Math.random() * (max - min));
-    // 15% chance of much longer pause (10-20 seconds) - human distraction
-    if (Math.random() < 0.15) {
-      return base + Math.floor(Math.random() * 12000) + 10000;
-    }
-    return base;
-  };
+  private randomIdle = (min = 800, max = 3500): number => min + Math.floor(Math.random() * (max - min));
 
-  // More realistic human typing: 40-60 WPM with variability
   private humanDelayFor(text: string): number {
-    if (!text) return 2000 + Math.floor(Math.random() * 1000); // 2-3s for empty
-    
-    const chars = text.length;
-    
-    // Average typing speed: 50 WPM = ~250 characters per minute = ~4.2 chars/sec
-    // But humans vary: 40-60 WPM range
-    const wpmVariation = 40 + Math.random() * 20; // 40-60 WPM
-    const charsPerSecond = (wpmVariation * 5) / 60; // ~3.3-5 chars/sec
-    const baseTypingTime = (chars / charsPerSecond) * 1000;
-    
-    // Add thinking time: 0.5-2 seconds per sentence
-    const sentences = Math.max(1, text.split(/[.!?]+/).length - 1);
-    const thinkingTime = sentences * (500 + Math.random() * 1500);
-    
-    // Add random pauses (hesitation): 10% chance of 1-3 second pause
-    const hesitation = Math.random() < 0.1 ? 1000 + Math.random() * 2000 : 0;
-    
-    const total = baseTypingTime + thinkingTime + hesitation;
-    
-    // Minimum 2 seconds, maximum 60 seconds (for very long messages)
-    return Math.min(60000, Math.max(2000, total));
+    if (!text) return 0;
+
+    const words = Math.max(1, text.split(/\s+/).length);
+    const base = 800 + words * 220; // base typing time
+    const jitter = Math.floor(Math.random() * 1200);
+
+    return base + jitter; // 1–5s typical
   }
 
   protected log(type: 'info' | 'warn' | 'error' | 'debug', ...args: any[]) {
@@ -346,11 +322,10 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private handleIncomingMessage(raw: WAMessageIncomingRaw, sock: WASocket): [WAMessageIncoming, WAMessageIncomingRaw] {
     const text = this.extractText(raw.message) || '';
     const fromJid = raw.key?.remoteJid;
-    const toJid = sock.user?.id;
-
-    if (!fromJid || !toJid) {
-      throw new Error('Missing required JID information');
+    if (!fromJid) {
+      throw new Error('Invalid message: missing remoteJid');
     }
+    const toJid = sock.user!.id!;
 
     return [{ fromNumber: this.jidToNumber(fromJid), toNumber: this.jidToNumber(toJid), text }, raw];
   }
@@ -478,16 +453,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         // Restore creds.json
         const creds = convertBinaryToBuffer(this.appState.creds);
 
-        // CRITICAL: Validate restored session state
-        if (creds && typeof creds === 'object' && Object.keys(creds).length > 0) {
-          // Validate essential session properties
-          const hasValidSession = creds.registered || creds.me || creds.signedIdentityKey || creds.signedPreKey;
-          
-          if (!hasValidSession) {
-            this.log('warn', '⚠️ Restored session appears invalid - missing essential properties');
-            // Try to restore anyway, Baileys will handle validation
-          }
-
+        if (creds) {
           await writeFile(path.join(this.TEMP_DIR, 'creds.json'), JSON.stringify(creds, null, 2));
 
           // Restore all keys
@@ -496,25 +462,21 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           for (const keyDoc of keyDocs) {
             const data = convertBinaryToBuffer(keyDoc.data);
 
-            if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+            if (data) {
               const filename = `${keyDoc.keyType}-${keyDoc.keyId}.json`;
               await writeFile(path.join(this.TEMP_DIR, filename), JSON.stringify(data, null, 2));
-            } else {
-              this.log('warn', `⚠️ Skipping invalid key file ${keyDoc.keyType}-${keyDoc.keyId}`);
             }
           }
 
           this.log('info', `✅ Restored ${keyDocs.length + 1} files`);
         } else {
-          this.log('warn', '⚠️ Invalid or empty creds in database - removing instance');
           await this.deleteAppAuth();
           await this.cleanupAndRemoveTempDir();
           this.onRemove();
 
           this.log('warn', '⭕ Instance data was removed');
         }
-      } catch (error) {
-        this.log('error', '❌ Error restoring session from database:', error);
+      } catch (_error) {
         await this.cleanupAndRemoveTempDir(true);
         const creds = initAuthCreds();
         await writeFile(path.join(this.TEMP_DIR, 'creds.json'), JSON.stringify(creds, null, 2));
@@ -590,39 +552,25 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       const handleFileChange = async () => {
         const fileList = await readdir(this.TEMP_DIR);
 
-        // Save creds.json - CRITICAL: Always persist creds updates
+        // Save creds.json
         if (fileList.includes('creds.json')) {
           try {
             const creds = await readJsonFile<AuthenticationCreds>('creds.json');
-            
-            // Validate session state before saving
-            if (!creds || (typeof creds === 'object' && Object.keys(creds).length === 0)) {
-              this.log('warn', '⚠️ Empty or invalid creds detected, skipping save');
-              return;
-            }
-
             const credsForStorage = convertBufferToPlain(creds);
             await this.updateAppAuth({ creds: credsForStorage } as WAAppAuth<T>);
 
-            this.log('debug', '✅ creds.json persisted to database');
+            this.log('info', 'creds.json has been updated');
           } catch (error) {
-            this.log('error', '❌ Error saving creds.json:', error);
-            // Re-throw to ensure we know when persistence fails
-            throw error;
+            this.log('error', 'Error saving creds.json:', error);
           }
         }
 
-        // Save keys - CRITICAL: Always persist all keys
+        // Save keys
         for (const fileName of fileList) {
           if (fileName === 'creds.json') continue;
 
           try {
             const data = await readJsonFile<any>(fileName);
-
-            if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
-              this.log('warn', `⚠️ Empty or invalid key file ${fileName} detected, skipping save`);
-              continue;
-            }
 
             const filenameWithoutExt = fileName.replace('.json', '');
             const [keyType, ...idParts] = filenameWithoutExt.split('-');
@@ -630,26 +578,23 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             const dataForStorage = convertBufferToPlain(data);
 
             await this.updateAppKey(keyType, keyId, { keyType, keyId, data: dataForStorage, updatedAt: getLocalTime() });
-            this.log('debug', `✅ Key ${keyType}-${keyId} persisted to database`);
           } catch (error) {
-            this.log('error', `❌ Error saving key file ${fileName}:`, error);
-            // Don't throw here - continue saving other keys even if one fails
+            this.log('error', `Error saving key file ${fileName}:`, error);
           }
         }
       };
 
       try {
-        // CRITICAL: Always call original saveCreds first to ensure temp files are updated
+        // Always call original saveCreds first to ensure temp files are updated
         await originalSaveCreds();
 
-        // CRITICAL: Always persist to database after every creds.update
-        // This ensures we never lose session state, even during transient disconnections
+        // Only save to database if this is a new session and we haven't saved yet
         if (isNewSession && !hasBeenSavedToDatabase) {
           this.log('info', 'Checking if registration is complete...');
 
           const creds = await readJsonFile<AuthenticationCreds>('creds.json');
 
-          // Check if registration is complete (has registered: true or me object)
+          // Check if registration is complete (has registered: true or me object) - EXACTLY like old version
           if (creds.registered || creds.me) {
             this.log('info', 'Registration complete, saving to database');
             this.onRegister();
@@ -657,22 +602,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             await handleFileChange();
             hasBeenSavedToDatabase = true;
           } else {
-            this.log('debug', 'Registration not complete yet, skipping database save');
+            this.log('info', 'Registration not complete yet, skipping database save');
           }
-        } else {
-          // CRITICAL: For existing sessions, ALWAYS persist creds updates
-          // This ensures session state is always current in database
+        } else if (!isNewSession) {
+          this.log('info', 'Updating session data');
+
           await handleFileChange();
         }
-      } catch (error) {
-        this.log('error', '❌ Error in saveCreds:', error);
-        
-        // Try to save original creds as fallback
-        try {
-          await originalSaveCreds();
-        } catch (fallbackError) {
-          this.log('error', '❌ Critical: Failed to save creds even as fallback:', fallbackError);
-        }
+      } catch (_error) {
+        this.log('error', 'Error in saveCreds');
+
+        await originalSaveCreds();
       }
     };
 
@@ -857,9 +797,6 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const reason = (lastDisconnect?.error as Boom)?.message || 'Unknown';
 
-        // CRITICAL: Properly detect loggedOut disconnect reason
-        const isLoggedOut = code === DisconnectReason.loggedOut;
-
         // Create a more descriptive reason that includes the error code
         const disconnectReason = code ? `${code}: ${reason}` : reason;
         if (code !== this.appState?.statusCode) {
@@ -877,34 +814,17 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('warn', '⚠️ Stream Error (440) - Conflict detected, this may be due to multiple sessions or rapid reconnections');
         }
 
-        // CRITICAL: Handle loggedOut - session expired, need new QR
-        if (isLoggedOut) {
-          this.log('error', '🚫 Session expired (loggedOut) - Session was logged out, need to re-pair with QR code');
-          
-          // CRITICAL: Clean up auth state on logout to prevent reuse
-          try {
-            // Mark session as inactive
-            await this.update({ isActive: false } as WAAppAuth<T>);
-            
-            // Clear temp directory but keep DB record for reference
-            await this.cleanupAndRemoveTempDir();
-            
-            // Don't attempt reconnection for loggedOut
-            this.hasManualDisconnected = true;
-            
-            this.log('info', '✅ Session cleanup completed after logout');
-          } catch (cleanupError) {
-            this.log('error', '❌ Error during session cleanup after logout:', cleanupError);
-          }
-          
-          // Trigger disconnect callback but don't attempt reconnection
-          await this.onDisconnect(disconnectReason);
-          return; // Don't attempt reconnection for loggedOut
-        }
-
         // Stop intervals
         this.stopKeepAlive();
         this.stopHealthCheck();
+
+        // Trigger disconnect callback
+        await this.handleInstanceDisconnect(disconnectReason);
+
+        // Handle specific disconnect reasons
+        if (code === DisconnectReason.loggedOut) {
+          this.log('info', 'Logged out');
+        }
 
         // Check if this was due to MAC/decryption errors, unsupported state errors, or decrypt message errors
         if (reason) {
@@ -921,21 +841,12 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             // Attempt to recover from these errors
             try {
               const recovered = await this.handleDecryptionError({ message: reason });
-              if (recovered) {
-                this.log('info', '✅ Error recovery successful after disconnect');
-                // If recovery successful, attempt reconnection
-                await this.handleInstanceDisconnect(disconnectReason);
-                return;
-              }
+              if (recovered) this.log('info', '✅ Error recovery successful after disconnect');
             } catch (recoveryError) {
               this.log('error', '❌ Error recovery failed after disconnect:', recoveryError);
             }
           }
         }
-
-        // CRITICAL: Only attempt reconnection if not loggedOut and not manually disconnected
-        // handleInstanceDisconnect will check if we should retry
-        await this.handleInstanceDisconnect(disconnectReason);
       }
     };
     const messagesUpsertHandler = async (msg: any): Promise<void> => {
@@ -1156,19 +1067,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       }
     };
 
-    // CRITICAL: Always persist creds updates - this is essential for session persistence
-    sock.ev.on('creds.update', async () => {
-      try {
-        if (this.saveCreds) {
-          await this.saveCreds();
-        } else {
-          this.log('warn', '⚠️ saveCreds not initialized, skipping creds update');
-        }
-      } catch (error) {
-        this.log('error', '❌ Failed to save creds on update:', error);
-        // Don't throw - we don't want to crash on save failures, but log them
-      }
-    });
+    sock.ev.on('creds.update', () => this.saveCreds?.()); // Credentials update handler
     sock.ev.on('connection.update', connectionUpdateHandler); // Connection update handler
     sock.ev.on('messages.upsert', messagesUpsertHandler); // Consolidated messages handler with comprehensive error handling
     sock.ev.on('messages.update', messageUpdateHandler); // Add message status tracking
@@ -1183,22 +1082,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   }
 
   private async handleInstanceDisconnect(reason: string, attempts: number = 1, maxRetry: number = 3): Promise<void> {
-    // CRITICAL: Check if this is a loggedOut disconnect - don't retry
-    if (reason.includes(`${DisconnectReason.loggedOut}`) || reason.includes('loggedOut')) {
-      this.log('error', '🚫 Session logged out - no reconnection attempts will be made');
-      this.onDisconnect(reason);
-      return;
-    }
-
     // Check if this is an authentication/authorization error that shouldn't be retried
     if (this.shouldSkipRetry(undefined, reason)) {
-      this.onDisconnect(reason);
-      return;
-    }
-
-    // CRITICAL: Don't retry if manually disconnected
-    if (this.hasManualDisconnected) {
-      this.log('info', 'Manual disconnect - skipping reconnection');
       this.onDisconnect(reason);
       return;
     }
@@ -1215,17 +1100,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
       this.log('info', `⏳ Waiting ${Math.round(delay / 1000)}s before reconnection attempt ${attempts}/${maxRetry}`);
 
-      if (attempts < maxRetry && this.appState?.isActive === true && !this.hasManualDisconnected) {
+      if (attempts < maxRetry && this.appState?.isActive === true) {
         setTimeout(async () => {
           try {
             // Add a small random delay to prevent multiple instances from reconnecting simultaneously
             const randomDelay = Math.random() * 5000;
             await new Promise((resolve) => setTimeout(resolve, randomDelay));
 
-            // Double-check we're still supposed to reconnect
-            if (!this.hasManualDisconnected && this.appState?.isActive === true) {
-              await this.connect();
-            }
+            await this.connect();
           } catch (_error) {
             this.log('warn', '🔄 Instance reconnect attempt failed', `${attempts + 1}/${maxRetry}`);
             await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
@@ -1236,14 +1118,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
 
     // Standard reconnection logic for other errors
-    if (attempts < maxRetry && this.appState?.isActive === true && !this.hasManualDisconnected) {
+    if (attempts < maxRetry && this.appState?.isActive === true) {
       const delay = 15000; // 15 seconds
       setTimeout(async () => {
         try {
-          // Double-check we're still supposed to reconnect
-          if (!this.hasManualDisconnected && this.appState?.isActive === true) {
-            await this.connect();
-          }
+          await this.connect();
         } catch (_error) {
           this.log('warn', '🔄 Instance reconnect attempt', `${attempts + 1}/${maxRetry}`);
           await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
@@ -1258,39 +1137,20 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startKeepAlive(): void {
     this.stopKeepAlive();
 
-    // More realistic keep-alive: 3-5 minutes with randomization to avoid patterns
-    const getNextKeepAliveDelay = () => {
-      const baseDelay = 180000; // 3 minutes base
-      const variation = Math.random() * 120000; // +0-2 minutes
-      return baseDelay + variation; // 3-5 minutes
-    };
-
-    const scheduleNextKeepAlive = () => {
-      const delay = getNextKeepAliveDelay();
-      this.keepAliveInterval = setTimeout(async () => {
-        try {
-          if (this.socket?.user && this.socket.user.id) {
-            // Only send presence if we haven't sent anything recently (no activity)
-            // This avoids excessive presence updates during active usage
-            await this.socket.sendPresenceUpdate('available', this.socket.user.id);
-          }
-        } catch (error) {
-          this.log('error', `Keep-alive failed:`, error);
+    this.keepAliveInterval = setInterval(async () => {
+      try {
+        if (this.socket?.user && this.socket.user.id) {
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
         }
-        
-        // Schedule next keep-alive with new random delay
-        scheduleNextKeepAlive();
-      }, delay) as unknown as NodeJS.Timeout;
-    };
-
-    scheduleNextKeepAlive();
+      } catch (error) {
+        this.log('error', `Keep-alive failed:`, error);
+      }
+    }, 30000); // 30 seconds
   }
 
   private stopKeepAlive(): void {
-    if (this.keepAliveInterval) {
-      clearTimeout(this.keepAliveInterval);
-      this.keepAliveInterval = undefined;
-    }
+    clearInterval(this.keepAliveInterval);
+    this.keepAliveInterval = undefined;
   }
 
   // Message delivery tracking methods
@@ -1546,113 +1406,38 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private startHealthCheck(): void {
     this.stopHealthCheck();
 
-    // Less aggressive health check: 8-12 minutes with randomization
-    const getNextHealthCheckDelay = () => {
-      const baseDelay = 480000; // 8 minutes base
-      const variation = Math.random() * 240000; // +0-4 minutes
-      return baseDelay + variation; // 8-12 minutes
-    };
-
-    const scheduleNextHealthCheck = () => {
-      const delay = getNextHealthCheckDelay();
-      this.healthCheckInterval = setTimeout(async () => {
-        try {
-          // Don't send presence updates - just check if socket is responsive
-          // Presence updates are handled by keep-alive
-          if (this.socket?.user?.id) {
-            // Simple connectivity check without additional presence spam
-            const isAlive = !!this.socket.user;
-            if (!isAlive) {
-              throw new Error('Socket appears unresponsive');
-            }
-          }
-        } catch (error) {
-          this.log('error', 'Health check failed, connection may be dead:', error);
-          this.onError(error);
+    this.healthCheckInterval = setInterval(async () => {
+      try {
+        // Try to send a presence update to check if connection is still alive
+        if (this.socket?.user?.id) {
+          await this.socket.sendPresenceUpdate('available', this.socket.user.id);
         }
-        
-        // Schedule next health check with new random delay
-        scheduleNextHealthCheck();
-      }, delay) as unknown as NodeJS.Timeout;
-    };
+      } catch (error) {
+        this.log('error', 'Health check failed, connection may be dead:', error);
 
-    scheduleNextHealthCheck();
+        this.onError(error);
+      }
+    }, 60000); // 60 seconds
   }
 
   private stopHealthCheck(): void {
-    if (this.healthCheckInterval) {
-      clearTimeout(this.healthCheckInterval);
-      this.healthCheckInterval = undefined;
-    }
+    clearInterval(this.healthCheckInterval);
+    this.healthCheckInterval = undefined;
   }
 
   private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
-    // Skip presence updates if privacy is set to invisible to avoid 403 errors
-    // When privacy is invisible, sending presence updates conflicts with the privacy setting
-    const isPrivacyInvisible = this.appState?.hasPrivacyUpdated === true;
-    
-    if (isPrivacyInvisible) {
-      // Just add delay for human-like behavior without presence updates
-      await this.delay(ms);
-      return;
-    }
-
     try {
-      // Only subscribe once, not every time we send a message
       await this.socket.presenceSubscribe(jid);
-      
-      // Send initial typing/recording indicator
-      await this.socket.sendPresenceUpdate(type, jid);
-      
-      // For longer messages, send occasional updates with random intervals
-      // But not too frequently - humans don't constantly re-trigger typing
-      if (ms > 10000) { // Only for messages taking >10 seconds
-        const numUpdates = Math.floor(ms / 15000); // Update every ~15 seconds
-        for (let i = 0; i < numUpdates; i++) {
-          await this.delay(12000 + Math.random() * 6000); // 12-18 seconds
-          
-          // 20% chance to pause (human stops typing momentarily)
-          if (Math.random() < 0.2) {
-            await this.socket.sendPresenceUpdate('paused', jid);
-            await this.delay(1000 + Math.random() * 2000); // Pause 1-3 seconds
-          }
-          
-          try {
-            await this.socket?.sendPresenceUpdate(type, jid);
-          } catch (error) {
-            this.log('error', 'Failed to send presence update:', error);
-            break; // Stop updating if there's an error
-          }
-        }
-        
-        // Wait for remaining time
-        const remainingTime = ms - (numUpdates * 15000);
-        if (remainingTime > 0) {
-          await this.delay(remainingTime);
-        }
-      } else {
-        // For shorter messages, just wait
-        await this.delay(ms);
-      }
-
-      // Send paused status
+      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
+      await this.delay(ms);
+      clearInterval(keepAlive);
       await this.socket.sendPresenceUpdate('paused', jid);
-      await this.delay(300 + Math.random() * 400); // 300-700ms pause
-      
-      // Return to available
-      await this.socket?.sendPresenceUpdate('available', jid);
-    } catch (error) {
-      this.log('error', 'Error during human emulation:', error);
-      
-      // Try to restore to available state
-      try {
-        await this.socket?.sendPresenceUpdate('available', jid);
-      } catch (error) {
-        this.log('error', 'Failed to set available status:', error);
-      }
+      await this.delay(250);
+    } finally {
+      await this.socket.sendPresenceUpdate('available');
     }
   }
 
@@ -1874,9 +1659,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         if (connection === 'close') {
           const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
           const reason = (lastDisconnect?.error as Boom)?.message || 'Unknown';
-          
-          // CRITICAL: Properly detect loggedOut during registration
-          const isLoggedOut = code === DisconnectReason.loggedOut;
+          const shouldReconnect = code !== DisconnectReason.loggedOut && !this.shouldSkipRetry(code, reason);
 
           this.log('info', `Disconnected during QR (${reason})`);
 
@@ -1888,15 +1671,9 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             } as WAAppAuth<T>);
           }
 
-          // CRITICAL: Handle loggedOut during registration
-          if (isLoggedOut) {
-            this.log('error', '🚫 Session logged out during registration - need to re-pair with QR code');
-            // Don't attempt reconnection - session is invalid
-            return;
+          if (code === DisconnectReason.loggedOut) {
+            this.log('info', 'Logged out');
           }
-
-          // Only reconnect if not loggedOut and not an auth error
-          const shouldReconnect = !isLoggedOut && !this.shouldSkipRetry(code, reason);
 
           if (this.shouldSkipRetry(code, reason)) {
             this.log('error', '🚫 Authentication/Authorization error during registration, skipping reconnection');
@@ -1920,18 +1697,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       const sock = makeWASocket(socketConfig);
       this.socket = sock;
       this.log('info', 'Socket created successfully');
-      // CRITICAL: Always persist creds updates during registration
-      sock.ev.on('creds.update', async () => {
-        try {
-          if (this.saveCreds) {
-            await this.saveCreds();
-          } else {
-            this.log('warn', '⚠️ saveCreds not initialized during registration, skipping creds update');
-          }
-        } catch (error) {
-          this.log('error', '❌ Failed to save creds during registration:', error);
-        }
-      });
+      sock.ev.on('creds.update', () => this.saveCreds?.());
       sock.ev.on('connection.update', connectionUpdateHandler);
     });
   }
@@ -2103,7 +1869,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       try {
         this.log('info', `Sending message to ${jid} (attempt ${attempt}/${maxRetries})`);
 
-        const raw = await (async () => {
+        const raw: WebMessageInfo | undefined = await (async () => {
           if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
 
           const isAudio = typeof payload === 'object' && (payload as any).type === 'audio';
@@ -2114,14 +1880,14 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
             (content as any).mimetype = (content as any).mimetype ?? 'audio/ogg; codecs=opus';
           }
 
-          // presenceSubscribe is now handled inside emulateHuman to avoid duplicate subscriptions
-          // emulateHuman will skip presence updates if privacy is set to invisible (to avoid 403 errors)
+          await this.socket.presenceSubscribe(jid);
+
           if (isAudio) {
             const seconds = payload?.duration || 0;
             const ms = seconds * 1000; // Convert seconds to milliseconds
             await this.emulateHuman(jid, 'recording', ms);
-          } else if (typeof payload === 'string' || payload?.text) {
-            const text = (typeof payload === 'string' ? payload : payload?.text)!;
+          } else {
+            const text = typeof payload === 'string' ? payload : payload?.text || '';
             const ms = this.humanDelayFor(text);
             await this.emulateHuman(jid, 'composing', ms);
           }
@@ -2184,7 +1950,11 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         onSuccess?.(record, raw, deliveryStatus || undefined);
 
-        return { messageId: raw?.key?.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
+        if (!raw || !raw.key) {
+          throw new Error('Message send failed: no response from server');
+        }
+
+        return { messageId: raw.key.id, sentAt: getLocalTime(), ...raw, ...(deliveryStatus || {}) } as WebMessageInfo & Partial<WAMessageDelivery>;
       } catch (error: any) {
         lastError = error;
 
@@ -2281,26 +2051,25 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.stopKeepAlive();
       this.stopHealthCheck();
 
-      // CRITICAL: Logout and cleanup session state
+      // Logout if socket is valid
       if (this.socket && typeof this.socket.logout === 'function') {
         try {
           await this.socket.logout();
-          this.log('info', '✅ Successfully logged out');
+          this.log('info', 'Successfully logged out');
         } catch (logoutError: any) {
           if (logoutError?.output?.payload?.message === 'Connection Closed') {
             this.log('debug', 'Socket already closed, skipping logout');
           } else {
-            this.log('warn', '⚠️ Logout failed:', logoutError);
+            this.log('warn', 'Logout failed:', logoutError);
           }
         }
       }
 
-      // CRITICAL: Clear session data and mark as inactive
+      // Clear data if requested
       this.log('info', 'Clearing session data from database...');
-      await this.update({ isActive: false } as WAAppAuth<T>);
       await this.cleanupAndRemoveTempDir();
       await this.deleteAppAuth();
-      this.log('info', '✅ Session data cleared successfully');
+      this.log('info', 'Session data cleared successfully');
 
       this.connected = false;
       this.socket = null;
@@ -2329,30 +2098,7 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       this.hasManualDisconnected = true;
 
       this.connected = false;
-
-      // CRITICAL: If logout is requested, properly logout and cleanup session
-      if (options?.logout && this.socket) {
-        try {
-          await this.socket.logout();
-          this.log('info', '✅ Logged out successfully');
-          
-          // CRITICAL: Clean up auth state on logout to prevent reuse
-          await this.update({ isActive: false } as WAAppAuth<T>);
-          await this.cleanupAndRemoveTempDir();
-          
-          this.log('info', '✅ Session cleaned up after logout');
-        } catch (logoutError: any) {
-          if (logoutError?.output?.payload?.message === 'Connection Closed') {
-            this.log('debug', 'Socket already closed, skipping logout');
-          } else {
-            this.log('warn', '⚠️ Logout failed:', logoutError);
-            // Still cleanup even if logout fails
-            await this.update({ isActive: false } as WAAppAuth<T>);
-            await this.cleanupAndRemoveTempDir();
-          }
-        }
-      }
-
+      if (options?.logout) await this.socket?.logout();
       if (options?.clearSocket) this.socket = null;
 
       await this.onDisconnect(reason);

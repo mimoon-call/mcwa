@@ -222,6 +222,7 @@ export const instanceService = {
   },
 
   [RELOAD_INSTANCES]: async (): Promise<void> => {
-    await wa.reloadInstances();
+    // TODO: Implement reloadInstances method in WhatsappWarmService
+    // await wa.reloadInstances();
   },
 };

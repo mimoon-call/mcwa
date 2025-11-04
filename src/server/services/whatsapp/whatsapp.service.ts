@@ -103,6 +103,16 @@ export class WhatsappService<T extends object = Record<never, never>> {
       const internalPhoneNumber = (await this.listAppAuth()).map(({ phoneNumber }) => phoneNumber);
       const internalFlag = internalPhoneNumber.includes(message.fromNumber);
 
+      setTimeout(
+        () => {
+          const fromInstance = this.instances.get(message.fromNumber);
+          if (raw.key) {
+            fromInstance?.read(raw.key);
+          }
+        },
+        this.getRealisticDelay(500, 2000)
+      );
+
       return Promise.allSettled([
         config.onIncomingMessage?.({ ...message, internalFlag }, raw, ...arg),
         ...this.messageCallback.map((cb) => cb?.({ ...message, internalFlag }, raw, ...arg)),
@@ -173,112 +183,6 @@ export class WhatsappService<T extends object = Record<never, never>> {
           this.log('info', `[${phoneNumber}]`, result.reason);
         }
       });
-    });
-  }
-
-  async reloadInstances(): Promise<void> {
-    const appAuths = await this.listAppAuth();
-    const dbPhoneNumbers = appAuths.map((auth) => auth.phoneNumber);
-    const existingPhoneNumbers = Array.from(this.instances.keys());
-    
-    // Find instances that exist in map but NOT in database (should be removed)
-    const instancesToRemove = existingPhoneNumbers.filter((phoneNumber) => !dbPhoneNumbers.includes(phoneNumber));
-    
-    // Find new phone numbers that exist in DB but not in instances map
-    const newPhoneNumbers = dbPhoneNumbers.filter((phoneNumber) => !existingPhoneNumbers.includes(phoneNumber));
-    
-    // Find existing instances that aren't connected
-    const disconnectedPhoneNumbers = existingPhoneNumbers.filter((phoneNumber) => {
-      if (instancesToRemove.includes(phoneNumber)) return false; // Don't try to reconnect instances that will be removed
-      const instance = this.instances.get(phoneNumber);
-      return instance && !instance.connected;
-    });
-
-    this.log('info', 'Reloading instances:', {
-      toRemove: instancesToRemove.length,
-      new: newPhoneNumbers.length,
-      disconnected: disconnectedPhoneNumbers.length,
-      total: dbPhoneNumbers.length,
-    });
-
-    // First, remove instances that no longer exist in the database
-    const removalPromises = instancesToRemove.map((phoneNumber) => {
-      return new Promise<void>((resolve) => {
-        const instance = this.instances.get(phoneNumber);
-        if (instance) {
-          instance
-            .disconnect({ clearSocket: true, logout: true }, 'Instance removed from database')
-            .then(() => instance.remove())
-            .then(() => {
-              this.log('info', `[${phoneNumber}]`, 'Removed instance (no longer in database)');
-              resolve();
-            })
-            .catch((error: any) => {
-              this.log('error', `[${phoneNumber}]`, 'Failed to remove instance:', error.message);
-              resolve(); // Continue even if removal fails
-            });
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    await Promise.allSettled(removalPromises);
-
-    // Prepare all phone numbers that need connection (new + disconnected)
-    const phoneNumbersToConnect = [...newPhoneNumbers, ...disconnectedPhoneNumbers];
-
-    if (phoneNumbersToConnect.length === 0 && instancesToRemove.length > 0) {
-      this.log('info', 'Reload completed: removed instances only');
-      return;
-    }
-
-    if (phoneNumbersToConnect.length === 0) {
-      this.log('info', 'No instances need to be reloaded');
-      return;
-    }
-
-    // Stagger connection attempts to prevent conflicts
-    const connectionPromises = phoneNumbersToConnect.map((phoneNumber, index) => {
-      const delay = index * this.getRealisticDelay(2000, 3000); // 2-3 second delay between each connection attempt
-
-      return new Promise<void>((resolve, reject) => {
-        setTimeout(async () => {
-          try {
-            let instance = this.instances.get(phoneNumber);
-            
-            // Create instance if it doesn't exist
-            if (!instance) {
-              instance = await this.createInstance(phoneNumber);
-            }
-            
-            // Connect the instance
-            await instance.connect();
-
-            resolve();
-          } catch (error: any) {
-            this.log('error', `[${phoneNumber}]`, 'Failed to reload:', error.message);
-            reject(error.message);
-          }
-        }, delay);
-      });
-    });
-
-    // Wait for all connections to complete
-    const results = await Promise.allSettled(connectionPromises);
-    
-    // Log details of failed connections
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        const phoneNumber = phoneNumbersToConnect[index];
-        this.log('info', `[${phoneNumber}]`, result.reason);
-      }
-    });
-
-    this.log('info', 'Reload completed:', {
-      removed: instancesToRemove.length,
-      successful: results.filter((r) => r.status === 'fulfilled').length,
-      failed: results.filter((r) => r.status === 'rejected').length,
     });
   }
 
@@ -376,38 +280,18 @@ export class WhatsappService<T extends object = Record<never, never>> {
   }
 
   async addInstanceQR(phoneNumber: string): Promise<{ qrCode: string; instance: WAInstance<T> }> {
-    // CRITICAL: Prevent duplicate connections - check if instance already exists and is connecting/connected
-    const existingInstance = this.instances.get(phoneNumber);
+    const instance = this.instances.get(phoneNumber);
 
-    if (existingInstance?.connected) {
+    if (instance?.connected) {
       throw new Error(`Number [${phoneNumber}] is already registered and connected.`);
-    } else if (existingInstance?.get('statusCode') === 200) {
+    } else if (instance?.get('statusCode') === 200) {
       throw new Error(`Number [${phoneNumber}] is already authenticated. Please restart the server or use it directly.`);
-    }
-
-    // CRITICAL: If instance exists but not connected, remove it first to prevent duplicate sessions
-    if (existingInstance && !existingInstance.connected) {
-      this.log('warn', `⚠️ Existing instance found for ${phoneNumber} but not connected - cleaning up before creating new one`);
-      try {
-        await existingInstance.disconnect({ clearSocket: true, logout: false }, 'Replacing with new instance');
-      } catch (error) {
-        this.log('warn', `Error disconnecting existing instance: ${error}`);
-      }
-      this.instances.delete(phoneNumber);
     }
 
     // Create new instance
     const newInstance = await this.createInstance(phoneNumber);
     const qrCode = await newInstance.register();
-    await newInstance.update({
-      lastErrorAt: null,
-      errorMessage: null,
-      lastIpAddress: null,
-      dailyMessageCount: 0,
-      incomingMessageCount: 0,
-      outgoingMessageCount: 0,
-      outgoingErrorCount: 0,
-    } as WAAppAuth<T>);
+    await newInstance.update({ lastErrorAt: null, errorMessage: null, lastIpAddress: null } as WAAppAuth<T>);
 
     this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list');
 

@@ -4,12 +4,11 @@ import { WhatsAppAuth, WhatsAppKey } from './whatsapp.db';
 import mongoose from 'mongoose';
 import { WhatsappAiService } from './whatsapp.ai';
 import getLocalTime from '../../helpers/get-local-time';
-import logger from '@server/helpers/logger';
 
 const getAppAuth = async <T extends object>(phoneNumber: string): Promise<WAAppAuth<T> | null> => {
   // Ensure mongoose is connected before querying
   if (mongoose.connection.readyState !== 1) {
-    logger.debug('getAuthKey', 'Waiting for database connection...');
+    console.log('getAuthKey', 'Waiting for database connection...');
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
@@ -37,7 +36,7 @@ const updateAppAuth = async <T extends object>(phoneNumber: string, data: Partia
 
         await WhatsAppAuth.updateOne({ phoneNumber, name: { $exists: false } }, { $set: { ...aiData, updatedAt: now } }, { writeConcern: { w: 1 } });
       } catch (error) {
-        logger.error('updateAppAuth', 'failed write persona profile:', error);
+        console.error('updateAppAuth', 'failed write persona profile:', error);
       }
     });
   }
@@ -52,7 +51,7 @@ const deleteAppAuth = async (phoneNumber: string): Promise<void> => {
     // Delete keys
     await WhatsAppKey.deleteMany({ phoneNumber });
   } catch (error) {
-    logger.error('deleteAppAuth', 'Error deleting auth data:', error);
+    console.error('deleteAppAuth', 'Error deleting auth data:', error);
   }
 };
 
@@ -60,26 +59,26 @@ const listAppAuth = async <T extends object>(): Promise<WAAppAuth<T>[]> => {
   try {
     // Ensure mongoose is connected before querying
     if ((mongoose.connection.readyState as number) !== 1) {
-      logger.debug('listAppAuth', 'Database not connected, waiting...');
+      console.log('listAppAuth', 'Database not connected, waiting...');
       // Wait for database connection with timeout
       let attempts = 0;
       const maxAttempts = 10;
       while ((mongoose.connection.readyState as number) !== 1 && attempts < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         attempts++;
-        logger.debug('listAppAuth', `Database connection attempt ${attempts}/${maxAttempts}`);
+        console.log('listAppAuth', `Database connection attempt ${attempts}/${maxAttempts}`);
       }
 
       if ((mongoose.connection.readyState as number) !== 1) {
-        logger.error('listAppAuth', 'Database connection timeout, returning empty list');
+        console.error('listAppAuth', 'Database connection timeout, returning empty list');
         return [];
       }
     }
 
-    logger.debug('listAppAuth', 'Database connected, querying auth states...');
+    console.log('listAppAuth', 'Database connected, querying auth states...');
     return await WhatsAppAuth.find({}, { _id: 0 });
   } catch (error) {
-    logger.error('listAppAuth', 'Error listing auth states:', error);
+    console.error('listAppAuth', 'Error listing auth states:', error);
     return [];
   }
 };
@@ -89,7 +88,7 @@ const updateAppKey = async <T extends object>(phoneNumber: string, keyType: stri
 
   // Ensure mongoose is connected before querying
   if (mongoose.connection.readyState !== 1) {
-    logger.debug('updateAppKey', 'Waiting for database connection...');
+    console.log('updateAppKey', 'Waiting for database connection...');
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 

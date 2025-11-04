@@ -2,9 +2,6 @@ import type { WAConversation, WAPersona } from './whatsapp.type';
 import type { JsonSchema } from '../open-ai/open-ai.types';
 import { OpenAiService } from '../open-ai/open-ai.service';
 import { WhatsAppAuth } from '@server/services/whatsapp/whatsapp.db';
-import logger from '@server/helpers/logger';
-import { app } from '@server/index';
-import { ConversationEventEnum } from '@server/api/conversation/conversation-event.enum';
 
 export type Language = 'en' | 'he' | 'ar' | 'ru';
 
@@ -13,7 +10,7 @@ export class WhatsappAiService {
   private langMap: Record<Language, string> = { en: 'English', he: 'Hebrew', ar: 'Arabic', ru: 'Russian' };
 
   constructor() {
-    this.ai = new OpenAiService({ failureCallback: (errorMessage) => app.socket.broadcast(ConversationEventEnum.AI_FAILURE, { errorMessage }) });
+    this.ai = new OpenAiService();
   }
 
   // Helpers
@@ -157,7 +154,7 @@ export class WhatsappAiService {
   ): { fromNumber: string; toNumber: string; text: string }[] {
     // Validate that we have items
     if (!items || items.length === 0) {
-      logger.error('WhatsappAiService:enforceSpeakerOrder', `No messages received from AI`);
+      console.error(`[AI Error] No messages received from AI`);
       return [];
     }
 
@@ -166,17 +163,11 @@ export class WhatsappAiService {
     const expectedCount = order.length;
 
     if (actualCount < expectedCount) {
-      logger.warn(
-        'WhatsappAiService:enforceSpeakerOrder',
-        `Incomplete response: got ${actualCount} messages, expected ${expectedCount}. Using available messages.`
-      );
+      console.warn(`[AI Warning] Incomplete response: got ${actualCount} messages, expected ${expectedCount}. Using available messages.`);
       // Truncate the order to match what we actually have
       order = order.slice(0, actualCount);
     } else if (actualCount > expectedCount) {
-      logger.warn(
-        'WhatsappAiService:enforceSpeakerOrder',
-        `Extra messages: got ${actualCount} messages, expected ${expectedCount}. Using first ${expectedCount} messages.`
-      );
+      console.warn(`[AI Warning] Extra messages: got ${actualCount} messages, expected ${expectedCount}. Using first ${expectedCount} messages.`);
       // Truncate the items to match what we expected
       items = items.slice(0, expectedCount);
     }
@@ -390,7 +381,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
         });
 
         if (!parsed) {
-          logger.error('WhatsappAiService:generateConversation', `[AI Error] Failed to parse AI response (attempt ${retryCount + 1}/${maxRetries})`);
+          console.error(`[AI Error] Failed to parse AI response (attempt ${retryCount + 1}/${maxRetries})`);
           retryCount++;
           continue;
         }
@@ -402,7 +393,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
             const msg = parsed.messages[i];
 
             if (!msg.text || msg.text.trim() === '') {
-              logger.error('WhatsappAiService:generateConversation', `Empty text in message ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg);
+              console.error(`[AI Error] Empty text in message ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg);
               hasInvalidMessages = true;
               break;
             }
@@ -414,11 +405,7 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
               )
             ) {
               if (msg.text.trim().length > 10) {
-                logger.error(
-                  'WhatsappAiService:generateConversation',
-                  `Emoji-only message too long at index ${i} (attempt ${retryCount + 1}/${maxRetries}):`,
-                  msg.text
-                );
+                console.error(`[AI Error] Emoji-only message too long at index ${i} (attempt ${retryCount + 1}/${maxRetries}):`, msg.text);
                 hasInvalidMessages = true;
                 break;
               }
@@ -439,19 +426,16 @@ Produce exactly ${messageCount} messages, one per entry in SPEAKER_ORDER.
         }
 
         // If no valid messages were produced, retry
-        logger.error(
-          'WhatsappAiService:generateConversation',
-          `No valid messages produced after enforcing speaker order (attempt ${retryCount + 1}/${maxRetries})`
-        );
+        console.error(`[AI Error] No valid messages produced after enforcing speaker order (attempt ${retryCount + 1}/${maxRetries})`);
         retryCount++;
       } catch (error) {
-        logger.error('WhatsappAiService:generateConversation', `Failed to generate conversation (attempt ${retryCount + 1}/${maxRetries}):`, error);
+        console.error(`[AI Error] Failed to generate conversation (attempt ${retryCount + 1}/${maxRetries}):`, error);
         retryCount++;
       }
     }
 
     // If all retries failed, return null
-    logger.error('WhatsappAiService:generateConversation', `Failed to generate conversation after ${maxRetries} attempts`);
+    console.error(`[AI Error] Failed to generate conversation after ${maxRetries} attempts`);
     return null;
   }
 
