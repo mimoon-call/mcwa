@@ -26,6 +26,7 @@ export const WhatsAppAuth = new MongoService<WAAppAuth<WAPersona> & { createdAt:
     phoneNumber: { type: String, required: true },
     isActive: { type: Boolean, required: true, default: true },
     creds: { type: Schema.Types.Mixed, required: false },
+    comment: { type: String },
     statusCode: { type: Number, required: false },
     errorMessage: { type: String, required: false },
     lastErrorAt: { type: Date },
@@ -135,6 +136,14 @@ export const WhatsAppMessage = new MongoService<MessageDocument>(
       // Compound indexes for common query patterns
       { fields: { status: 1, deliveredAt: 1 }, options: { name: 'deliveryStatus_status_deliveredAt_compound' } },
       { fields: { status: 1, readAt: 1 }, options: { name: 'deliveryStatus_status_readAt_compound' } },
+      // Critical indexes for conversation search aggregation
+      { fields: { internalFlag: 1, text: 1, createdAt: -1 }, options: { name: 'conversation_search_compound' } },
+      { fields: { fromNumber: 1, createdAt: -1 }, options: { name: 'fromNumber_createdAt_compound' } },
+      { fields: { toNumber: 1, createdAt: -1 }, options: { name: 'toNumber_createdAt_compound' } },
+      { fields: { fromNumber: 1, toNumber: 1, messageId: 1 }, options: { name: 'message_lookup_compound' } },
+      { fields: { intent: 1 }, options: { name: 'intent_index' } },
+      { fields: { department: 1 }, options: { name: 'department_index' } },
+      { fields: { interested: 1 }, options: { name: 'interested_index' } },
     ],
     preSave: setModifiedAndCreationDate,
   }
