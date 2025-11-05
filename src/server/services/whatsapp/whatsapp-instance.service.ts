@@ -799,7 +799,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
         // Create a more descriptive reason that includes the error code
         const disconnectReason = code ? `${code}: ${reason}` : reason;
-        if (code !== this.appState?.statusCode) {
+        const previousStatusCode = this.appState?.statusCode;
+        
+        // Preserve original error code if it's a temporary error (503) and new error is different
+        // This prevents overwriting temporary errors with permanent errors during reconnection
+        if (previousStatusCode === 503 && code !== 503 && code !== undefined) {
+          this.log('warn', `⚠️ Status changed from 503 to ${code} during reconnection. Preserving original 503 error.`);
+          // Don't update status code if we're reconnecting from a 503 error
+          // The 503 might be temporary and the reconnection failure could be due to aggressive retry
+        } else if (code !== this.appState?.statusCode) {
           this.update({ statusCode: code, errorMessage: reason, lastErrorAt: getLocalTime() } as WAAppAuth<T>);
         }
 
@@ -810,6 +818,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('error', '🚫 Unauthorized (401) - Authentication failed, this usually means invalid credentials');
         } else if (code === 403) {
           this.log('error', '🚫 Forbidden (403) - Access denied, this usually means insufficient permissions');
+        } else if (code === 503) {
+          this.log('warn', '⚠️ Service Unavailable (503) - Temporary server issue, will retry with longer delay');
         } else if (code === 440) {
           this.log('warn', '⚠️ Stream Error (440) - Conflict detected, this may be due to multiple sessions or rapid reconnections');
         }
@@ -1086,6 +1096,52 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     if (this.shouldSkipRetry(undefined, reason)) {
       this.onDisconnect(reason);
       return;
+    }
+
+    // Special handling for 503 errors (Service Unavailable) - temporary errors that need longer delays
+    if (reason.includes('503:') || this.appState?.statusCode === 503) {
+      this.log('warn', '🔄 503 Service Unavailable detected, implementing extended reconnection strategy...');
+
+      // For 503 errors, use exponential backoff with longer delays to avoid triggering 403
+      // 503 is often temporary, so we wait longer to let WhatsApp recover
+      const baseDelay = 60000; // 60 seconds base delay (longer than standard)
+      const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempts - 1), 600000); // Max 10 minutes
+      const jitter = Math.random() * 20000; // Add up to 20 seconds of jitter
+      const delay = exponentialDelay + jitter;
+
+      this.log('info', `⏳ Waiting ${Math.round(delay / 1000)}s before reconnection attempt ${attempts}/${maxRetry} (503 requires longer delay)`);
+
+      if (attempts < maxRetry && this.appState?.isActive === true) {
+        setTimeout(async () => {
+          try {
+            // Validate session state before reconnection to prevent 403 errors
+            const isValidSession = await this.validateSessionState();
+            if (!isValidSession) {
+              this.log('error', '❌ Session validation failed before reconnection, skipping attempt');
+              // Preserve 503 status if session validation fails
+              this.log('warn', '⚠️ Preserving 503 status - session validation failed but original error was temporary');
+              return;
+            }
+
+            // Add a small random delay to prevent multiple instances from reconnecting simultaneously
+            const randomDelay = Math.random() * 5000;
+            await new Promise((resolve) => setTimeout(resolve, randomDelay));
+
+            await this.connect();
+          } catch (error: any) {
+            // If connection fails with 403, preserve the original 503 status
+            const errorCode = error?.output?.statusCode || error?.statusCode;
+            if (errorCode === 403 && this.appState?.statusCode === 503) {
+              this.log('warn', '⚠️ Reconnection failed with 403, but preserving original 503 status (temporary server issue)');
+              // Don't update status code - keep 503
+            } else {
+              this.log('warn', '🔄 Instance reconnect attempt failed', `${attempts + 1}/${maxRetry}`);
+              await this.handleInstanceDisconnect(reason, attempts + 1, maxRetry);
+            }
+          }
+        }, delay);
+        return;
+      }
     }
 
     // Special handling for 440 errors (Stream Errored - conflict)
@@ -1740,9 +1796,62 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
     }
   }
 
+  private async validateSessionState(): Promise<boolean> {
+    try {
+      this.appState ??= await this.getAppAuth();
+      
+      // Check if we have valid credentials
+      if (!this.appState?.creds) {
+        this.log('warn', '⚠️ No credentials found in session state');
+        return false;
+      }
+
+      // Check if credentials have required fields
+      const creds = this.appState.creds;
+      if (!creds.me && !creds.registered) {
+        this.log('warn', '⚠️ Session not registered (missing me or registered flag)');
+        return false;
+      }
+
+      // Check if session is active
+      if (this.appState.isActive === false) {
+        this.log('warn', '⚠️ Session is marked as inactive');
+        return false;
+      }
+
+      // Check if we have a valid phone number
+      if (!this.appState.phoneNumber) {
+        this.log('warn', '⚠️ No phone number in session state');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      this.log('error', '❌ Error validating session state:', error);
+      return false;
+    }
+  }
+
   private async performConnect(disconnectBeforeFlag: boolean = false): Promise<void> {
     this.appState ??= await this.getAppAuth();
     this.isConnecting = true;
+
+    // Validate session state before attempting reconnection
+    // This helps prevent 403 errors from reconnecting with invalid/corrupted session data
+    const isValidSession = await this.validateSessionState();
+    if (!isValidSession) {
+      this.log('error', '❌ Session validation failed, aborting reconnection attempt');
+      this.isConnecting = false;
+      
+      // If session is invalid and we had a 503 error, don't update to 403
+      // Keep the 503 status as it indicates a temporary server issue
+      if (this.appState?.statusCode === 503) {
+        this.log('warn', '⚠️ Preserving 503 status - session validation failed but original error was temporary');
+        return;
+      }
+      
+      throw new Error('Session validation failed - invalid or corrupted session state');
+    }
 
     if (this.connected && disconnectBeforeFlag) await this.disconnect();
     await this.update({ isActive: true } as Partial<WAAppAuth<T>>);
