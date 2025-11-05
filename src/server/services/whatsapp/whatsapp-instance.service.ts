@@ -1991,15 +1991,15 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
 
           await this.socket.presenceSubscribe(jid);
 
-          if (isAudio) {
-            const seconds = payload?.duration || 0;
-            const ms = seconds * 1000; // Convert seconds to milliseconds
-            await this.emulateHuman(jid, 'recording', ms);
-          } else {
-            const text = typeof payload === 'string' ? payload : payload?.text || '';
-            const ms = this.humanDelayFor(text);
-            await this.emulateHuman(jid, 'composing', ms);
-          }
+          // if (isAudio) {
+          //   const seconds = payload?.duration || 0;
+          //   const ms = seconds * 1000; // Convert seconds to milliseconds
+          //   await this.emulateHuman(jid, 'recording', ms);
+          // } else {
+          //   const text = typeof payload === 'string' ? payload : payload?.text || '';
+          //   const ms = this.humanDelayFor(text);
+          //   await this.emulateHuman(jid, 'composing', ms);
+          // }
 
           const messageResult = await this.socket.sendMessage(jid, content); // Send the actual message
           if (options?.trackDelivery && messageResult?.key?.id) this.trackMessageDelivery(messageResult.key.id, this.phoneNumber, toNumber, options); // Track message delivery if enabled
