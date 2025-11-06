@@ -1484,18 +1484,16 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
   private async emulateHuman(jid: string, type: 'composing' | 'recording', ms: number = 0): Promise<void> {
     if (!ms) return;
     if (!this.connected || !this.socket) throw new Error(`Instance is not connected`);
-    
-    // TODO: Temporarily disabled due to issues with presence subscription because spammy behavior, privacy issues, etc.
 
     try {
-      // await this.socket.presenceSubscribe(jid);
-      // const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
+      await this.socket.presenceSubscribe(jid);
+      const keepAlive = setInterval(() => this.socket?.sendPresenceUpdate(type, jid), 4500);
       await this.delay(ms);
-      // clearInterval(keepAlive);
-      // await this.socket.sendPresenceUpdate('paused', jid);
+      clearInterval(keepAlive);
+      await this.socket.sendPresenceUpdate('paused', jid);
       await this.delay(250);
     } finally {
-      // await this.socket.sendPresenceUpdate('available');
+      await this.socket.sendPresenceUpdate('available');
     }
   }
 
