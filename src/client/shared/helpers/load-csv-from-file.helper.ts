@@ -62,9 +62,9 @@ async function loadCsvFromFile<T extends object>(file: Blob, columns?: (keyof T)
   }
 
   const dataLines = !columns ? lines.slice(1) : lines;
-
+  
   const data = dataLines.map((line, rowIdx) => {
-    const cells = line.split(',').map((cell) => cell.trim());
+    const cells = line.split(',').map((cell) => cell.trim()).filter(Boolean);
 
     if (cells.length !== actualColumns.length) {
       throw new Error(
