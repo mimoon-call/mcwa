@@ -29,7 +29,6 @@ import {
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  initAuthCreds,
   makeWASocket,
   useMultiFileAuthState,
   WASocket,
