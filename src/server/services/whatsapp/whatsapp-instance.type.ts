@@ -6,7 +6,6 @@ import IMessageKey = proto.IMessageKey;
 import IMessage = proto.IMessage;
 import IWebMessageInfo = proto.IWebMessageInfo;
 import WebMessageInfo = proto.WebMessageInfo;
-import type { AuthenticationCreds } from '@whiskeysockets/baileys/lib/Types/Auth';
 import { MessageStatusEnum } from '@server/services/whatsapp/whatsapp.enum';
 import { LeadIntentEnum } from '@server/api/message-queue/reply/interest.enum';
 
@@ -199,5 +198,13 @@ type MediaPart =
   | proto.Message.IImageMessage
   | proto.Message.IDocumentMessage
   | proto.Message.IStickerMessage;
+
+// Minimal AuthenticationCreds shape used by this project.
+// We intentionally avoid importing Baileys' internal Auth types to keep compatibility across major versions.
+type AuthenticationCreds = {
+  registered?: boolean;
+  me?: any;
+  [key: string]: any;
+};
 
 export { Message, IMessage, IMessageKey, IWebMessageInfo, AuthenticationCreds, WebMessageInfo, MediaPart };

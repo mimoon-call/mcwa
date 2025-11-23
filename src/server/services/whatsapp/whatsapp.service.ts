@@ -279,6 +279,10 @@ export class WhatsappService<T extends object = Record<never, never>> {
     return instance;
   }
 
+  /**
+   * Start registration for a new instance using QR code login.
+   */
+
   async addInstanceQR(phoneNumber: string): Promise<{ qrCode: string; instance: WAInstance<T> }> {
     const instance = this.instances.get(phoneNumber);
 
@@ -304,6 +308,37 @@ export class WhatsappService<T extends object = Record<never, never>> {
     this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list');
 
     return { qrCode, instance: newInstance };
+  }
+
+  /**
+   * Start registration for a new instance using WhatsApp's pairing code (phone-number) login flow.
+   * Returns the pairing code string.
+   */
+  async addInstancePairingCode(phoneNumber: string): Promise<{ code: string; instance: WAInstance<T> }> {
+    const instance = this.instances.get(phoneNumber);
+
+    if (instance?.connected) {
+      throw new Error(`Number [${phoneNumber}] is already registered and connected.`);
+    } else if (instance?.get('statusCode') === 200) {
+      throw new Error(`Number [${phoneNumber}] is already authenticated. Please restart the server or use it directly.`);
+    }
+
+    // Create new instance
+    const newInstance = await this.createInstance(phoneNumber);
+    const code = await newInstance.registerByCode();
+    await newInstance.update({
+      lastErrorAt: null,
+      errorMessage: null,
+      lastIpAddress: null,
+      dailyMessageCount: 0,
+      incomingMessageCount: 0,
+      outgoingMessageCount: 0,
+      outgoingErrorCount: 0,
+    } as WAAppAuth<T>);
+
+    this.log('info', `[${phoneNumber}]`, '✅', 'Successfully added to active numbers list using pairing code');
+
+    return { code, instance: newInstance };
   }
 
   listInstanceNumbers(data?: Partial<{ onlyConnectedFlag: boolean; activeFlag: boolean; hasWarmedUp: boolean; shuffleFlag: boolean }>): string[] {

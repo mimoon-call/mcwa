@@ -26,6 +26,7 @@ import type { Agent as HttpAgent } from 'http';
 import type { Agent as HttpsAgent } from 'https';
 import {
   AnyMessageContent,
+  Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
   initAuthCreds,
@@ -477,17 +478,13 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
           this.log('warn', '⭕ Instance data was removed');
         }
       } catch (_error) {
+        // If restoration fails, start with a clean directory and let Baileys create a fresh auth state
         await this.cleanupAndRemoveTempDir(true);
-        const creds = initAuthCreds();
-        await writeFile(path.join(this.TEMP_DIR, 'creds.json'), JSON.stringify(creds, null, 2));
-        this.log('info', 'Started fresh session due to restoration error');
+        this.log('info', 'Started fresh session due to restoration error (Baileys will initialize auth state)');
       }
     } else {
-      // Initialize new session
-      this.log('info', 'Initializing new session');
-      const creds = initAuthCreds();
-
-      await writeFile(path.join(this.TEMP_DIR, 'creds.json'), JSON.stringify(creds, null, 2));
+      // Initialize new session: let Baileys create auth state via useMultiFileAuthState
+      this.log('info', 'Initializing new session (Baileys-managed auth state)');
     }
 
     // Use the standard useMultiFileAuthState with our temp directory
@@ -684,6 +681,8 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
       version,
       auth: state,
       logger: silentLogger,
+      // Use a desktop browser profile to be compatible with pairing-code login
+      browser: Browsers.macOS('Google Chrome'),
       connectTimeoutMs: options.connectTimeoutMs || 30000,
       keepAliveIntervalMs: options.keepAliveIntervalMs || 25000,
       retryRequestDelayMs: options.retryRequestDelayMs || 1000,
@@ -1692,7 +1691,121 @@ export class WhatsappInstance<T extends object = Record<never, never>> {
         }
       };
 
-      this.log('info', 'Creating instance socket...');
+      this.log('info', 'Creating instance socket (QR registration)...');
+      const socketConfig = this.createSocketConfig(version, state);
+      const sock = makeWASocket(socketConfig);
+      this.socket = sock;
+      this.log('info', 'Socket created successfully');
+      sock.ev.on('creds.update', () => this.saveCreds?.());
+      sock.ev.on('connection.update', connectionUpdateHandler);
+    });
+  }
+
+  /**
+   * Register this instance using WhatsApp's pairing code (phone-number) login flow.
+   * Returns the pairing code string that should be shown to the user.
+   */
+  public async registerByCode(): Promise<string> {
+    if (this.connected) throw new Error(`Number [${this.phoneNumber}] is already registered and connected.`);
+
+    this.log('info', 'Starting pairing-code registration process...');
+    const { state, saveCreds } = await this.state(true);
+    this.saveCreds = saveCreds;
+
+    const { version } = await fetchLatestBaileysVersion();
+    this.log('debug', `Using Baileys version: ${version}`);
+
+    await saveCreds();
+    this.log('info', 'Initial credentials saved');
+
+    return new Promise((resolve, reject) => {
+      let resolved = false;
+
+      const connectionUpdateHandler = async (update: any) => {
+        const { connection, qr, lastDisconnect } = update;
+
+        // As soon as we are connecting (or QR is emitted), request a pairing code
+        if (!resolved && (connection === 'connecting' || !!qr)) {
+          try {
+            const sock = this.socket as any;
+            if (!sock || typeof sock.requestPairingCode !== 'function') {
+              throw new Error('Baileys socket does not support pairing code login (requestPairingCode missing)');
+            }
+
+            const code: string = await sock.requestPairingCode(this.phoneNumber);
+            this.log('info', `Pairing code generated for [${this.phoneNumber}]`);
+            resolved = true;
+            resolve(code);
+          } catch (error) {
+            this.log('error', 'Failed to generate pairing code:', error);
+            resolved = true;
+            reject(error);
+          }
+        }
+
+        if (connection === 'open') {
+          this.log('info', 'Connected via pairing code');
+
+          await this.updatePrivacy();
+          await this.updateProfile();
+          this.connected = true;
+
+          // Start keep-alive and health check
+          this.startKeepAlive();
+          this.startHealthCheck();
+
+          // Only trigger ready callback if session is actually ready (has valid credentials)
+          if (this.appState?.creds?.me || this.appState?.creds?.registered) {
+            // Trigger ready callback
+            this.appState = await this.getAppAuth();
+            await this.onReady(this);
+
+            // Immediately update status to 200 when connection is successful
+            await this.update({ statusCode: 200, errorMessage: null, lastErrorAt: null } as WAAppAuth<T>);
+          } else {
+            this.log('warn', 'Connection open but session not ready (no valid credentials)');
+          }
+
+          this.log('info', '✅ Successfully added to active numbers list (pairing code)');
+        }
+
+        if (connection === 'close') {
+          const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
+          const reason = (lastDisconnect?.error as Boom)?.message || 'Unknown';
+          const shouldReconnect = code !== DisconnectReason.loggedOut && !this.shouldSkipRetry(code, reason);
+
+          this.log('info', `Disconnected during pairing-code registration (${reason})`);
+
+          if (this.appState?.statusCode !== code) {
+            await this.update({
+              statusCode: code,
+              errorMessage: code === 200 ? null : reason,
+              lastErrorAt: code === 200 ? null : getLocalTime(),
+            } as WAAppAuth<T>);
+          }
+
+          if (code === DisconnectReason.loggedOut) {
+            this.log('info', 'Logged out');
+          }
+
+          if (this.shouldSkipRetry(code, reason)) {
+            this.log('error', '🚫 Authentication/Authorization error during registration, skipping reconnection');
+          } else if (shouldReconnect) {
+            this.log('info', 'Registration completed but connection closed - attempting to restore connection...');
+            this.onRegister();
+
+            try {
+              await this.connect();
+
+              this.log('info', 'Connection restored successfully after registration');
+            } catch (error) {
+              this.log('warn', 'Failed to restore connection after registration:', error);
+            }
+          }
+        }
+      };
+
+      this.log('info', 'Creating instance socket (pairing-code registration)...');
       const socketConfig = this.createSocketConfig(version, state);
       const sock = makeWASocket(socketConfig);
       this.socket = sock;
